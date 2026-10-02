@@ -55,6 +55,10 @@ Sidebar → "Input list & stage plan".
 - **Stage plan:** click a symbol to add it, drag it (25 cm snap), arrows nudge, ⌫ deletes; the inspector sets caption, channels/mix, rotation, size, layer. Text is its own item.
 - **Export:** PDF (all sheets), PNG (input list or stage plan), CSV. File: "Save input list" (⌘S) — `.ssmtinput`; undo — ⌘Z.
 
+## Show player (function #3)
+
+Sidebar → "Show player". Drop audio files onto the list or use "+ Audio" (⌘I). **GO** (Space) starts the cue on the playhead and moves on; double-click a row to move the playhead; **Stop all** (Esc) fades everything out, a second press cuts at once. Continue modes: wait for GO, next cue after the post-wait, next cue when this one ends. The inspector edits every setting (file region, loops, speed, level, fades, routing matrix; fade, group and control cue options). Show mode locks editing. The gear opens the output patch. "Check show" lists missing targets and files, duplicate numbers and hotkeys; missing files can be relinked from a folder. Files: `.ssmtshow`, autosave, undo.
+
 ## Microphone correction
 
 Choose your microphone in the list (Prepare step or "Audio and calibration"); its response is removed from the measurement.
