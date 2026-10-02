@@ -57,11 +57,18 @@ final class InputListStore: ObservableObject {
         change(&doc)
         guard doc != before, let undo else { return }
         undo.registerUndo(withTarget: self) { store in
-            let redo = store.doc
-            store.doc = before
-            store.undo?.registerUndo(withTarget: store) { $0.doc = redo }
+            MainActor.assumeIsolated { store.restore(before) }
         }
         undo.setActionName(name)
+    }
+
+    /// Undo / redo step: swaps the document and registers the opposite step.
+    private func restore(_ state: InputListDocument) {
+        let current = doc
+        doc = state
+        undo?.registerUndo(withTarget: self) { store in
+            MainActor.assumeIsolated { store.restore(current) }
+        }
     }
 
     // MARK: Files
