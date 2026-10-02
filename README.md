@@ -3,8 +3,11 @@
 Native macOS app (13+, Apple Silicon + Intel) for sound engineers. Feature #1: guided automatic
 system setup — subwoofer ↔ mains alignment and EQ suggestions from dual-channel FFT measurements.
 
+- **Install:** [`docs/INSTALL.md`](docs/INSTALL.md) · **User guide:** [RU](docs/USER_GUIDE.ru.md) · [EN](docs/USER_GUIDE.en.md)
 - Plan: [`docs/PLAN.md`](docs/PLAN.md) · Assumptions: [`docs/ASSUMPTIONS.md`](docs/ASSUMPTIONS.md)
-- Status: [`docs/STATUS.md`](docs/STATUS.md)
+- Status: [`docs/STATUS.md`](docs/STATUS.md) · Acceptance: [`docs/ACCEPTANCE.md`](docs/ACCEPTANCE.md)
+
+![Instruments](App/Tests/Snapshots/References/instruments.png)
 
 ## Layout
 
@@ -26,5 +29,10 @@ open SSMT.xcodeproj         # or: xcodebuild -scheme SSMT -configuration Release
 
 Core tests: `swift test -c release --package-path Packages/SSMTCore`
 (on Linux without a toolchain: `scripts/linux-swift.sh swift test -c release --package-path Packages/SSMTCore`).
+
+Snapshot tests (macOS): `xcodebuild test -scheme SSMT -configuration Debug -destination 'platform=macOS'`;
+images go to `build/snapshots`, references live in `App/Tests/Snapshots/References` (CI records missing ones).
+
+Release: push a tag `vX.Y.Z` → CI builds, ad-hoc signs, packages `SSMT-X.Y.Z.pkg` and publishes a GitHub Release.
 
 UI strings live in `scripts/strings.py` (en + ru); run `python3 scripts/strings.py generate` after editing.

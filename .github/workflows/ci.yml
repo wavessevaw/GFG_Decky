@@ -93,12 +93,40 @@ jobs:
           name: SSMT-snapshots
           path: build/snapshots
           retention-days: 14
-      - name: Package app
+      - name: Sign (ad-hoc) and build the installer package
         run: |
-          cd build/DerivedData/Build/Products/Release
-          ditto -c -k --keepParent SSMT.app SSMT-app.zip
+          APP=build/DerivedData/Build/Products/Release/SSMT.app
+          # Whole-bundle ad-hoc signature: without a sealed bundle a downloaded app is reported as "damaged".
+          codesign --force --deep --sign - "$APP"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP/Contents/Info.plist")
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          mkdir -p build/pkgroot/Applications
+          ditto "$APP" build/pkgroot/Applications/SSMT.app
+          pkgbuild --analyze --root build/pkgroot build/components.plist
+          plutil -replace 0.BundleIsRelocatable -bool NO build/components.plist
+          pkgbuild --root build/pkgroot --component-plist build/components.plist \
+            --identifier com.soundsolutions.ssmt --version "$VERSION" --install-location / \
+            build/SSMT-component.pkg
+          productbuild --package build/SSMT-component.pkg \
+            --identifier com.soundsolutions.ssmt.installer --version "$VERSION" \
+            "build/SSMT-$VERSION.pkg"
+          pkgutil --payload-files "build/SSMT-$VERSION.pkg" | head -5
+          (cd build/DerivedData/Build/Products/Release && ditto -c -k --keepParent SSMT.app SSMT-app.zip)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SSMT-installer
+          path: build/SSMT-${{ env.VERSION }}.pkg
+          retention-days: 30
       - uses: actions/upload-artifact@v4
         with:
           name: SSMT-app
           path: build/DerivedData/Build/Products/Release/SSMT-app.zip
           retention-days: 14
+      - name: Publish GitHub Release (tags v*)
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" "build/SSMT-${VERSION}.pkg" \
+            --title "SSMT ${GITHUB_REF_NAME}" --notes-file docs/INSTALL.md

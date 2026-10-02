@@ -4286,6 +4286,23 @@
         }
       }
     },
+    "target.addPoint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add point"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Добавить точку"
+          }
+        }
+      }
+    },
     "target.club": {
       "extractionState": "manual",
       "localizations": {
@@ -4299,6 +4316,57 @@
           "stringUnit": {
             "state": "translated",
             "value": "Клуб"
+          }
+        }
+      }
+    },
+    "target.custom": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Custom"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пользовательская"
+          }
+        }
+      }
+    },
+    "target.editor": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Target curve editor"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Редактор целевой кривой"
+          }
+        }
+      }
+    },
+    "target.editor.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Points are joined in log frequency; the curve is flat beyond the first and last point. The level is aligned to the measurement automatically."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Точки соединяются в логарифмической шкале частот; за крайними точками кривая горизонтальна. Уровень подстраивается к замеру автоматически."
           }
         }
       }
@@ -4350,6 +4418,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Речь"
+          }
+        }
+      }
+    },
+    "target.startFrom": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start from preset"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Взять за основу"
           }
         }
       }

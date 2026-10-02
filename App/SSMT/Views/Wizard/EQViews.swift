@@ -5,6 +5,7 @@ import SwiftUI
 struct EQPointsView: View {
     @EnvironmentObject var model: AppModel
     @EnvironmentObject var loc: Localizer
+    @State private var editingTarget = false
 
     private var verifying: Bool { model.wizard.step == .eqVerification }
     private var done: Int { verifying ? model.wizard.eqVerificationPoints.count : model.wizard.eqPoints.count }
@@ -74,13 +75,21 @@ struct EQPointsView: View {
 
     private var targetPicker: some View {
         Panel(title: loc.t("eq.target"), marking: "TGT") {
-            Picker("", selection: Binding(get: { model.wizard.configuration.target.preset },
-                                          set: { model.wizard.configuration.target = .preset($0) })) {
-                ForEach(TargetCurve.Preset.allCases.filter { $0 != .custom }, id: \.self) {
-                    Text(loc.t("target.\($0.rawValue)")).tag($0)
+            HStack {
+                Picker("", selection: Binding(get: { model.wizard.configuration.target.preset },
+                                              set: { p in
+                                                  if p == .custom { editingTarget = true } else { model.wizard.configuration.target = .preset(p) }
+                                              })) {
+                    ForEach(TargetCurve.Preset.allCases, id: \.self) {
+                        Text(loc.t("target.\($0.rawValue)")).tag($0)
+                    }
                 }
+                .labelsHidden().pickerStyle(.segmented)
+                Button { editingTarget = true } label: { Image(systemName: "slider.horizontal.3") }
+                    .buttonStyle(SSMTButtonStyle())
+                    .help(loc.t("target.editor"))
             }
-            .labelsHidden().pickerStyle(.segmented)
+            .sheet(isPresented: $editingTarget) { TargetEditorView() }
             Stepper(value: $model.wizard.configuration.eqPointCount, in: 3...9) {
                 Text(loc.t("eq.pointCount", model.wizard.configuration.eqPointCount)).font(Theme.label(12))
             }
