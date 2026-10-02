@@ -30,6 +30,25 @@ enum Theme {
     static let statusWarning = Color(hex: 0xFFC21A)
     static let statusError = Color(hex: 0xFF2D3D)
 
+    /// Continuous "how close to the target" colour: 0 = far (red) → orange → yellow → 1 = on target (green).
+    /// Used by every tuner gauge so the whole UI reads the same way.
+    static func closeness(_ c: Double) -> Color {
+        let stops: [(Double, (Double, Double, Double))] = [
+            (0.0, (1.00, 0.176, 0.239)),   // #FF2D3D red
+            (0.40, (1.00, 0.420, 0.102)),  // #FF6B1A orange
+            (0.75, (1.00, 0.761, 0.102)),  // #FFC21A yellow
+            (1.0, (0.294, 0.878, 0.541)),  // #4BE08A green
+        ]
+        let x = min(max(c.isFinite ? c : 0, 0), 1)
+        for i in 1..<stops.count where x <= stops[i].0 {
+            let (x0, a) = stops[i - 1], (x1, b) = stops[i]
+            let t = (x - x0) / (x1 - x0)
+            return Color(.sRGB, red: a.0 + (b.0 - a.0) * t, green: a.1 + (b.1 - a.1) * t,
+                         blue: a.2 + (b.2 - a.2) * t, opacity: 1)
+        }
+        return statusGood
+    }
+
     // Typography
     static func heading(_ size: CGFloat) -> Font {
         .system(size: size, weight: .heavy, design: .default).width(.condensed)

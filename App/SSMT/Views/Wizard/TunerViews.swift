@@ -1,111 +1,6 @@
 import SSMTCore
 import SwiftUI
 
-/// Guitar-tuner style gauge: a 180° scale, a needle, a green "in tune" zone in the centre and
-/// ◀ ▶ direction lamps. `value` is the normalized error (−1…1, clamped), 0 = perfect.
-struct TunerGauge: View {
-    var title: String
-    var value: Double?
-    var tolerance: Double
-    var readout: String
-    var instruction: String
-    var inTune: Bool
-    var reliable: Bool
-    var leftLabel: String
-    var rightLabel: String
-    var large = false
-
-    private var clamped: Double { min(max(value ?? 0, -1), 1) }
-
-    var body: some View {
-        VStack(spacing: 8) {
-            Text(title.uppercased()).font(Theme.label(12)).tracking(1.4).foregroundStyle(Theme.textSecondary)
-            ZStack {
-                scale
-                needle
-                    .rotationEffect(.degrees(clamped * 80), anchor: .bottom)
-                    .animation(.interpolatingSpring(stiffness: 60, damping: 11), value: clamped)
-                    .opacity(value == nil ? 0.25 : 1)
-            }
-            .frame(height: large ? 170 : 120)
-            HStack {
-                directionLamp(left: true, on: !inTune && clamped < -tolerance, label: leftLabel)
-                Spacer()
-                Text(readout)
-                    .font(Theme.mono(large ? 44 : 30, weight: .bold))
-                    .foregroundStyle(inTune ? Theme.statusGood : Theme.textPrimary)
-                    .shadow(color: inTune ? Theme.statusGood.opacity(0.6) : .clear, radius: 10)
-                Spacer()
-                directionLamp(left: false, on: !inTune && clamped > tolerance, label: rightLabel)
-            }
-            Text(instruction)
-                .font(Theme.heading(large ? 22 : 17))
-                .foregroundStyle(inTune ? Theme.statusGood : Theme.accent)
-                .multilineTextAlignment(.center)
-                .frame(minHeight: 26)
-        }
-        .padding(14)
-        .frame(maxWidth: .infinity)
-        .background(CutCornerShape(cut: 14).fill(Theme.panel))
-        .overlay(CutCornerShape(cut: 14).stroke(inTune ? Theme.statusGood.opacity(0.8) : Theme.hairlineStrong, lineWidth: inTune ? 2 : 1))
-        .shadow(color: inTune ? Theme.statusGood.opacity(0.35) : .clear, radius: 14)
-        .opacity(reliable ? 1 : 0.55)
-        .animation(.easeInOut(duration: 0.25), value: inTune)
-    }
-
-    private var scale: some View {
-        Canvas { ctx, size in
-            let center = CGPoint(x: size.width / 2, y: size.height - 6)
-            let radius = min(size.width / 2, size.height) - 10
-            func point(_ v: Double, _ r: CGFloat) -> CGPoint {
-                let a = (-90 + v * 80) * Double.pi / 180
-                return CGPoint(x: center.x + r * CGFloat(cos(a)), y: center.y + r * CGFloat(sin(a)))
-            }
-            // In-tune zone.
-            var zone = Path()
-            zone.addArc(center: center, radius: radius - 4, startAngle: .degrees(-90 - tolerance * 80),
-                        endAngle: .degrees(-90 + tolerance * 80), clockwise: false)
-            ctx.stroke(zone, with: .color(Theme.statusGood.opacity(inTune ? 1 : 0.6)), lineWidth: 8)
-            // Ticks.
-            for i in -10...10 {
-                let v = Double(i) / 10
-                let major = i % 5 == 0
-                var p = Path()
-                p.move(to: point(v, radius - (major ? 22 : 14)))
-                p.addLine(to: point(v, radius - 8))
-                ctx.stroke(p, with: .color(i == 0 ? Theme.textPrimary : Theme.textMuted.opacity(major ? 0.9 : 0.5)),
-                           lineWidth: major ? 2 : 1)
-            }
-        }
-    }
-
-    private var needle: some View {
-        GeometryReader { geo in
-            let h = min(geo.size.width / 2, geo.size.height) - 22
-            VStack(spacing: 0) {
-                Spacer(minLength: 0)
-                Capsule()
-                    .fill(inTune ? Theme.statusGood : Theme.accent)
-                    .frame(width: 4, height: h)
-                    .shadow(color: (inTune ? Theme.statusGood : Theme.accent).opacity(0.7), radius: 6)
-                Circle().fill(Theme.textPrimary).frame(width: 12, height: 12).offset(y: -6)
-            }
-            .frame(width: geo.size.width)
-        }
-    }
-
-    private func directionLamp(left: Bool, on: Bool, label: String) -> some View {
-        VStack(spacing: 2) {
-            Image(systemName: left ? "arrowtriangle.left.fill" : "arrowtriangle.right.fill")
-                .font(.system(size: large ? 26 : 20))
-                .foregroundStyle(on ? Theme.accentHot : Theme.textMuted.opacity(0.3))
-                .shadow(color: on ? Theme.accentHot.opacity(0.8) : .clear, radius: 8)
-            Text(label).font(Theme.label(10)).foregroundStyle(on ? Theme.textPrimary : Theme.textMuted)
-        }
-        .frame(width: 90)
-    }
-}
-
 /// Polarity lamp: green "correct" / blinking orange-red "switch".
 struct PolarityLamp: View {
     @EnvironmentObject var loc: Localizer
@@ -138,7 +33,7 @@ struct PolarityLamp: View {
 
     private var color: Color {
         switch wrong {
-        case .some(true): return Theme.accentHot
+        case .some(true): return Theme.closeness(0)
         case .some(false): return Theme.statusGood
         case .none: return Theme.textMuted
         }
@@ -195,7 +90,6 @@ struct TunerPanel: View {
                         tolerance: tolPhase / 90,
                         readout: r.map { String(format: "%+.2f ms", $0.delayError * 1000) } ?? "—",
                         instruction: delayInstruction(r, mainsStage: mainsStage),
-                        inTune: r?.delayInTune ?? false,
                         reliable: reliable,
                         leftLabel: loc.t("tuner.less"), rightLabel: loc.t("tuner.more"),
                         large: large)
@@ -207,7 +101,6 @@ struct TunerPanel: View {
                         tolerance: 0.5 / 6,
                         readout: r.map { String(format: "%+.1f dB", $0.levelError) } ?? "—",
                         instruction: levelInstruction(r),
-                        inTune: r?.levelInTune ?? false,
                         reliable: reliable,
                         leftLabel: loc.t("tuner.quieter"), rightLabel: loc.t("tuner.louder"),
                         large: large)

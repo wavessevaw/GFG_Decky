@@ -10,6 +10,8 @@ public struct VirtualSource: Equatable, Codable, Sendable {
     public var invertPolarity: Bool
     /// Group is powered/unmuted.
     public var enabled: Bool
+    /// EQ entered on the loudspeaker processor for this group.
+    public var processorEQ: [Biquad] = []
 
     public init(filters: [Biquad], delaySamples: Int, gainDB: Double = 0, invertPolarity: Bool = false,
                 enabled: Bool = true) {
@@ -24,7 +26,7 @@ public struct VirtualSource: Equatable, Codable, Sendable {
 
     public func response(at f: Double, sampleRate fs: Double) -> Complex {
         guard enabled else { return .zero }
-        let h = filters.reduce(Complex.one) { $0 * $1.response(at: f, sampleRate: fs) }
+        let h = (filters + processorEQ).reduce(Complex.one) { $0 * $1.response(at: f, sampleRate: fs) }
         return h * linearGain * Complex.expj(-2 * .pi * f * Double(delaySamples) / fs)
     }
 }
@@ -95,6 +97,28 @@ public struct VirtualSystem: Equatable, Codable, Sendable {
         max(sub.delaySamples, main.delaySamples) + (room.reflections.map(\.delaySamples).max() ?? 0)
     }
 
+    /// Variant of the system as heard at listening position `index` (0 = main position):
+    /// different reflection delays/gains and modal strengths, as in a real room.
+    public func atListeningPoint(_ index: Int) -> VirtualSystem {
+        guard index > 0 else { return self }
+        var s = self
+        var rng = RandomSource(seed: UInt64(index) &* 7919)
+        s.room.reflections = room.reflections.map {
+            VirtualReflection(delaySamples: max(20, $0.delaySamples + Int((rng.nextUniform() - 0.5) * 400)),
+                              gain: $0.gain * (0.6 + 0.8 * rng.nextUniform()))
+        }
+        s.room.modes = room.modes.map { m in
+            // Scale the modal boost per position (nodes / antinodes).
+            let scale = 0.3 + 1.2 * rng.nextUniform()
+            return Biquad(b0: 1 + (m.b0 - 1) * scale, b1: m.a1 + (m.b1 - m.a1) * scale,
+                          b2: m.a2 + (m.b2 - m.a2) * scale, a1: m.a1, a2: m.a2)
+        }
+        let extra = Int((rng.nextUniform() * 3) / Acoustics.speedOfSound(celsius: 20) * sampleRate)
+        s.sub.delaySamples += extra
+        s.main.delaySamples += extra
+        return s
+    }
+
     /// A typical small PA: LR24 crossover at `crossover` Hz, mains with a 2nd-order HPF at 45 Hz
     /// (cabinet), subs with an 8th-order-ish 30 Hz roll-off, given distances to the microphone.
     public static func typicalPA(sampleRate: Double = 48000, crossover: Double = 90,
@@ -123,6 +147,8 @@ public final class VirtualSystemProcessor {
 
     private var subFilter: BiquadCascade
     private var mainFilter: BiquadCascade
+    private var subEQ: BiquadCascade
+    private var mainEQ: BiquadCascade
     private var modeFilter: BiquadCascade
     private var inputHistory: [Double]
     private var sumHistory: [Double]
@@ -134,6 +160,8 @@ public final class VirtualSystemProcessor {
         self.system = system
         subFilter = BiquadCascade(system.sub.filters)
         mainFilter = BiquadCascade(system.main.filters)
+        subEQ = BiquadCascade(system.sub.processorEQ)
+        mainEQ = BiquadCascade(system.main.processorEQ)
         modeFilter = BiquadCascade(system.room.modes)
         var size = 1
         while size < system.maximumDelaySamples + 2 { size <<= 1 }
@@ -160,6 +188,24 @@ public final class VirtualSystemProcessor {
         system.main.delaySamples = mainDelaySamples
     }
 
+    /// Replaces the room (new microphone position). Reflection taps read the existing history.
+    public func updateRoom(_ room: VirtualRoom) {
+        system.room = room
+        modeFilter = BiquadCascade(room.modes)
+    }
+
+    /// Replaces the processor EQ of both groups.
+    public func updateEQ(sub: [Biquad], main: [Biquad]) {
+        if sub != system.sub.processorEQ {
+            system.sub.processorEQ = sub
+            subEQ = BiquadCascade(sub)
+        }
+        if main != system.main.processorEQ {
+            system.main.processorEQ = main
+            mainEQ = BiquadCascade(main)
+        }
+    }
+
     public func process(_ input: [Float]) -> [Float] {
         let s = system
         let gSub = s.sub.enabled ? s.sub.linearGain : 0
@@ -172,8 +218,8 @@ public final class VirtualSystemProcessor {
             let xs = inputHistory[(position - s.sub.delaySamples) & mask]
             let xm = inputHistory[(position - s.main.delaySamples) & mask]
             // Filters always run so that toggling groups behaves like muting an amplifier.
-            let ys = subFilter.process(xs) * gSub
-            let ym = mainFilter.process(xm) * gMain
+            let ys = subEQ.process(subFilter.process(xs)) * gSub
+            let ym = mainEQ.process(mainFilter.process(xm)) * gMain
             let direct = ys + ym
             sumHistory[position] = direct
             var y = direct

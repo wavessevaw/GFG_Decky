@@ -47,6 +47,11 @@ struct PreparationStepView: View {
                 }
             }
 
+            HStack(alignment: .top, spacing: 12) {
+                SNRGauge()
+                SignalQualityGauge(band: 40...16000)
+            }
+
             Panel(title: loc.t("prep.system"), marking: "SYS") {
                 Toggle(loc.t("prep.hasSub"), isOn: $model.wizard.configuration.hasSubwoofer)
                 HStack {

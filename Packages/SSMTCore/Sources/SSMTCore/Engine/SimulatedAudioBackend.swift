@@ -7,6 +7,8 @@ public struct VirtualProcessorSettings: Equatable, Codable, Sendable {
     public var mainsDelayMs: Double = 0
     public var subPolarityInverted = false
     public var subGainDB: Double = 0
+    public var subEQ: [PEQFilter] = []
+    public var mainsEQ: [PEQFilter] = []
     public init() {}
 }
 
@@ -32,6 +34,7 @@ public final class SimulatedAudioBackend: AudioIOBackend, @unchecked Sendable {
     private var stopRequested = false
     private var pendingGroups: (sub: Bool, main: Bool)?
     private var pendingProcessor: ((VirtualSystem) -> VirtualSystem)?
+    private var pendingRoom: VirtualRoom?
     private let baseSystem: VirtualSystem
     public private(set) var processorSettings = VirtualProcessorSettings()
     /// Extra analog gain of the virtual microphone preamp (dB).
@@ -84,6 +87,8 @@ public final class SimulatedAudioBackend: AudioIOBackend, @unchecked Sendable {
             s.main.delaySamples = base.main.delaySamples + Int((p.mainsDelayMs / 1000 * fs).rounded())
             s.sub.invertPolarity = base.sub.invertPolarity != p.subPolarityInverted
             s.sub.gainDB = base.sub.gainDB + p.subGainDB
+            s.sub.processorEQ = p.subEQ.map { $0.biquad(sampleRate: fs) }
+            s.main.processorEQ = p.mainsEQ.map { $0.biquad(sampleRate: fs) }
             return s
         }
     }
@@ -109,7 +114,12 @@ public final class SimulatedAudioBackend: AudioIOBackend, @unchecked Sendable {
             let n = change(processor.system)
             processor.updateProcessor(subDelaySamples: n.sub.delaySamples, subGainDB: n.sub.gainDB,
                                       subInverted: n.sub.invertPolarity, mainDelaySamples: n.main.delaySamples)
+            processor.updateEQ(sub: n.sub.processorEQ, main: n.main.processorEQ)
             pendingProcessor = nil
+        }
+        if let room = pendingRoom {
+            processor.updateRoom(room)
+            pendingRoom = nil
         }
         stateLock.unlock()
 

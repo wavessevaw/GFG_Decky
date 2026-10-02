@@ -73,39 +73,29 @@ struct CaptureStepView: View {
 
     private var progressPanel: some View {
         let p = model.snapshot?.capture
-        return Panel(title: loc.t("capture.progress"), marking: "REC") {
-            HStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 6) {
+        return HStack(alignment: .top, spacing: 12) {
+            SignalQualityGauge(band: step.qualityBand(crossover: model.wizard.configuration.crossover))
+            Panel(title: loc.t("capture.progress"), marking: "REC") {
+                VStack(alignment: .leading, spacing: 10) {
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
                             Rectangle().fill(Color.black)
-                            Rectangle().fill(Theme.accentHot).frame(width: geo.size.width * CGFloat(p?.fraction ?? 0))
-                                .shadow(color: Theme.accentHot.opacity(0.6), radius: 6)
+                            Rectangle().fill(Theme.closeness(p?.fraction ?? 0))
+                                .frame(width: geo.size.width * CGFloat(p?.fraction ?? 0))
+                                .shadow(color: Theme.closeness(p?.fraction ?? 0).opacity(0.6), radius: 6)
                         }
                     }
-                    .frame(height: 12)
+                    .frame(height: 16)
                     .overlay(Rectangle().stroke(Theme.hairline, lineWidth: 1))
                     Text(p.map { String(format: "%.0f / %.0f s", $0.elapsed, $0.duration) }
                          ?? String(format: "%.0f s", model.wizard.configuration.captureSeconds))
-                        .font(Theme.mono(12)).foregroundStyle(Theme.textSecondary)
+                        .font(Theme.mono(18, weight: .semibold)).foregroundStyle(Theme.textPrimary)
+                    Text(loc.t(model.wizardCaptureRunning ? "capture.running" : "capture.ready"))
+                        .font(.system(size: 13)).foregroundStyle(Theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                liveQuality
             }
-        }
-    }
-
-    /// Live traffic light from the running (exponential) analysis in this step's band.
-    @ViewBuilder private var liveQuality: some View {
-        if let tf = model.snapshot?.transfer {
-            let a = CaptureAssessment.assess(tf, band: step.qualityBand(crossover: model.wizard.configuration.crossover),
-                                             clipped: model.snapshot?.microphone.clipped ?? false, minimumAverages: 0)
-            switch a.quality {
-            case .good: StatusBadge(level: .good, text: loc.t("quality.good"))
-            case .weak: StatusBadge(level: .warning, text: loc.t("quality.weak"))
-            case .repeatRequired: StatusBadge(level: .error, text: loc.t("quality.repeat"))
-            }
-        } else {
-            StatusBadge(level: .idle, text: loc.t("quality.none"))
+            .frame(maxWidth: 320)
         }
     }
 
