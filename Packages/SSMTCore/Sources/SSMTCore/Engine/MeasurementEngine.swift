@@ -132,6 +132,20 @@ public final class MeasurementEngine: @unchecked Sendable {
         }
     }
 
+    /// Live averaging time constant. Short (≈1 s) for the tuner so the needle follows the knob,
+    /// longer for steady display. The analyzer layout stays identical to captures, so live data
+    /// can be compared with captured responses bin for bin.
+    public func setLiveAveraging(seconds: Double) {
+        queue.async {
+            guard self.configuration.liveAveragingSeconds != seconds else { return }
+            self.configuration.liveAveragingSeconds = seconds
+            let a = MultiWindowAnalyzer(config: .standard(sampleRate: self.backend.sampleRate,
+                                                          averaging: .exponential(timeConstant: seconds)))
+            a.setReferenceDelay(samples: self.referenceDelay)
+            self.live = a
+        }
+    }
+
     public func resetLiveAverages() { queue.async { self.live.reset() } }
     public func resetClipIndicators() {
         queue.async {

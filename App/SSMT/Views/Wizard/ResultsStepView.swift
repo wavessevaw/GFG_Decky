@@ -8,7 +8,7 @@ struct ResultsStepView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            InstructionHeader(marking: "STEP 4 · RESULT", title: loc.t("results.title"), text: loc.t("results.text"))
+            InstructionHeader(marking: "STEP 4 · TUNE", title: loc.t("results.title"), text: loc.t("results.text"))
 
             if let error = model.wizard.alignmentError {
                 HazardNotice(text: loc.t("results.failed") + "\n" + error, color: Theme.statusError)
@@ -23,18 +23,42 @@ struct ResultsStepView: View {
                 if model.wizard.configuration.fastMode {
                     HazardNotice(text: loc.t("results.fastMode"))
                 }
-                Panel(title: loc.t("results.prediction"), marking: String(format: "XO %.0f Hz", a.crossover)) {
-                    ComparisonPlotView(curves: predictionCurves, band: a.overlapBand)
-                        .frame(height: 240)
+
+                Panel(title: loc.t("tuner.title"), marking: "LIVE") {
+                    TunerPanel()
                 }
+                if model.isSimulation { VirtualProcessorPanel() }
+
+                DisclosureGroup(loc.t("results.prediction")) {
+                    ComparisonPlotView(curves: predictionCurves, band: a.overlapBand)
+                        .frame(height: 220)
+                }
+                .font(Theme.label(12))
+
                 HStack(spacing: 12) {
                     Button(loc.t("wizard.back")) { model.wizardBack() }.buttonStyle(SSMTButtonStyle())
-                    WizardPrimaryButton(title: loc.t("results.applied"), systemImage: "checkmark.seal.fill") {
-                        model.wizardBeginVerification()
+                    if model.tunerNeedsMainsStage && model.tunerStage == .adjustSub {
+                        WizardPrimaryButton(title: loc.t("tuner.next.mains"), systemImage: "arrow.right.circle.fill",
+                                            enabled: subStageDone) {
+                            model.tunerAdvanceToMains()
+                        }
+                    } else {
+                        WizardPrimaryButton(title: loc.t(allInTune ? "tuner.verify.ready" : "results.applied"),
+                                            systemImage: "checkmark.seal.fill") {
+                            model.wizardBeginVerification()
+                        }
                     }
                 }
             }
         }
+        .onAppear { model.startTuner() }
+        .onDisappear { model.stopTuner() }
+    }
+
+    private var allInTune: Bool { model.tunerReading?.allInTune ?? false }
+    private var subStageDone: Bool {
+        guard let r = model.tunerReading else { return false }
+        return !r.polarityWrong && r.levelInTune
     }
 
     private var predictionCurves: [ComparisonPlotView.Curve] {

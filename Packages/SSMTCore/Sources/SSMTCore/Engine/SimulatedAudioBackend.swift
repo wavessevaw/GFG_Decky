@@ -1,6 +1,15 @@
 import Foundation
 
 /// Virtual audio interface + virtual room. Lets the whole app (and the wizard) run without hardware.
+/// Knob positions of the simulated loudspeaker processor (relative to the virtual room's initial state).
+public struct VirtualProcessorSettings: Equatable, Codable, Sendable {
+    public var subDelayMs: Double = 0
+    public var mainsDelayMs: Double = 0
+    public var subPolarityInverted = false
+    public var subGainDB: Double = 0
+    public init() {}
+}
+
 public final class SimulatedAudioBackend: AudioIOBackend, @unchecked Sendable {
     public let sampleRate: Double
     public let inputRing: RealtimeRing
@@ -23,6 +32,8 @@ public final class SimulatedAudioBackend: AudioIOBackend, @unchecked Sendable {
     private var stopRequested = false
     private var pendingGroups: (sub: Bool, main: Bool)?
     private var pendingProcessor: ((VirtualSystem) -> VirtualSystem)?
+    private let baseSystem: VirtualSystem
+    public private(set) var processorSettings = VirtualProcessorSettings()
     /// Extra analog gain of the virtual microphone preamp (dB).
     public var micPreampDB: Double = 0
 
@@ -35,6 +46,7 @@ public final class SimulatedAudioBackend: AudioIOBackend, @unchecked Sendable {
         generatorBank = bank
         self.bank = GeneratorBank(spec: bank, sampleRate: system.sampleRate, safety: safety, seed: seed)
         processor = VirtualSystemProcessor(system: system, seed: seed &+ 99)
+        baseSystem = system
         latencyLine = [Float](repeating: 0, count: deviceLatency)
         let ringFrames = Int(system.sampleRate * 4)
         inputRing = RealtimeRing(minimumFrames: ringFrames, channels: 2)
@@ -59,17 +71,31 @@ public final class SimulatedAudioBackend: AudioIOBackend, @unchecked Sendable {
         stateLock.unlock()
     }
 
-    /// Applies an alignment recommendation to the virtual processor: delay (to the sub, or to the
-    /// mains when negative), polarity and sub level.
-    public func applyAlignment(delaySeconds: Double, invertPolarity: Bool, subGainDB: Double) {
-        let samples = Int((delaySeconds * sampleRate).rounded())
+    /// Sets the virtual processor knobs (absolute, relative to the initial room state).
+    public func setProcessor(_ p: VirtualProcessorSettings) {
+        stateLock.lock()
+        processorSettings = p
+        stateLock.unlock()
+        let base = baseSystem
+        let fs = sampleRate
         applyProcessorChange { sys in
             var s = sys
-            if samples >= 0 { s.sub.delaySamples += samples } else { s.main.delaySamples -= samples }
-            if invertPolarity { s.sub.invertPolarity.toggle() }
-            s.sub.gainDB += subGainDB
+            s.sub.delaySamples = base.sub.delaySamples + Int((p.subDelayMs / 1000 * fs).rounded())
+            s.main.delaySamples = base.main.delaySamples + Int((p.mainsDelayMs / 1000 * fs).rounded())
+            s.sub.invertPolarity = base.sub.invertPolarity != p.subPolarityInverted
+            s.sub.gainDB = base.sub.gainDB + p.subGainDB
             return s
         }
+    }
+
+    /// Applies an alignment recommendation to the virtual processor: delay (to the sub, or to the
+    /// mains when negative), polarity and sub level — on top of the current knob positions.
+    public func applyAlignment(delaySeconds: Double, invertPolarity: Bool, subGainDB: Double) {
+        var p = processorSettings
+        if delaySeconds >= 0 { p.subDelayMs += delaySeconds * 1000 } else { p.mainsDelayMs -= delaySeconds * 1000 }
+        if invertPolarity { p.subPolarityInverted.toggle() }
+        p.subGainDB += subGainDB
+        setProcessor(p)
     }
 
     /// Renders `frames` frames synchronously (used by the real-time thread and by tests).

@@ -83,6 +83,21 @@ final class AppModel: ObservableObject {
     @Published private(set) var lastAcceptance: CaptureAcceptance?
     @Published private(set) var simulationSettingsApplied = false
 
+    // Tuner (live alignment needle)
+    @Published private(set) var tunerActive = false
+    @Published private(set) var tunerStage: AlignmentTuner.Stage = .adjustSub
+    @Published private(set) var tunerReading: AlignmentTuner.Reading?
+    /// Virtual processor knobs (simulation only) — turned by the user like a real processor.
+    @Published var simProcessor = VirtualProcessorSettings() {
+        didSet {
+            simulationBackend?.setProcessor(simProcessor)
+            // The simulated knob change is known exactly: restart averaging so the needle reacts fast.
+            if tunerActive { engine?.resetLiveAverages() }
+        }
+    }
+    private var tuner: AlignmentTuner?
+    private var lastTunerUpdate = Date.distantPast
+
     // Display
     @Published var smoothing: SmoothingResolution = .oct12
     @Published var coherenceThreshold: Double = 0.6
@@ -168,7 +183,7 @@ final class AppModel: ObservableObject {
         config.referenceMode = referenceMode
         let engine = MeasurementEngine(backend: backend, configuration: config)
         engine.setSnapshotHandler { [weak self] snap in
-            Task { @MainActor in self?.snapshot = snap }
+            Task { @MainActor in self?.receive(snap) }
         }
         do {
             try engine.start()
@@ -183,7 +198,17 @@ final class AppModel: ObservableObject {
         noiseFloor = nil
         autoLevelState = .idle
         simulationSettingsApplied = false
+        simProcessor = VirtualProcessorSettings()
+        stopTuner()
         wizard = SetupWizard(configuration: wizard.configuration)
+    }
+
+    private func receive(_ snap: LiveSnapshot) {
+        snapshot = snap
+        guard tunerActive, let tuner, let tf = snap.transfer,
+              snap.timestamp.timeIntervalSince(lastTunerUpdate) >= 0.25 else { return }
+        lastTunerUpdate = snap.timestamp
+        tunerReading = tuner.read(live: tf)
     }
 
     private func makeHardwareBackend() throws -> AudioIOBackend {
@@ -393,12 +418,14 @@ final class AppModel: ObservableObject {
     }
 
     func wizardBeginVerification() {
+        stopTuner()
         lastAcceptance = nil
         wizard.beginVerification()
         if isSimulation { simulateGroupsForStep() }
     }
 
     func wizardBack() {
+        stopTuner()
         wizardCancelCapture()
         lastAcceptance = nil
         wizard.goBack()
@@ -416,6 +443,46 @@ final class AppModel: ObservableObject {
         }
     }
 
+    // MARK: - Tuner
+
+    /// Whether the mains need a second tuner stage (the subs arrive late).
+    var tunerNeedsMainsStage: Bool { wizard.alignment?.delayTarget == .mains }
+
+    /// Starts the live needle: all groups on, mains are the fixed reference, the user turns the sub knobs.
+    func startTuner() {
+        guard let engine, let a = wizard.alignment, let mains = wizard.mainsResponse else { return }
+        tuner = AlignmentTuner(stage: .adjustSub, fixed: mains, alignment: a, settings: wizard.configuration.alignmentSettings)
+        tunerStage = .adjustSub
+        tunerReading = nil
+        tunerActive = true
+        if !noiseOn { setNoise(on: true) }
+        if isSimulation {
+            simulationSubOn = true
+            simulationMainOn = true
+        }
+        engine.setLiveAveraging(seconds: 1.0)
+        engine.resetLiveAverages()
+    }
+
+    /// Sub is done; it becomes the fixed reference and the needle now shows the mains delay.
+    func tunerAdvanceToMains() {
+        guard let t = tuner, let tf = snapshot?.transfer, let a = wizard.alignment else { return }
+        let adjustedSub = t.changingResponse(live: tf)
+        tuner = AlignmentTuner(stage: .adjustMainsDelay, fixed: adjustedSub, alignment: a,
+                               settings: wizard.configuration.alignmentSettings)
+        tunerStage = .adjustMainsDelay
+        tunerReading = nil
+        engine?.resetLiveAverages()
+    }
+
+    func stopTuner() {
+        guard tunerActive else { return }
+        tunerActive = false
+        tuner = nil
+        tunerReading = nil
+        engine?.setLiveAveraging(seconds: 1.5)
+    }
+
     /// Simulation only: mute/unmute the virtual groups as the current step asks the user to.
     func simulateGroupsForStep() {
         guard isSimulation, let g = wizard.step.requiredGroups else { return }
@@ -426,8 +493,11 @@ final class AppModel: ObservableObject {
     /// Simulation only: enter the recommendation on the virtual processor (once).
     func simulateApplyRecommendation() {
         guard isSimulation, !simulationSettingsApplied, let a = wizard.alignment else { return }
-        simulationBackend?.applyAlignment(delaySeconds: a.roundedDelay, invertPolarity: a.best.invertPolarity,
-                                          subGainDB: a.subGainDB)
+        var p = simProcessor
+        if a.roundedDelay >= 0 { p.subDelayMs += a.roundedDelay * 1000 } else { p.mainsDelayMs -= a.roundedDelay * 1000 }
+        if a.best.invertPolarity { p.subPolarityInverted.toggle() }
+        p.subGainDB += a.subGainDB
+        simProcessor = p
         simulationSettingsApplied = true
     }
 

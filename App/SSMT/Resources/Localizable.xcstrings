@@ -2456,13 +2456,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enter the values below on your loudspeaker processor, then run the verification."
+            "value": "The cards show the target. Turn the knobs on your processor while watching the needles — like a guitar tuner — until everything is green."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Введите значения ниже в процессор акустической системы, затем сделайте проверочный замер."
+            "value": "Карточки — это цель. Крутите ручки процессора, глядя на стрелки, как в гитарном тюнере, пока всё не станет зелёным."
           }
         }
       }
@@ -2473,13 +2473,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enter these settings"
+            "value": "Tune by the needle"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Введите эти настройки"
+            "value": "Настройте по стрелке"
           }
         }
       }
@@ -2960,6 +2960,397 @@
         }
       }
     },
+    "tuner.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All loudspeakers on, noise running. The needle follows your changes within 1–2 seconds; wait for it to settle."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Все громкоговорители включены, шум идёт. Стрелка реагирует на изменения за 1–2 секунды — дождитесь, пока она успокоится."
+          }
+        }
+      }
+    },
+    "tuner.inTune": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IN TUNE"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "В СТРОЮ"
+          }
+        }
+      }
+    },
+    "tuner.less": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "less"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "меньше"
+          }
+        }
+      }
+    },
+    "tuner.level.down": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn the subwoofer down"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Убавьте уровень сабвуфера"
+          }
+        }
+      }
+    },
+    "tuner.level.up": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn the subwoofer up"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Прибавьте уровень сабвуфера"
+          }
+        }
+      }
+    },
+    "tuner.louder": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "louder"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "громче"
+          }
+        }
+      }
+    },
+    "tuner.mains.less": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reduce mains delay"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Уменьшите задержку топов"
+          }
+        }
+      }
+    },
+    "tuner.mains.more": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add mains delay"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Добавьте задержку топам"
+          }
+        }
+      }
+    },
+    "tuner.mainsLater": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The subwoofers arrive late: the mains delay is tuned in the next step."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сабвуферы приходят позже: задержку топов настроим следующим шагом."
+          }
+        }
+      }
+    },
+    "tuner.more": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "more"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "больше"
+          }
+        }
+      }
+    },
+    "tuner.next.mains": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subwoofer done → mains delay"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сабвуфер готов → задержка топов"
+          }
+        }
+      }
+    },
+    "tuner.polarity.ok": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Correct"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Верно"
+          }
+        }
+      }
+    },
+    "tuner.polarity.switch": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Switch polarity"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Переключите полярность"
+          }
+        }
+      }
+    },
+    "tuner.quieter": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "quieter"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "тише"
+          }
+        }
+      }
+    },
+    "tuner.scale": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Full scale = a quarter period at the crossover (%.2f ms)"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вся шкала = четверть периода на частоте раздела (%.2f мс)"
+          }
+        }
+      }
+    },
+    "tuner.stage.mains": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mains delay"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Задержка топов"
+          }
+        }
+      }
+    },
+    "tuner.stage.sub": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subwoofer: polarity, level and delay"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сабвуфер: полярность, уровень и задержка"
+          }
+        }
+      }
+    },
+    "tuner.sub.less": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reduce subwoofer delay"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Уменьшите задержку сабвуфера"
+          }
+        }
+      }
+    },
+    "tuner.sub.more": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add subwoofer delay"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Добавьте задержку сабвуферу"
+          }
+        }
+      }
+    },
+    "tuner.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live tuner"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Тюнер"
+          }
+        }
+      }
+    },
+    "tuner.unreliable": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unstable signal"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сигнал нестабилен"
+          }
+        }
+      }
+    },
+    "tuner.verify.ready": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All in tune → verify"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Всё в строю → проверка"
+          }
+        }
+      }
+    },
+    "tuner.waiting": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listening…"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Слушаю…"
+          }
+        }
+      }
+    },
     "verdict.checkSettings": {
       "extractionState": "manual",
       "localizations": {
@@ -3143,6 +3534,108 @@
           "stringUnit": {
             "state": "translated",
             "value": "Сложение"
+          }
+        }
+      }
+    },
+    "vproc.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Simulation: these are the knobs of the virtual loudspeaker processor. Turn them and watch the needles."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Симуляция: это ручки виртуального процессора. Крутите их и смотрите на стрелки."
+          }
+        }
+      }
+    },
+    "vproc.mainsDelay": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mains delay"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Задержка топов"
+          }
+        }
+      }
+    },
+    "vproc.subDelay": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sub delay"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Задержка саба"
+          }
+        }
+      }
+    },
+    "vproc.subLevel": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sub level"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Уровень саба"
+          }
+        }
+      }
+    },
+    "vproc.subPolarity": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sub polarity inverted"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Полярность саба инвертирована"
+          }
+        }
+      }
+    },
+    "vproc.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Virtual processor"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Виртуальный процессор"
           }
         }
       }
