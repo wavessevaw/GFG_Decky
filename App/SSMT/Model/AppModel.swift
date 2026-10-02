@@ -110,6 +110,8 @@ final class AppModel: ObservableObject {
     @Published var coherenceThreshold: Double = 0.6
     @Published var visibleGraphs: Set<GraphKind> = [.magnitude, .phase, .coherence]
     @Published var stageMode = false
+    /// Audio and calibration settings sheet (wizard mode).
+    @Published var showSettings = false
 
     // Simulation controls (stand-in for muting groups on the processor)
     @Published var simulationSubOn = true { didSet { applySimulationGroups() } }

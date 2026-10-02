@@ -26,7 +26,7 @@ struct PolarityLamp: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
-        .background(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).fill(Theme.panel))
+        .background(GlassBackground())
         .onAppear {
             withAnimation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true)) { blink = true }
         }
@@ -125,8 +125,6 @@ struct VirtualProcessorPanel: View {
             knob(loc.t("vproc.subLevel"), value: $model.simProcessor.subGainDB, range: -12...6, step: 0.5, format: "%+.1f dB")
             Toggle(loc.t("vproc.subPolarity"), isOn: $model.simProcessor.subPolarityInverted)
         }
-        .padding(14)
-        .background(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).fill(Theme.panel))
     }
 
     private func knob(_ title: String, value: Binding<Double>, range: ClosedRange<Double>, step: Double,

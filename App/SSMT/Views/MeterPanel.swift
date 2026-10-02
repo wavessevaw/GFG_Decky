@@ -7,7 +7,7 @@ struct MeterPanel: View {
 
     var body: some View {
         let s = model.snapshot
-        Panel(title: loc.t("meters.title"), marking: "IN-03") {
+        Panel(title: loc.t("meters.title")) {
             MeterBar(label: loc.t("meters.mic"), rmsDBFS: s?.microphone.rmsDBFS ?? -120,
                      peakDBFS: s?.microphone.peakDBFS ?? -120, clipped: s?.microphone.clipped ?? false,
                      clipText: loc.t("meters.clip"))

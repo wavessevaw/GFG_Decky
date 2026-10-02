@@ -35,17 +35,17 @@ final class SnapshotTests: XCTestCase {
 
     func testInstruments() throws {
         let view = HStack(spacing: 16) {
-            TunerGauge(title: "Задержка сабвуфера", value: 0.45, tolerance: 10.0 / 90, readout: "+1.25 ms",
+            TunerGauge(title: "Задержка сабвуфера", value: 0.45, tolerance: 10.0 / 90, readout: "+1.25",
                        instruction: "Добавьте задержку сабвуферу", leftLabel: "меньше", rightLabel: "больше",
                        scaleLabels: ["−2.8", "−1.4", "0", "+1.4", "+2.8"], unit: "мс")
-            TunerGauge(title: "Задержка сабвуфера", value: 0.03, tolerance: 10.0 / 90, readout: "+0.08 ms",
-                       instruction: "В СТРОЮ", leftLabel: "меньше", rightLabel: "больше",
+            TunerGauge(title: "Задержка сабвуфера", value: 0.03, tolerance: 10.0 / 90, readout: "+0.08",
+                       instruction: "В строю", leftLabel: "меньше", rightLabel: "больше",
                        scaleLabels: ["−2.8", "−1.4", "0", "+1.4", "+2.8"], unit: "мс")
-            TunerGauge(title: "Качество сигнала", value: 0.62, mode: .oneSided, tolerance: 0.91, readout: "64 %",
+            TunerGauge(title: "Качество сигнала", value: 0.62, mode: .oneSided, tolerance: 0.91, readout: "64",
                        instruction: "Слабо — тише или громче", scaleLabels: ["30", "44", "58", "71", "85"], unit: "%")
         }
-        .padding(16)
-        try snapshot(view, size: CGSize(width: 1380, height: 330), name: "instruments", loc: Self.ru)
+        .padding(16).background(Backdrop())
+        try snapshot(view, size: CGSize(width: 1380, height: 340), name: "instruments", loc: Self.ru)
     }
 
     func testMiniMetersAndPolarity() throws {
@@ -56,7 +56,7 @@ final class SnapshotTests: XCTestCase {
             MiniMeter(value: -0.05, tolerance: 0.5 / 6, readout: "−0.3 dB")
             MiniMeter(value: 0.15, tolerance: 0.5 / 6, readout: "+0.9 dB")
         }
-        .padding(16)
+        .padding(16).background(Backdrop())
         try snapshot(view, size: CGSize(width: 560, height: 330), name: "mini-meters", loc: Self.ru)
     }
 
@@ -84,23 +84,23 @@ final class SnapshotTests: XCTestCase {
     }
 
     func testPreparation() throws {
-        try snapshot(PreparationStepView(showSettings: .constant(false)).padding(16), size: CGSize(width: 900, height: 1250), name: "step0-preparation", loc: Self.ru)
+        try snapshot(PreparationStepView().padding(16).background(Backdrop()), size: CGSize(width: 1120, height: 1000), name: "step0-preparation", loc: Self.ru)
     }
 
     func testTunerScreen() throws {
-        try snapshot(ResultsStepView().padding(16), size: CGSize(width: 1000, height: 1300), name: "step4-tuner", loc: Self.ru)
+        try snapshot(ResultsStepView().padding(16).background(Backdrop()), size: CGSize(width: 1000, height: 1300), name: "step4-tuner", loc: Self.ru)
     }
 
     func testAlignmentCheck() throws {
-        try snapshot(AlignmentCheckView().padding(16), size: CGSize(width: 1000, height: 1000), name: "step5-verify", loc: Self.ru)
+        try snapshot(AlignmentCheckView().padding(16).background(Backdrop()), size: CGSize(width: 1000, height: 1000), name: "step5-verify", loc: Self.ru)
     }
 
     func testEQTuning() throws {
-        try snapshot(EQTuningView().padding(16), size: CGSize(width: 1100, height: 1300), name: "step7-eq", loc: Self.ru)
+        try snapshot(EQTuningView().padding(16).background(Backdrop()), size: CGSize(width: 1100, height: 1300), name: "step7-eq", loc: Self.ru)
     }
 
     func testFinished() throws {
-        try snapshot(FinishedStepView().padding(16), size: CGSize(width: 1000, height: 1250), name: "finished", loc: Self.ru)
+        try snapshot(FinishedStepView().padding(16).background(Backdrop()), size: CGSize(width: 1000, height: 1250), name: "finished", loc: Self.ru)
     }
 
     func testMiniWindow() throws {

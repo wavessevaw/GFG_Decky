@@ -1,8 +1,10 @@
 import SwiftUI
 
-/// Common layout of every wizard step: one-line title, short subtitle, optional details behind an
-/// info button, the content in the middle and one row of actions at the bottom.
+/// Common layout of every wizard step: "Step n of 5", a large title with a short description
+/// (details behind an info button), the content and one action row at the bottom.
 struct StepScaffold<Content: View, Actions: View>: View {
+    @EnvironmentObject var model: AppModel
+    @EnvironmentObject var loc: Localizer
     var title: String
     var subtitle: String = ""
     var info: String? = nil
@@ -10,25 +12,26 @@ struct StepScaffold<Content: View, Actions: View>: View {
     @ViewBuilder var actions: Actions
 
     var body: some View {
-        VStack(spacing: 36) {
-            VStack(spacing: 6) {
-                HStack(spacing: 8) {
-                    Text(title).font(.system(size: 28, weight: .semibold)).foregroundStyle(Theme.textPrimary)
-                        .multilineTextAlignment(.center)
+        VStack(alignment: .leading, spacing: 22) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(String(format: loc.t("stage.counter"), WizardStage.of(model.wizard.step).rawValue + 1, WizardStage.allCases.count))
+                    .font(.system(size: 12, weight: .medium)).foregroundStyle(Theme.textSecondary)
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Text(title).font(.system(size: 30, weight: .bold)).foregroundStyle(Theme.textPrimary)
                     if let info { InfoButton(text: info) }
                 }
                 if !subtitle.isEmpty {
-                    Text(subtitle).font(.system(size: 15)).foregroundStyle(Theme.textSecondary)
-                        .multilineTextAlignment(.center)
+                    Text(subtitle).font(.system(size: 14)).foregroundStyle(Theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             content
             actions
         }
-        .frame(maxWidth: 900)
-        .frame(maxWidth: .infinity)
-        .padding(.top, 24)
-        .padding(.bottom, 32)
+        .frame(maxWidth: 1180, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, 8)
+        .padding(.bottom, 24)
     }
 }
 
@@ -51,7 +54,7 @@ struct InfoButton: View {
     }
 }
 
-/// Bottom action row: quiet secondary actions on the left, one primary button on the right.
+/// Bottom action row: quiet secondary actions on the left, the wide primary button filling the rest.
 struct ActionRow<Secondary: View>: View {
     var primaryTitle: String
     var primaryIcon: String
@@ -62,10 +65,8 @@ struct ActionRow<Secondary: View>: View {
     var body: some View {
         HStack(spacing: 18) {
             secondary
-            Spacer()
             WizardPrimaryButton(title: primaryTitle, systemImage: primaryIcon, enabled: primaryEnabled, action: primaryAction)
-                .frame(minWidth: 220)
-                .fixedSize()
+                .frame(maxWidth: .infinity)
         }
     }
 }
@@ -103,12 +104,15 @@ struct Collapsible<Content: View>: View {
                     Text(title)
                     Spacer()
                 }
-                .font(Theme.label(12)).foregroundStyle(Theme.textSecondary)
+                .font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.textSecondary)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             if expanded { content.transition(.opacity) }
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(GlassBackground(radius: 12))
     }
 }
 
@@ -126,7 +130,7 @@ struct ValueChip: View {
         }
         .padding(.vertical, 14)
         .frame(maxWidth: .infinity)
-        .background(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).fill(Theme.panel))
+        .background(GlassBackground())
     }
 }
 
@@ -151,32 +155,6 @@ struct StatusTile<Action: View>: View {
         .padding(.vertical, 20)
         .padding(.horizontal, 12)
         .frame(maxWidth: .infinity)
-        .background(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).fill(Theme.panel))
+        .background(GlassBackground())
     }
 }
-
-/// Thin step progress for the top bar: segments + "4 / 8 · TUNER".
-struct ProgressStrip: View {
-    @EnvironmentObject var loc: Localizer
-    var step: SSMTCoreStep
-
-    private let total = 9
-
-    var body: some View {
-        HStack(spacing: 12) {
-            HStack(spacing: 3) {
-                ForEach(0..<total, id: \.self) { i in
-                    Capsule()
-                        .fill(i < step.index ? Theme.textSecondary : (i == step.index ? Theme.accent : Theme.hairlineStrong))
-                        .frame(width: 14, height: 3)
-                }
-            }
-            Text("\(min(step.index, total - 1)) / \(total - 1) · " + loc.t("wizard.step.\(step.index)"))
-                .font(Theme.label(12)).foregroundStyle(Theme.textSecondary)
-                .lineLimit(1)
-        }
-    }
-}
-
-/// Lightweight wrapper so the strip does not depend on the wizard type directly.
-struct SSMTCoreStep { var index: Int }

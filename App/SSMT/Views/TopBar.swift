@@ -1,46 +1,23 @@
 import SSMTCore
 import SwiftUI
 
-/// Minimal top bar: logo · step progress · noise · mini window · menu · STOP.
+/// Toolbar above the content: system status · noise · mini window · more · STOP.
 struct TopBar: View {
     @EnvironmentObject var model: AppModel
     @EnvironmentObject var loc: Localizer
-    var brandNamespace: Namespace.ID? = nil
-    var showBrand = true
-    @Binding var showSettings: Bool
-    @State private var showAbout = false
 
     var body: some View {
-        HStack(spacing: 16) {
-            Button { showAbout = true } label: {
-                ZStack {
-                    if showBrand {
-                        BrandMark(variant: .compact, height: 22).modifier(MatchedBrand(namespace: brandNamespace))
-                    }
-                }
-                .frame(minWidth: 40, minHeight: 22)
+        HStack(spacing: 10) {
+            if model.appMode == .expert {
+                Text(loc.t("mode.expert")).font(Theme.heading(15)).foregroundStyle(Theme.textPrimary)
             }
-            .buttonStyle(.plain)
-            .help(loc.t("about.title"))
-            .popover(isPresented: $showAbout) { AboutView() }
-
-            if model.appMode == .wizard {
-                ProgressStrip(step: SSMTCoreStep(index: model.wizard.step.rawValue))
-            } else {
-                Text(loc.t("mode.expert")).font(Theme.label(11))
-                    .foregroundStyle(Theme.textSecondary)
-            }
-
             Spacer()
 
-            if let d = model.delay, d.isReliable {
-                Text(String(format: "Δt %.2f ms", d.milliseconds)).font(Theme.mono(11)).foregroundStyle(Theme.textMuted)
-            }
+            statusPill
 
             Button { model.toggleNoise() } label: {
-                HStack(spacing: 6) {
-                    Circle().fill(model.noiseOn ? Theme.accentHot : Theme.textMuted).frame(width: 7, height: 7)
-                        .shadow(color: model.noiseOn ? Theme.accentHot : .clear, radius: 4)
+                HStack(spacing: 7) {
+                    Image(systemName: model.noiseOn ? "waveform" : "waveform.slash")
                     Text(loc.t("noise.short"))
                 }
             }
@@ -60,30 +37,51 @@ struct TopBar: View {
                 .pickerStyle(.inline)
                 Toggle(loc.t("mode.stage"), isOn: $model.stageMode)
                 Divider()
-                if model.appMode == .wizard {
-                    Button(loc.t("settings.open")) { showSettings = true }
-                }
+                Button(loc.t("settings.open")) { model.showSettings = true }
                 Button(loc.t("session.save")) { model.saveSession() }
                 Button(loc.t("session.open")) { model.openSession() }
                 Button(loc.t("report.pdf")) { model.exportReport(pdf: true, localizer: loc) }
             } label: {
-                Image(systemName: "gearshape")
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Theme.textPrimary)
+                    .frame(width: 34, height: 34)
+                    .background(Circle().fill(Color.white.opacity(0.07)))
+                    .overlay(Circle().strokeBorder(Color.white.opacity(0.12)))
             }
             .menuStyle(.borderlessButton)
-            .frame(width: 34)
+            .menuIndicator(.hidden)
+            .fixedSize()
 
             Button { model.emergencyStop() } label: {
                 Label(loc.t("action.stop"), systemImage: "stop.fill")
-                    .font(Theme.heading(model.stageMode ? 24 : 15))
-                    .padding(.horizontal, model.stageMode ? 20 : 8)
+                    .font(.system(size: model.stageMode ? 22 : 13, weight: .semibold))
+                    .padding(.horizontal, model.stageMode ? 16 : 2)
                     .padding(.vertical, model.stageMode ? 6 : 0)
             }
             .buttonStyle(SSMTButtonStyle(kind: .danger))
             .help(loc.t("action.stop.help"))
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 10)
-        .background(Theme.background)
-        .overlay(alignment: .bottom) { Rectangle().fill(Theme.hairline).frame(height: 1) }
+        .padding(.vertical, 6)
+    }
+
+    private var statusPill: some View {
+        let (key, color): (String, Color) = {
+            if !model.isRunning { return ("status.off", Theme.textMuted) }
+            if model.snapshot?.microphone.clipped == true { return ("meters.clip", Theme.statusError) }
+            if model.appMode == .wizard && !model.wizard.isPrepared { return ("status.running", Theme.accent) }
+            return ("status.ready", Theme.statusGood)
+        }()
+        return HStack(spacing: 8) {
+            Circle().fill(color).frame(width: 8, height: 8)
+                .shadow(color: color.opacity(0.8), radius: 4)
+            Text(loc.t(key)).font(.system(size: 13)).foregroundStyle(Theme.textPrimary)
+            if let d = model.delay, d.isReliable {
+                Text(String(format: "Δt %.2f ms", d.milliseconds)).font(Theme.mono(12)).foregroundStyle(Theme.textSecondary)
+            }
+        }
+        .padding(.horizontal, 14).padding(.vertical, 8)
+        .background(Capsule().fill(Color.white.opacity(0.06)))
+        .overlay(Capsule().strokeBorder(Color.white.opacity(0.12)))
     }
 }

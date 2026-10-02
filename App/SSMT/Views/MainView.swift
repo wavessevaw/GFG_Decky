@@ -7,45 +7,44 @@ struct MainView: View {
     var brandNamespace: Namespace.ID? = nil
     var showBrand = true
 
-    @State private var showSettings = false
-
     var body: some View {
-        VStack(spacing: 0) {
-            TopBar(brandNamespace: brandNamespace, showBrand: showBrand, showSettings: $showSettings)
-            HStack(spacing: 0) {
-                // The setup panel is permanent only in Expert mode; the wizard keeps it in a sheet.
-                if model.appMode == .expert && !model.stageMode {
-                    SetupSidebar(expert: true)
-                    Rectangle().fill(Theme.hairline).frame(width: 1)
+        ZStack {
+            Backdrop()
+            HStack(spacing: 16) {
+                if !model.stageMode {
+                    AppSidebar(brandNamespace: brandNamespace, showBrand: showBrand)
                 }
-                switch model.appMode {
-                case .wizard:
-                    WizardView(showSettings: $showSettings)
-                case .expert:
-                    VStack(spacing: 12) {
-                        MeterPanel()
-                        graphs
+                VStack(spacing: 8) {
+                    TopBar()
+                    switch model.appMode {
+                    case .wizard:
+                        WizardView()
+                    case .expert:
+                        VStack(spacing: 14) {
+                            MeterPanel()
+                            graphs
+                        }
+                        .padding(.bottom, 4)
                     }
-                    .padding(12)
                 }
             }
+            .padding(14)
         }
-        .background(Theme.background)
         .preferredColorScheme(.dark)
         .tint(Theme.accent)
         .frame(minWidth: 1100, minHeight: 720)
-        .sheet(isPresented: $showSettings) {
+        .sheet(isPresented: $model.showSettings) {
             VStack(spacing: 0) {
                 HStack {
-                    Text(loc.t("settings.title")).font(Theme.heading(18))
+                    Text(loc.t("settings.title")).font(Theme.heading(17))
                     Spacer()
-                    Button(loc.t("settings.done")) { showSettings = false }.buttonStyle(SSMTButtonStyle(kind: .primary))
+                    Button(loc.t("settings.done")) { model.showSettings = false }.buttonStyle(SSMTButtonStyle(kind: .primary))
                 }
                 .padding(16)
                 SetupSidebar(expert: false)
             }
-            .frame(width: 340, height: 640)
-            .background(Theme.background)
+            .frame(width: 360, height: 660)
+            .background(Backdrop())
             .environmentObject(model)
             .environmentObject(loc)
             .preferredColorScheme(.dark)

@@ -20,14 +20,13 @@ struct SetupSidebar: View {
             }
             .padding(12)
         }
-        .frame(width: 290)
-        .background(Theme.background)
+        .scrollIndicators(.never)
     }
 
     // MARK: Source
 
     private var sourcePanel: some View {
-        Panel(title: loc.t("setup.source"), marking: "IO-01") {
+        Panel(title: loc.t("setup.source")) {
             Toggle(loc.t("setup.split"), isOn: Binding(
                 get: { model.isSplitSource },
                 set: { split in
@@ -112,7 +111,7 @@ struct SetupSidebar: View {
     // MARK: Generator
 
     private var generatorPanel: some View {
-        Panel(title: loc.t("setup.generator"), marking: "GEN-02") {
+        Panel(title: loc.t("setup.generator")) {
             Picker(loc.t("setup.noise"), selection: $model.noise) {
                 ForEach(NoiseChoice.allCases) { Text(loc.t($0.key)).tag($0) }
             }
@@ -183,7 +182,7 @@ struct SetupSidebar: View {
     // MARK: Simulation
 
     private var simulationPanel: some View {
-        Panel(title: loc.t("sim.title"), marking: "SIM") {
+        Panel(title: loc.t("sim.title")) {
             Text(loc.t("sim.hint")).font(.system(size: 11)).foregroundStyle(Theme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
             Toggle(loc.t("sim.sub"), isOn: $model.simulationSubOn)
@@ -194,7 +193,7 @@ struct SetupSidebar: View {
     // MARK: Display
 
     private var displayPanel: some View {
-        Panel(title: loc.t("display.title"), marking: "VIEW") {
+        Panel(title: loc.t("display.title")) {
             Picker(loc.t("display.smoothing"), selection: $model.smoothing) {
                 Text(loc.t("display.smoothing.none")).tag(SmoothingResolution.none)
                 ForEach([SmoothingResolution.oct48, .oct24, .oct12, .oct6, .oct3], id: \.self) {
@@ -222,7 +221,7 @@ struct SetupSidebar: View {
     }
 
     private var languagePanel: some View {
-        Panel(title: loc.t("settings.language"), marking: "L10N") {
+        Panel(title: loc.t("settings.language")) {
             Picker("", selection: Binding(get: { loc.language }, set: { loc.language = $0 })) {
                 Text(loc.t("language.system")).tag(AppLanguage.system)
                 Text("English").tag(AppLanguage.en)

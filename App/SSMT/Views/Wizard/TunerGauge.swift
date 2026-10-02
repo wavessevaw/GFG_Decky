@@ -66,7 +66,7 @@ struct TunerGauge: View {
     var body: some View {
         VStack(spacing: 6) {
             Text(title)
-                .font(.system(size: large ? 15 : 13))
+                .font(.system(size: large ? 15 : 13, weight: .medium))
                 .foregroundStyle(Theme.textSecondary)
                 .lineLimit(1)
             instrument
@@ -80,6 +80,7 @@ struct TunerGauge: View {
             .frame(height: large ? 24 : 20)
         }
         .frame(maxWidth: .infinity)
+        .glassCard(padding: 16)
         .animation(.easeInOut(duration: 0.25), value: inTune)
     }
 
@@ -94,7 +95,7 @@ struct TunerGauge: View {
                     ArcPointer(geometry: g, position: position)
                         .fill(color)
                         .overlay(ArcPointer(geometry: g, position: position)
-                            .stroke(Theme.background, lineWidth: g.lineWidth * 0.6))
+                            .stroke(Color(hex: 0x17171A), lineWidth: g.lineWidth * 0.6))
                         .shadow(color: color.opacity(0.35), radius: 6)
                 }
                 VStack(spacing: 2) {

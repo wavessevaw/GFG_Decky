@@ -1,28 +1,113 @@
 import SwiftUI
 
-/// Quiet card: soft surface, continuous corners, optional small title.
+/// Dark backdrop with two soft warm glows, shared by all windows.
+struct Backdrop: View {
+    var body: some View {
+        ZStack {
+            LinearGradient(colors: [Color(hex: 0x111114), Color(hex: 0x09090B)], startPoint: .top, endPoint: .bottom)
+            RadialGradient(colors: [Theme.accent.opacity(0.13), .clear], center: UnitPoint(x: 0.85, y: -0.05),
+                           startRadius: 0, endRadius: 700)
+            RadialGradient(colors: [Theme.accentHot.opacity(0.08), .clear], center: UnitPoint(x: 0.05, y: 1.05),
+                           startRadius: 0, endRadius: 650)
+        }
+        .ignoresSafeArea()
+    }
+}
+
+/// Frosted glass surface: translucent fill, top highlight hairline, soft shadow.
+struct GlassBackground: View {
+    var radius: CGFloat = Theme.radius
+    var highlighted = false
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+        shape.fill(Color.white.opacity(highlighted ? 0.09 : 0.045))
+            .background(shape.fill(Color(hex: 0x141417).opacity(0.55)))
+            .overlay(shape.strokeBorder(
+                LinearGradient(colors: [Color.white.opacity(highlighted ? 0.22 : 0.12), Color.white.opacity(0.03)],
+                               startPoint: .top, endPoint: .bottom), lineWidth: 1))
+            .shadow(color: .black.opacity(0.35), radius: 18, y: 8)
+    }
+}
+
+extension View {
+    /// Places the view on a glass card.
+    func glassCard(padding: CGFloat = 18, radius: CGFloat = Theme.radius, highlighted: Bool = false) -> some View {
+        self.padding(padding).background(GlassBackground(radius: radius, highlighted: highlighted))
+    }
+}
+
+/// Glass card with an optional title marked by a short coloured bar.
 struct Panel<Content: View>: View {
     var title: String?
     var marking: String?
+    var tint: Color = Theme.accent
     @ViewBuilder var content: Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
             if title != nil || marking != nil {
-                HStack(spacing: 8) {
-                    if let title {
-                        Text(title).font(Theme.heading(13)).foregroundStyle(Theme.textPrimary)
-                    }
-                    Spacer()
-                    if let marking {
-                        Text(marking).font(Theme.mono(11)).foregroundStyle(Theme.textMuted)
-                    }
-                }
+                CardTitle(title: title ?? "", marking: marking, tint: tint)
             }
             content
         }
-        .padding(16)
-        .background(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).fill(Theme.panel))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassCard()
+    }
+}
+
+struct CardTitle: View {
+    var title: String
+    var marking: String? = nil
+    var tint: Color = Theme.accent
+
+    var body: some View {
+        HStack(spacing: 10) {
+            RoundedRectangle(cornerRadius: 1.5).fill(tint).frame(width: 3, height: 15)
+            Text(title).font(Theme.heading(15)).foregroundStyle(Theme.textPrimary)
+            Spacer()
+            if let marking {
+                Text(marking).font(Theme.mono(12)).foregroundStyle(Theme.textSecondary)
+            }
+        }
+    }
+}
+
+/// Rounded square with an SF Symbol, used in list rows.
+struct IconTile: View {
+    var systemName: String
+    var tint: Color = Theme.textPrimary
+    var size: CGFloat = 40
+
+    var body: some View {
+        Image(systemName: systemName)
+            .font(.system(size: size * 0.42, weight: .regular))
+            .foregroundStyle(tint)
+            .frame(width: size, height: size)
+            .background(RoundedRectangle(cornerRadius: size * 0.28, style: .continuous).fill(Color.white.opacity(0.08)))
+            .overlay(RoundedRectangle(cornerRadius: size * 0.28, style: .continuous).strokeBorder(Color.white.opacity(0.08)))
+    }
+}
+
+/// Round check mark: empty ring → filled accent check.
+struct CheckDot: View {
+    var done: Bool
+    var failed = false
+
+    var body: some View {
+        ZStack {
+            if done {
+                Circle().fill(Theme.statusGood)
+                Image(systemName: "checkmark").font(.system(size: 11, weight: .bold)).foregroundStyle(.black)
+            } else if failed {
+                Circle().fill(Theme.statusError)
+                Image(systemName: "exclamationmark").font(.system(size: 11, weight: .bold)).foregroundStyle(.white)
+            } else {
+                Circle().strokeBorder(Color.white.opacity(0.25), lineWidth: 1.5)
+            }
+        }
+        .frame(width: 22, height: 22)
+        .animation(.easeInOut(duration: 0.2), value: done)
     }
 }
 
@@ -33,23 +118,33 @@ struct SSMTButtonStyle: ButtonStyle {
     var active = false
 
     func makeBody(configuration: Configuration) -> some View {
-        let fill: Color
-        let fg: Color
-        switch kind {
-        case .primary: fill = Theme.accent; fg = .black
-        case .secondary: fill = active ? Theme.accent.opacity(0.22) : Color.white.opacity(0.08)
-            fg = active ? Theme.accent : Theme.textPrimary
-        case .danger: fill = Theme.statusError; fg = .white
-        }
+        let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
         return configuration.label
-            .font(.system(size: 13, weight: kind == .secondary ? .regular : .medium))
-            .foregroundStyle(fg)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 7)
-            .background(Capsule(style: .continuous).fill(fill))
-            .opacity(configuration.isPressed ? 0.7 : 1)
-            .contentShape(Capsule())
+            .font(.system(size: 13, weight: kind == .secondary ? .regular : .semibold))
+            .foregroundStyle(foreground)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(fill(shape))
+            .overlay(shape.strokeBorder(Color.white.opacity(kind == .secondary ? 0.12 : 0.18), lineWidth: 1))
+            .opacity(configuration.isPressed ? 0.75 : 1)
+            .contentShape(shape)
             .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+    }
+
+    private var foreground: Color {
+        switch kind {
+        case .primary: return .black
+        case .secondary: return active ? Theme.accent : Theme.textPrimary
+        case .danger: return .white
+        }
+    }
+
+    @ViewBuilder private func fill(_ shape: RoundedRectangle) -> some View {
+        switch kind {
+        case .primary: shape.fill(LinearGradient(colors: [Theme.accent, Theme.accentHot], startPoint: .leading, endPoint: .trailing))
+        case .secondary: shape.fill(active ? Theme.accent.opacity(0.18) : Color.white.opacity(0.07))
+        case .danger: shape.fill(Theme.statusError)
+        }
     }
 }
 

@@ -11,7 +11,7 @@ struct CalibrationPanel: View {
     @State private var calibratorLevel = 94.0
 
     var body: some View {
-        Panel(title: loc.t("cal.title"), marking: "CAL-04") {
+        Panel(title: loc.t("cal.title")) {
             Picker(loc.t("cal.mic"), selection: Binding(get: { model.calibration.selectedMicrophoneID },
                                                        set: { model.selectMicrophone($0) })) {
                 Text(loc.t("cal.mic.none")).tag(UUID?.none)

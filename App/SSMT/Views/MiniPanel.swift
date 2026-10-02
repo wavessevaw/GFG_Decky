@@ -166,7 +166,7 @@ struct MiniDiagnosticsView: View {
         }
         .padding(14)
         .frame(maxHeight: .infinity, alignment: .top)
-        .background(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).fill(Theme.panel))
+        .background(GlassBackground())
         .preferredColorScheme(.dark)
     }
 

@@ -19,7 +19,7 @@ struct EQPointsView: View {
                     EQResultGauges()
                 } else {
                     HStack(alignment: .top, spacing: 18) {
-                        PointMap(total: total, done: done, qualities: qualities).frame(width: 300)
+                        PointMap(total: total, done: done, qualities: qualities).frame(width: 280).glassCard(padding: 16)
                         SignalQualityGauge(band: 40...16000)
                     }
                     if model.wizardCaptureRunning, let p = model.snapshot?.capture {
@@ -105,11 +105,11 @@ struct PointMap: View {
 
     var body: some View {
         VStack(spacing: 8) {
-            Text(loc.t("eq.map")).font(Theme.label(11)).foregroundStyle(Theme.textMuted)
+            Text(loc.t("eq.map")).font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.textSecondary)
             Canvas { ctx, size in
                 // Stage with two mains and the sub.
                 let stage = CGRect(x: size.width * 0.15, y: 4, width: size.width * 0.7, height: 16)
-                ctx.fill(Path(stage), with: .color(Theme.panelRaised))
+                ctx.fill(Path(roundedRect: stage, cornerRadius: 4), with: .color(.white.opacity(0.08)))
                 ctx.draw(Text(loc.t("eq.map.stage")).font(Theme.label(11)).foregroundColor(Theme.textMuted),
                          at: CGPoint(x: stage.midX, y: stage.midY))
                 for x in [stage.minX - 8, stage.maxX + 8] {
@@ -147,7 +147,6 @@ struct PointMap: View {
                 }
             }
             .frame(height: 200)
-            .background(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).fill(Theme.panel))
         }
     }
 }
@@ -245,7 +244,7 @@ struct EQTuningView: View {
             }
         }
         .frame(maxWidth: .infinity, minHeight: 300)
-        .background(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).fill(Theme.panel))
+        .background(GlassBackground())
     }
 
     private func bandList(_ r: EQResult) -> some View {
@@ -274,7 +273,7 @@ struct EQTuningView: View {
             }
         }
         .padding(8)
-        .background(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).fill(Theme.panel))
+        .background(GlassBackground())
     }
 
     @ViewBuilder private func bandGauge(_ r: EQResult) -> some View {
@@ -340,8 +339,6 @@ struct EQTuningView: View {
                 }
             }
         }
-        .padding(14)
-        .background(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).fill(Theme.panel))
     }
 }
 

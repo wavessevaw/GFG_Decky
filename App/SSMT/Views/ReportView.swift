@@ -78,7 +78,7 @@ struct ReportView: View {
     }
 
     private var conditions: some View {
-        Panel(title: loc.t("report.conditions"), marking: "INFO") {
+        Panel(title: loc.t("report.conditions")) {
             Grid(alignment: .leading, horizontalSpacing: 24, verticalSpacing: 4) {
                 row(loc.t("setup.interface"), "\(report.interfaceName) · \(Int(report.sampleRate)) Hz")
                 row(loc.t("setup.temperature"), String(format: "%.0f °C", report.temperatureCelsius))
