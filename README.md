@@ -1,1 +1,1 @@
-# GFG_Decky
+# SSMT
