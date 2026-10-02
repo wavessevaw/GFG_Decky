@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  core-linux:
+    name: SSMTCore tests (Linux, portable FFT)
+    runs-on: ubuntu-latest
+    container: swift:6.0-noble
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test
+        run: swift test -c release --package-path Packages/SSMTCore
+
+  macos:
+    name: macOS build + tests (Accelerate, universal app)
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+      - name: Localization catalog is complete
+        run: python3 scripts/strings.py check
+      - name: SSMTCore tests (Accelerate backend)
+        run: swift test -c release --package-path Packages/SSMTCore
+      - name: SSMTAudio build
+        run: swift build --package-path Packages/SSMTAudio
+      - name: Generate Xcode project
+        run: |
+          brew install xcodegen
+          xcodegen generate
+      - name: Build universal app
+        run: |
+          mkdir -p build
+          set +e
+          xcodebuild -project SSMT.xcodeproj -scheme SSMT -configuration Release \
+            -derivedDataPath build/DerivedData \
+            ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO \
+            build > build/xcodebuild.log 2>&1
+          status=$?
+          set -e
+          grep -E "(error|warning):" build/xcodebuild.log | sort -u | head -200 || true
+          if [ $status -ne 0 ]; then tail -150 build/xcodebuild.log; exit $status; fi
+          lipo -info build/DerivedData/Build/Products/Release/SSMT.app/Contents/MacOS/SSMT
+      - name: Package app
+        run: |
+          cd build/DerivedData/Build/Products/Release
+          ditto -c -k --keepParent SSMT.app SSMT-app.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SSMT-app
+          path: build/DerivedData/Build/Products/Release/SSMT-app.zip
+          retention-days: 14

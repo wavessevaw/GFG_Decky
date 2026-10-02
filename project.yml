@@ -1,0 +1,65 @@
+name: SSMT
+options:
+  bundleIdPrefix: com.soundsolutions
+  deploymentTarget:
+    macOS: "13.0"
+  developmentLanguage: en
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MACOSX_DEPLOYMENT_TARGET: "13.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+packages:
+  SSMTCore:
+    path: Packages/SSMTCore
+  SSMTAudio:
+    path: Packages/SSMTAudio
+targets:
+  SSMT:
+    type: application
+    platform: macOS
+    sources:
+      - path: App/SSMT
+        excludes:
+          - "Resources/Brand/README.md"
+    dependencies:
+      - package: SSMTCore
+        product: SSMTCore
+      - package: SSMTAudio
+        product: SSMTAudio
+    info:
+      path: App/SSMT/Info.plist
+      properties:
+        CFBundleName: SSMT
+        CFBundleDisplayName: SSMT
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleLocalizations: [en, ru]
+        CFBundleDevelopmentRegion: en
+        LSApplicationCategoryType: public.app-category.music
+        LSMinimumSystemVersion: "13.0"
+        NSHighResolutionCapable: true
+        NSMicrophoneUsageDescription: "SSMT measures your sound system with a measurement microphone. / SSMT измеряет акустическую систему через измерительный микрофон."
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.soundsolutions.ssmt
+        PRODUCT_NAME: SSMT
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "-"
+        ENABLE_HARDENED_RUNTIME: NO
+        COMBINE_HIDPI_IMAGES: YES
+        LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+        SWIFT_EMIT_LOC_STRINGS: NO
+schemes:
+  SSMT:
+    build:
+      targets:
+        SSMT: all
+    run:
+      config: Debug
+    archive:
+      config: Release
