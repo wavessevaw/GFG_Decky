@@ -4,8 +4,8 @@ import SwiftUI
 struct Backdrop: View {
     var body: some View {
         ZStack {
-            LinearGradient(colors: [Color(hex: 0x111114), Color(hex: 0x09090B)], startPoint: .top, endPoint: .bottom)
-            RadialGradient(colors: [Theme.accent.opacity(0.13), .clear], center: UnitPoint(x: 0.85, y: -0.05),
+            LinearGradient(colors: [Color(hex: 0x0E1210), Color(hex: 0x050706)], startPoint: .top, endPoint: .bottom)
+            RadialGradient(colors: [Theme.accent.opacity(0.12), .clear], center: UnitPoint(x: 0.85, y: -0.05),
                            startRadius: 0, endRadius: 700)
             RadialGradient(colors: [Theme.accentHot.opacity(0.08), .clear], center: UnitPoint(x: 0.05, y: 1.05),
                            startRadius: 0, endRadius: 650)
@@ -22,7 +22,7 @@ struct GlassBackground: View {
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
         shape.fill(Color.white.opacity(highlighted ? 0.09 : 0.045))
-            .background(shape.fill(Color(hex: 0x141417).opacity(0.55)))
+            .background(shape.fill(Color(hex: 0x111513).opacity(0.55)))
             .overlay(shape.strokeBorder(
                 LinearGradient(colors: [Color.white.opacity(highlighted ? 0.22 : 0.12), Color.white.opacity(0.03)],
                                startPoint: .top, endPoint: .bottom), lineWidth: 1))

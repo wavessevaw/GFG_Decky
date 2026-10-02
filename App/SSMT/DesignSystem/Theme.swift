@@ -1,33 +1,35 @@
 import SwiftUI
 
-/// SSMT design tokens. Quiet near-black surfaces, system typography, one warm accent.
-/// Colour is reserved for meaning: the accent marks actions, the closeness scale marks how far
-/// a value is from its target. The brand logo stays strictly white and is never tinted.
+/// SSMT design tokens. Black surfaces with an emerald-green accent and system typography.
+/// The accent marks actions and the live trace; the closeness scale (red → yellow → green) marks how
+/// far a value is from its target, so "green" always means "good / go". The logo stays white.
 enum Theme {
     // Surfaces
-    static let background = Color(hex: 0x0B0B0C)
-    static let panel = Color(hex: 0x161618)
-    static let panelRaised = Color(hex: 0x202023)
+    static let background = Color(hex: 0x070908)
+    static let panel = Color(hex: 0x121513)
+    static let panelRaised = Color(hex: 0x1B1F1C)
     static let hairline = Color.white.opacity(0.08)
     static let hairlineStrong = Color.white.opacity(0.16)
 
     // Text
-    static let textPrimary = Color(hex: 0xF5F5F7)
-    static let textSecondary = Color(hex: 0x98989D)
-    static let textMuted = Color(hex: 0x636366)
+    static let textPrimary = Color(hex: 0xF3F6F4)
+    static let textSecondary = Color(hex: 0x939C96)
+    static let textMuted = Color(hex: 0x5F6862)
 
     // Accents
-    /// Primary accent: warm orange (actions, active state, main trace).
-    static let accent = Color(hex: 0xFF9F0A)
-    /// Orange-red for "live" emphasis (noise on, capture running).
-    static let accentHot = Color(hex: 0xFF6A2B)
-    /// Secondary data colour: yellow (secondary traces, highlights).
+    /// Primary accent: emerald green (actions, current stage, main trace).
+    static let accent = Color(hex: 0x2EE59D)
+    /// Deeper green: end of accent gradients, "live" emphasis.
+    static let accentHot = Color(hex: 0x10A86E)
+    /// Secondary data colour: pale mint (coherence trace, group tags, secondary card marks).
+    static let dataSecondary = Color(hex: 0xA7F3D0)
+    /// Warning yellow (caution notes only).
     static let signalYellow = Color(hex: 0xFFD60A)
     /// Cool blue reserved for comparison data (prediction / reference traces) so it never reads as a status.
     static let dataBlue = Color(hex: 0x64D2FF)
 
     // Status (always paired with an icon or a word — never colour alone)
-    static let statusGood = Color(hex: 0x30D158)
+    static let statusGood = Color(hex: 0x34D399)
     static let statusWarning = Color(hex: 0xFFD60A)
     static let statusError = Color(hex: 0xFF453A)
 
@@ -42,7 +44,7 @@ enum Theme {
             (0.0, (1.00, 0.271, 0.227)),   // #FF453A red
             (0.40, (1.00, 0.624, 0.039)),  // #FF9F0A orange
             (0.75, (1.00, 0.839, 0.039)),  // #FFD60A yellow
-            (1.0, (0.188, 0.820, 0.345)),  // #30D158 green
+            (1.0, (0.204, 0.827, 0.600)),  // #34D399 green
         ]
         let x = min(max(c.isFinite ? c : 0, 0), 1)
         for i in 1..<stops.count where x <= stops[i].0 {

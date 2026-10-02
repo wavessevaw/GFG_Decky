@@ -93,7 +93,7 @@ struct TunerGauge: View {
                     ArcPointer(geometry: g, position: position)
                         .fill(color)
                         .overlay(ArcPointer(geometry: g, position: position)
-                            .stroke(Color(hex: 0x17171A), lineWidth: g.lineWidth * 0.6))
+                            .stroke(Color(hex: 0x131715), lineWidth: g.lineWidth * 0.6))
                         .shadow(color: color.opacity(0.35), radius: 6)
                 }
                 VStack(spacing: 2) {

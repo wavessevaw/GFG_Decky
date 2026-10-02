@@ -79,7 +79,7 @@ struct PreparationStepView: View {
     // MARK: System options (inline, no popover)
 
     private var systemCard: some View {
-        Panel(title: loc.t("prep.system"), tint: Theme.signalYellow) {
+        Panel(title: loc.t("prep.system"), tint: Theme.dataSecondary) {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
                     Toggle(loc.t("prep.hasSub"), isOn: $model.wizard.configuration.hasSubwoofer)

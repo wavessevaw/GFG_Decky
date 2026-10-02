@@ -256,7 +256,7 @@ struct EQTuningView: View {
                         Text("\(i + 1)").font(Theme.mono(12, weight: .bold)).foregroundStyle(Theme.textMuted).frame(width: 16)
                         Text(loc.t(f.group == .sub ? "group.subs.tag" : "group.mains.tag"))
                             .font(Theme.label(11))
-                            .foregroundStyle(f.group == .sub ? Theme.signalYellow : Theme.textSecondary)
+                            .foregroundStyle(f.group == .sub ? Theme.dataSecondary : Theme.textSecondary)
                             .frame(width: 30)
                         Text(String(format: "%.0f Hz", f.frequency)).font(Theme.mono(12)).frame(width: 70, alignment: .trailing)
                         Text(String(format: "%+.1f", f.gainDB)).font(Theme.mono(12, weight: .semibold)).frame(width: 40, alignment: .trailing)

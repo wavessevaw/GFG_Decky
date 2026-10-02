@@ -158,7 +158,7 @@ struct TransferPlotView: View {
             lastValue = v
             lastGood = isGood
         }
-        let color: Color = kind == .coherence ? Theme.signalYellow : Theme.accent
+        let color: Color = kind == .coherence ? Theme.dataSecondary : Theme.accent
         ctx.stroke(weak, with: .color(Theme.textMuted.opacity(0.6)), lineWidth: lineWidth * 0.8)
         // Soft glow under the main trace.
         ctx.stroke(good, with: .color(color), lineWidth: lineWidth)
