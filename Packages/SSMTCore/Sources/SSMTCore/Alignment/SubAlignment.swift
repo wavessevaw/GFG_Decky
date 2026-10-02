@@ -129,9 +129,10 @@ public enum SubAlignment {
         // construction, so the medians always match; use the adjacent pass bands instead
         // (one octave below / above the crossover).
         let gain: Double
+        // Each curve uses its own coherent points: reusing the "levels within 12 dB" selection of
+        // the delay search would bias the difference toward zero.
         if s.crossover != nil {
-            gain = median(usable.map { Decibel.fromAmplitude(hm.response[$0].magnitude) })
-                - median(usable.map { Decibel.fromAmplitude(hs.response[$0].magnitude) })
+            gain = passbandLevel(hm, band: band, settings: s) - passbandLevel(hs, band: band, settings: s)
         } else {
             gain = passbandLevel(hm, band: (fc * 2)...(fc * 4), settings: s)
                 - passbandLevel(hs, band: (fc / 4)...(fc / 2), settings: s)

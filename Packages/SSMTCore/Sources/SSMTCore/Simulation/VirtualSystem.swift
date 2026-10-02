@@ -137,7 +137,8 @@ public final class VirtualSystemProcessor {
         modeFilter = BiquadCascade(system.room.modes)
         var size = 1
         while size < system.maximumDelaySamples + 2 { size <<= 1 }
-        size = max(size, 1 << 12)
+        // Headroom so processor delays (up to ±30 ms + distances) can be changed later.
+        size = max(size, 1 << 16)
         inputHistory = [Double](repeating: 0, count: size)
         sumHistory = [Double](repeating: 0, count: size)
         mask = size - 1
@@ -148,6 +149,15 @@ public final class VirtualSystemProcessor {
     public func setEnabled(sub: Bool, main: Bool) {
         system.sub.enabled = sub
         system.main.enabled = main
+    }
+
+    /// Changes processor-side parameters (delay, gain, polarity) of the groups, as a user would
+    /// on the loudspeaker processor. Filter states are kept, so there is no restart transient.
+    public func updateProcessor(subDelaySamples: Int, subGainDB: Double, subInverted: Bool, mainDelaySamples: Int) {
+        system.sub.delaySamples = subDelaySamples
+        system.sub.gainDB = subGainDB
+        system.sub.invertPolarity = subInverted
+        system.main.delaySamples = mainDelaySamples
     }
 
     public func process(_ input: [Float]) -> [Float] {

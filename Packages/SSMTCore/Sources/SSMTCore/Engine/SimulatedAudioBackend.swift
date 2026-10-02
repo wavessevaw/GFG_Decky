@@ -22,6 +22,7 @@ public final class SimulatedAudioBackend: AudioIOBackend, @unchecked Sendable {
     private let stateLock = NSLock()
     private var stopRequested = false
     private var pendingGroups: (sub: Bool, main: Bool)?
+    private var pendingProcessor: ((VirtualSystem) -> VirtualSystem)?
     /// Extra analog gain of the virtual microphone preamp (dB).
     public var micPreampDB: Double = 0
 
@@ -51,12 +52,38 @@ public final class SimulatedAudioBackend: AudioIOBackend, @unchecked Sendable {
 
     public func updateSafety(_ s: GeneratorSafety) { bank.updateSafety(s) }
 
+    /// Simulates entering settings on the loudspeaker processor (applied on the next block).
+    public func applyProcessorChange(_ change: @escaping (VirtualSystem) -> VirtualSystem) {
+        stateLock.lock()
+        pendingProcessor = change
+        stateLock.unlock()
+    }
+
+    /// Applies an alignment recommendation to the virtual processor: delay (to the sub, or to the
+    /// mains when negative), polarity and sub level.
+    public func applyAlignment(delaySeconds: Double, invertPolarity: Bool, subGainDB: Double) {
+        let samples = Int((delaySeconds * sampleRate).rounded())
+        applyProcessorChange { sys in
+            var s = sys
+            if samples >= 0 { s.sub.delaySamples += samples } else { s.main.delaySamples -= samples }
+            if invertPolarity { s.sub.invertPolarity.toggle() }
+            s.sub.gainDB += subGainDB
+            return s
+        }
+    }
+
     /// Renders `frames` frames synchronously (used by the real-time thread and by tests).
     public func pump(frames: Int) {
         stateLock.lock()
         if let g = pendingGroups {
             processor.setEnabled(sub: g.sub, main: g.main)
             pendingGroups = nil
+        }
+        if let change = pendingProcessor {
+            let n = change(processor.system)
+            processor.updateProcessor(subDelaySamples: n.sub.delaySamples, subGainDB: n.sub.gainDB,
+                                      subInverted: n.sub.invertPolarity, mainDelaySamples: n.main.delaySamples)
+            pendingProcessor = nil
         }
         stateLock.unlock()
 

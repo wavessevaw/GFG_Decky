@@ -32,9 +32,13 @@ public struct Capture: Identifiable, Codable, Sendable {
     public var transfer: TransferFunction
     public var assessment: CaptureAssessment
     public var referenceMode: ReferenceMode
+    /// Backend discontinuity counter at the end of the capture. Captures compared against each
+    /// other (sub vs mains) must share the same value, i.e. the same stream and delay lock.
+    public var streamEpoch: UInt64
 
     public init(id: UUID = UUID(), label: String, date: Date = Date(), duration: Double,
-                transfer: TransferFunction, assessment: CaptureAssessment, referenceMode: ReferenceMode) {
+                transfer: TransferFunction, assessment: CaptureAssessment, referenceMode: ReferenceMode,
+                streamEpoch: UInt64 = 0) {
         self.id = id
         self.label = label
         self.date = date
@@ -42,6 +46,7 @@ public struct Capture: Identifiable, Codable, Sendable {
         self.transfer = transfer
         self.assessment = assessment
         self.referenceMode = referenceMode
+        self.streamEpoch = streamEpoch
     }
 }
 
@@ -65,7 +70,7 @@ public final class MeasurementEngine: @unchecked Sendable {
     private var live: MultiWindowAnalyzer
     private var captureAnalyzer: MultiWindowAnalyzer?
     private var captureState: (label: String, duration: Double, elapsed: Double, clipped: Bool,
-                               discontinuitiesAtStart: UInt64,
+                               discontinuitiesAtStart: UInt64, qualityBand: ClosedRange<Double>,
                                completion: (Capture) -> Void)?
     private var micMeter: MeterAccumulator
     private var refMeter: MeterAccumulator
@@ -136,12 +141,15 @@ public final class MeasurementEngine: @unchecked Sendable {
     }
 
     /// Starts a cumulative capture of `duration` seconds. The completion runs on the engine queue.
-    public func capture(label: String, duration: Double, completion: @escaping (Capture) -> Void) {
+    /// `qualityBand` is where coherence is judged (e.g. only the sub's range for a sub-only capture).
+    public func capture(label: String, duration: Double, qualityBand: ClosedRange<Double>? = nil,
+                        completion: @escaping (Capture) -> Void) {
         queue.async {
             let a = MultiWindowAnalyzer(config: .standard(sampleRate: self.backend.sampleRate))
             a.setReferenceDelay(samples: self.referenceDelay)
             self.captureAnalyzer = a
-            self.captureState = (label, duration, 0, false, self.backend.discontinuities.value, completion)
+            self.captureState = (label, duration, 0, false, self.backend.discontinuities.value,
+                                 qualityBand ?? self.configuration.qualityBand, completion)
         }
     }
 
@@ -285,10 +293,10 @@ public final class MeasurementEngine: @unchecked Sendable {
         guard let a = captureAnalyzer, let st = captureState else { return }
         let tf = a.snapshot()
         let discontinuity = backend.discontinuities.value != st.discontinuitiesAtStart
-        let assessment = CaptureAssessment.assess(tf, band: configuration.qualityBand, clipped: st.clipped,
+        let assessment = CaptureAssessment.assess(tf, band: st.qualityBand, clipped: st.clipped,
                                                   discontinuity: discontinuity)
         let capture = Capture(label: st.label, duration: st.elapsed, transfer: tf, assessment: assessment,
-                              referenceMode: configuration.referenceMode)
+                              referenceMode: configuration.referenceMode, streamEpoch: backend.discontinuities.value)
         captureAnalyzer = nil
         captureState = nil
         st.completion(capture)
