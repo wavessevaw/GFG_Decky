@@ -1,3 +1,22 @@
+# SSMT 0.9.2 — полосы EQ на стандартных частотах · EQ bands on standard frequencies
+
+## Что нового · What's new
+
+- **Русский.** Полосы EQ ставятся на стандартные частоты ряда ISO 1/3 октавы (63, 80, 100, 125, 160,
+  200, 250 … 1.6k, 2k, 2.5k … 10k, 12.5k, 16k Гц) и идут по возрастанию частоты — в тюнере, экспорте и
+  отчёте. Частоты не округляются «в лоб»: после переноса на сетку усиления и добротности всех полос
+  подбираются заново, точность почти не теряется. В меню цели EQ — выбор: 1/3 октавы (по умолчанию),
+  точные 1/6 октавы или любые частоты. Полосы с поправкой меньше 0.5 дБ не предлагаются. Частоты
+  подписаны как на процессорах: 31.5 Hz, 1.25 kHz, 12.5 kHz.
+- **English.** EQ bands use the standard ISO 1/3-octave centre frequencies and are listed in ascending
+  order in the tuner, export and report. After moving to the grid, the gains and Qs of all bands are
+  re-fitted together, so accuracy is kept. The EQ target menu offers 1/3 octave (default), fine 1/6
+  octave or any frequency. Bands below 0.5 dB are not suggested. Processor-style labels.
+
+Обновление: установите поверх предыдущей версии · Install over the previous version.
+
+---
+
 # SSMT 0.9.1 — быстрее на старых Mac · faster on older Macs
 
 ## Что нового · What's new

@@ -319,8 +319,8 @@ public enum EQFitter {
                     filters[b].gainDB = min(max(refit.x[2 * b + 1], -s.maxCutDB), s.maxBoostDB)
                 }
             }
-            // A band whose gain collapsed after the move is dropped.
-            filters.removeAll { abs($0.gainDB) < 0.3 }
+            // A band whose gain collapsed after the move is not worth entering on the processor.
+            filters.removeAll { abs($0.gainDB) < 0.5 }
         }
 
         // Rounding to sensible processor resolution (grid frequencies are kept exact), then the
