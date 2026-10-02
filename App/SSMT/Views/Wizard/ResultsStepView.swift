@@ -21,6 +21,10 @@ struct ResultsStepView: View {
                     if a.isAmbiguous {
                         Text(loc.t("results.ambiguous.short")).font(.system(size: 13)).foregroundStyle(Theme.signalYellow)
                     }
+                    if let maxMs = model.wizard.configuration.processor.maxDelayMs,
+                       !model.wizard.configuration.processor.canEnter(delaySeconds: a.roundedDelay) {
+                        HazardNotice(text: String(format: loc.t("processor.delayTooLong"), abs(a.roundedDelay) * 1000, maxMs))
+                    }
                     TunerPanel()
                     VStack(spacing: 12) {
                         if model.isSimulation {

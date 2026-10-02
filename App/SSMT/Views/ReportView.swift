@@ -124,7 +124,7 @@ struct ReportView: View {
                     Text(loc.t(f.group == .sub ? "group.subs" : "group.mains")).font(Theme.label(12))
                     Text(f.frequencyLabel).font(Theme.mono(12))
                     Text(String(format: "%+.1f dB", f.gainDB)).font(Theme.mono(12, weight: .semibold))
-                    Text(String(format: "%.2f", f.q)).font(Theme.mono(12))
+                    Text(f.widthLabel(inOctaves: wizard.configuration.processor.bandwidthInOctaves)).font(Theme.mono(12))
                 }
             }
         }

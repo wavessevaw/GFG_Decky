@@ -78,6 +78,7 @@ struct PreparationStepView: View {
     private var systemCard: some View {
         Panel(title: loc.t("prep.system"), tint: Theme.dataSecondary) {
             VStack(alignment: .leading, spacing: 14) {
+                ProcessorPicker()
                 HStack {
                     Toggle(loc.t("prep.hasSub"), isOn: $model.wizard.configuration.hasSubwoofer)
                     Spacer()
@@ -223,5 +224,76 @@ struct MicCheckRow: View {
         if model.calibration.selectedMicrophone == nil { return state + " " + loc.t("prep.mic.noProfile") }
         if model.calibration.selectedProfile != nil { return state + " " + loc.t("prep.mic.typical") }
         return state
+    }
+}
+
+/// Console / processor that receives the corrections: preset (only confirmed values) or custom.
+struct ProcessorPicker: View {
+    @EnvironmentObject var model: AppModel
+    @EnvironmentObject var loc: Localizer
+    @State private var editing = false
+
+    private var current: ProcessorProfile { model.wizard.configuration.processor }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(loc.t("processor.title")).font(.system(size: 13))
+                Spacer()
+                Menu {
+                    ForEach(ProcessorProfile.presets) { p in
+                        Button(p.id == "generic" ? loc.t("processor.generic") : p.name) { model.wizard.configuration.processor = p }
+                    }
+                    Divider()
+                    Button(loc.t("processor.custom")) {
+                        if !current.isCustom { model.wizard.configuration.processor = .customDefault }
+                        editing = true
+                    }
+                } label: {
+                    Text(current.isCustom ? loc.t("processor.custom") : (current.id == "generic" ? loc.t("processor.generic") : current.name))
+                }
+                .fixedSize()
+                if current.isCustom {
+                    Button(loc.t("processor.edit")) { editing = true }.buttonStyle(SSMTButtonStyle())
+                }
+            }
+            if let source = current.source {
+                Text(loc.t("processor.verified") + " " + (loc.t("processor.source.\(current.id)")) + " " + loc.t("processor.rest"))
+                    .font(.system(size: 11)).foregroundStyle(Theme.textMuted)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .help(source)
+            }
+        }
+        .popover(isPresented: $editing) { CustomProcessorEditor().padding(16).frame(width: 360) }
+    }
+}
+
+/// Parameters of the user's own console, entered from its manual or screen.
+struct CustomProcessorEditor: View {
+    @EnvironmentObject var model: AppModel
+    @EnvironmentObject var loc: Localizer
+
+    private var p: Binding<ProcessorProfile> {
+        Binding(get: { model.wizard.configuration.processor }, set: { model.wizard.configuration.processor = $0 })
+    }
+
+    var body: some View {
+        Form {
+            TextField(loc.t("processor.maxDelay"), value: Binding(get: { p.wrappedValue.maxDelayMs ?? 0 },
+                                                                 set: { p.wrappedValue.maxDelayMs = $0 > 0 ? $0 : nil }),
+                      format: .number)
+            Picker(loc.t("prep.delayStep"), selection: p.delayStepMs) {
+                Text("0.01 ms").tag(0.01); Text("0.02 ms").tag(0.02); Text("0.1 ms").tag(0.1); Text("1 ms").tag(1.0)
+            }
+            Stepper(String(format: loc.t("processor.bandsSub"), p.wrappedValue.peqBandsSub ?? 0),
+                    value: Binding(get: { p.wrappedValue.peqBandsSub ?? 0 }, set: { p.wrappedValue.peqBandsSub = $0 }), in: 0...16)
+            Stepper(String(format: loc.t("processor.bandsMains"), p.wrappedValue.peqBandsMains ?? 0),
+                    value: Binding(get: { p.wrappedValue.peqBandsMains ?? 0 }, set: { p.wrappedValue.peqBandsMains = $0 }), in: 0...16)
+            Picker(loc.t("processor.gainStep"), selection: p.gainStepDB) {
+                Text("0.1 dB").tag(0.1); Text("0.25 dB").tag(0.25); Text("0.5 dB").tag(0.5); Text("1 dB").tag(1.0)
+            }
+            Toggle(loc.t("processor.octaves"), isOn: p.bandwidthInOctaves)
+        }
+        .font(.system(size: 13))
     }
 }

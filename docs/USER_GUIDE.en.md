@@ -22,6 +22,8 @@ from red (far from target) to green ("IN TUNE").
 main listening position. Checklist: Start audio → Auto level (5 s of silence, then a slow rise to SNR ≥ 20 dB)
 → Find delay (all loudspeakers on). Describe the system (subs, crossover if known, processor steps). Start setup.
 
+**Console / processor** ("Your system"): pick a model or "My console…" and set the maximum delay, PEQ bands on the sub and satellite outputs, gain step and how the width is set (Q or octaves). SSMT never suggests more bands than the output has and warns if a delay exceeds the console maximum.
+
 **1. Whole system** → **2. Subs only** (mute the mains) → **3. Mains only** (mute the subs). Tiles show what must
 be ON / MUTED; wait for the green "Signal quality" needle and press Capture (Return).
 

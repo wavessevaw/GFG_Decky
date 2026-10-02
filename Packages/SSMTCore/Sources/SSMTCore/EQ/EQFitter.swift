@@ -24,6 +24,11 @@ public struct PEQFilter: Equatable, Codable, Sendable, Identifiable {
         return f >= 1000 ? trim(f / 1000) + " kHz" : trim(f) + " Hz"
     }
 
+    /// "Q 2.0", or "BW 0.67 oct" for consoles that set the width in octaves.
+    public func widthLabel(inOctaves: Bool) -> String {
+        inOctaves ? String(format: "BW %.2f oct", ProcessorProfile.octaves(q: q)) : String(format: "Q %.1f", q)
+    }
+
     public func biquad(sampleRate: Double) -> Biquad {
         Biquad.design(.peaking, frequency: frequency, q: q, gainDB: gainDB, sampleRate: sampleRate)
     }
@@ -71,6 +76,15 @@ public struct EQSettings: Equatable, Codable, Sendable {
     }
     /// Optional so that sessions saved before the grid existed still decode.
     private var frequencyGridStorage: EQFrequencyGrid?
+    /// PEQ bands available per group on the console (nil = no separate limit).
+    public var maxBandsSub: Int?
+    public var maxBandsMains: Int?
+    /// Gain resolution of the console's PEQ (dB).
+    public var gainStepDB: Double {
+        get { gainStepStorage ?? 0.1 }
+        set { gainStepStorage = newValue }
+    }
+    private var gainStepStorage: Double?
     public var maxBands = 8
     public var maxBoostDB = 3.0
     public var maxCutDB = 12.0
@@ -272,9 +286,15 @@ public enum EQFitter {
                 skipped.append(f[bestK])
                 continue
             }
-            error = newError
             let k = f.indices.min { abs(log(f[$0] / fc)) < abs(log(f[$1] / fc)) }!
             let group: LoudspeakerGroup = dominance[k] ?? .mains
+            // No free PEQ band on that group's output: leave this area and try the next one.
+            if let limit = group == .sub ? s.maxBandsSub : s.maxBandsMains,
+               filters.filter({ $0.group == group }).count >= limit {
+                skipped.append(f[bestK])
+                continue
+            }
+            error = newError
             filters.append(PEQFilter(id: filters.count + 1, frequency: fc, gainDB: g, q: q, group: group,
                                      groupAmbiguous: dominance[k] == nil))
         }
@@ -329,7 +349,8 @@ public enum EQFitter {
             if s.frequencyGrid == .free {
                 x.frequency = x.frequency < 1000 ? x.frequency.rounded() : (x.frequency / 10).rounded() * 10
             }
-            x.gainDB = (x.gainDB * 10).rounded() / 10
+            let step = max(s.gainStepDB, 0.01)
+            x.gainDB = (x.gainDB / step).rounded() * step
             x.q = (x.q * 100).rounded() / 100
             return x
         }
@@ -420,15 +441,18 @@ public struct QualityScore: Equatable, Codable, Sendable {
 /// Text exports of the filter list.
 public enum PEQExport {
     /// "Filter Settings" style text for manual entry.
-    public static func filterSettingsText(_ filters: [PEQFilter], title: String = "SSMT Filter Settings") -> String {
+    public static func filterSettingsText(_ filters: [PEQFilter], title: String = "SSMT Filter Settings",
+                                          widthInOctaves: Bool = false) -> String {
         var lines = [title, "Date: \(ISO8601DateFormatter().string(from: Date()))", ""]
         for group in [LoudspeakerGroup.mains, .sub] {
             let fs = filters.filter { $0.group == group }
             guard !fs.isEmpty else { continue }
             lines.append("Group: \(group == .sub ? "Subwoofers" : "Mains")")
             for (i, x) in fs.enumerated() {
-                lines.append(String(format: "Filter %2d: ON  PK  Fc %7.1f Hz  Gain %+5.1f dB  Q %5.2f%@",
-                                    i + 1, x.frequency, x.gainDB, x.q, x.groupAmbiguous ? "  (check group)" : ""))
+                let width = widthInOctaves ? String(format: "BW %4.2f oct", ProcessorProfile.octaves(q: x.q))
+                    : String(format: "Q %5.2f", x.q)
+                lines.append(String(format: "Filter %2d: ON  PK  Fc %7.1f Hz  Gain %+5.2f dB  %@%@",
+                                    i + 1, x.frequency, x.gainDB, width, x.groupAmbiguous ? "  (check group)" : ""))
             }
             lines.append("")
         }

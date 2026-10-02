@@ -14,6 +14,9 @@
   подъёмы, провалы и интерференция не «лечатся».
 - **Микрофоны:** ваши файлы калибровки и 22 встроенных типовых профиля (Shure SM81, Soyuz 011/013 FET,
   Soyuz 022 Bomblet, AKG C414 XLII и др., точность ±2–3 дБ).
+- **Пульт / процессор:** профиль с шагом и максимумом задержки, числом полос PEQ на выходах сабов и сателлитов,
+  шагом усиления и шириной в Q или октавах; пресеты Behringer X32 / Midas M32, Allen & Heath SQ, Yamaha CL/QL
+  (только подтверждённые значения) и «Свой пульт».
 - **Звуковые карты:** любые через Core Audio (USB, Thunderbolt, Dante/AVB), вход и выход на разных устройствах.
 - **Интерфейс:** «Мастер» / «Эксперт», «Сцена» (крупные цифры), мини-окно, STOP / Esc, русский и английский;
   «Облегчённая графика» для старых Mac (включается автоматически на Intel).
@@ -32,7 +35,7 @@ captures → sub/satellite phase alignment with live needle tuners → zone-aver
 report, filter export, session); robust alignment (phase match over the overlap band, cycle-slip
 rejection by arrival time, ambiguity warning, verification capture); EQ bands on ISO 1/3-octave
 frequencies in ascending order; microphone correction (your files + 22 typical profiles, ±2–3 dB); any
-Core Audio interface; Wizard/Expert/Stage modes, mini window, Russian and English, reduced graphics for
+Core Audio interface; console/processor profiles (delay limits, PEQ bands per output, gain step, width as Q or octaves); Wizard/Expert/Stage modes, mini window, Russian and English, reduced graphics for
 older Macs; full simulation.
 
 New since 0.9.x: twice-as-fast analysis, tuner readings off the main thread, a clean stop when the audio

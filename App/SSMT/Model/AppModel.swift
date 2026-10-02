@@ -708,7 +708,11 @@ final class AppModel: ObservableObject {
 
     // MARK: - Export
 
-    var exportText: String { PEQExport.filterSettingsText(wizard.enteredFilters.isEmpty ? (wizard.eqResult?.filters ?? []) : wizard.enteredFilters) }
+    var exportText: String {
+        PEQExport.filterSettingsText(wizard.enteredFilters.isEmpty ? (wizard.eqResult?.filters ?? []) : wizard.enteredFilters,
+                                     title: "SSMT Filter Settings · \(wizard.configuration.processor.name)",
+                                     widthInOctaves: wizard.configuration.processor.bandwidthInOctaves)
+    }
     var exportCSV: String { PEQExport.csv(wizard.enteredFilters.isEmpty ? (wizard.eqResult?.filters ?? []) : wizard.enteredFilters) }
 
     func saveExport(csv: Bool) {

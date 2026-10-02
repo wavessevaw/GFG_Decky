@@ -18,6 +18,16 @@ public struct WizardConfiguration: Equatable, Codable, Sendable {
     public var eq = EQSettings()
     /// Consecutive EQ iterations allowed before suggesting to stop (spec 7).
     public var maxEQIterations = 2
+    /// Console / processor that receives the corrections (resolution and limits).
+    public var processor: ProcessorProfile {
+        get { processorStorage ?? .generic }
+        set {
+            processorStorage = newValue
+            newValue.apply(to: &self)
+        }
+    }
+    /// Optional so that sessions saved before profiles existed still decode.
+    private var processorStorage: ProcessorProfile?
 
     public init() {}
 
@@ -240,6 +250,9 @@ public struct SetupWizard: Codable, Sendable {
         var eqs = configuration.eq
         eqs.coherenceThreshold = configuration.coherenceThreshold
         eqs.sampleRate = configuration.sampleRate
+        // Bands already entered in earlier rounds use up the console's PEQ bands.
+        if let m = eqs.maxBandsSub { eqs.maxBandsSub = max(0, m - enteredFilters.filter { $0.group == .sub }.count) }
+        if let m = eqs.maxBandsMains { eqs.maxBandsMains = max(0, m - enteredFilters.filter { $0.group == .mains }.count) }
         let r = EQFitter.fit(average: a, target: configuration.target, settings: eqs,
                              main: mainsResponse, sub: subOnly?.transfer, crossoverBand: alignment?.overlapBand,
                              occupied: enteredFilters.map(\.frequency))
