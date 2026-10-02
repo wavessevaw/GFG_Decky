@@ -5,6 +5,8 @@ import SwiftUI
 struct SetupSidebar: View {
     @EnvironmentObject var model: AppModel
     @EnvironmentObject var loc: Localizer
+    /// Expert mode shows display options (smoothing, coherence threshold, graph selection).
+    var expert = true
 
     var body: some View {
         ScrollView {
@@ -13,7 +15,7 @@ struct SetupSidebar: View {
                 generatorPanel
                 CalibrationPanel()
                 if model.source == .simulation { simulationPanel }
-                displayPanel
+                if expert { displayPanel }
                 languagePanel
             }
             .padding(12)

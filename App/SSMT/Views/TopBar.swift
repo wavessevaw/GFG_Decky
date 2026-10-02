@@ -13,6 +13,16 @@ struct TopBar: View {
                 Text(loc.t("app.subtitle")).font(Theme.label(9)).tracking(1).foregroundStyle(Theme.textMuted)
             }
             Rectangle().fill(Theme.hairline).frame(width: 1, height: 26)
+            Picker("", selection: $model.appMode) {
+                Text(loc.t("mode.wizard")).tag(AppMode.wizard)
+                Text(loc.t("mode.expert")).tag(AppMode.expert)
+            }
+            .labelsHidden()
+            .pickerStyle(.segmented)
+            .frame(width: 200)
+            Toggle(loc.t("mode.stage"), isOn: $model.stageMode)
+                .toggleStyle(.button)
+                .help(loc.t("mode.stage.help"))
             engineStatus
             Spacer()
             if let d = model.delay {

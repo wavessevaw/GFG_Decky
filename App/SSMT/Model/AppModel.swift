@@ -33,6 +33,11 @@ enum NoiseChoice: Int, CaseIterable, Identifiable {
     }
 }
 
+enum AppMode: String, CaseIterable, Identifiable {
+    case wizard, expert
+    var id: String { rawValue }
+}
+
 enum GraphKind: String, CaseIterable, Identifiable {
     case magnitude, phase, coherence
     var id: String { rawValue }
@@ -69,6 +74,14 @@ final class AppModel: ObservableObject {
     @Published private(set) var calibration = CalibrationLibrary.load()
     @Published private(set) var autoLevelState: AutoLevelState = .idle
     @Published private(set) var noiseFloor: [Double]?
+
+    // Wizard
+    @Published var appMode: AppMode = .wizard
+    @Published var wizard = SetupWizard()
+    @Published private(set) var wizardCaptureRunning = false
+    @Published private(set) var wizardDelaySearch = false
+    @Published private(set) var lastAcceptance: CaptureAcceptance?
+    @Published private(set) var simulationSettingsApplied = false
 
     // Display
     @Published var smoothing: SmoothingResolution = .oct12
@@ -169,6 +182,8 @@ final class AppModel: ObservableObject {
         delay = nil
         noiseFloor = nil
         autoLevelState = .idle
+        simulationSettingsApplied = false
+        wizard = SetupWizard(configuration: wizard.configuration)
     }
 
     private func makeHardwareBackend() throws -> AudioIOBackend {
@@ -325,6 +340,97 @@ final class AppModel: ObservableObject {
         return calibration.selectedMicrophone?.apply(to: tf) ?? tf
     }
 
+    // MARK: - Wizard
+
+    var isSimulation: Bool { source == .simulation }
+
+    /// Step 0: finds and locks the delay on the full system (noise must be on).
+    func wizardLockDelay() {
+        guard let engine else { return }
+        if !noiseOn { setNoise(on: true) }
+        wizardDelaySearch = true
+        engine.findDelay(seconds: 3) { [weak self] estimate in
+            let epoch = engine.backend.discontinuities.value
+            Task { @MainActor in
+                guard let self else { return }
+                self.wizardDelaySearch = false
+                self.delay = estimate
+                if let e = estimate, e.isReliable { self.wizard.lockDelay(e, epoch: epoch) }
+            }
+        }
+    }
+
+    func wizardStart() {
+        wizard.configuration.temperatureCelsius = temperatureCelsius
+        wizard.configuration.coherenceThreshold = coherenceThreshold
+        lastAcceptance = nil
+        simulationSettingsApplied = false
+        wizard.start()
+        if isSimulation { simulateGroupsForStep() }
+    }
+
+    /// Captures the current step with the step's quality band; the wizard decides acceptance.
+    func wizardCapture() {
+        guard let engine, wizard.step.requiredGroups != nil, !wizardCaptureRunning else { return }
+        if !noiseOn { setNoise(on: true) }
+        wizardCaptureRunning = true
+        lastAcceptance = nil
+        let step = wizard.step
+        engine.capture(label: "\(step)", duration: wizard.configuration.captureSeconds,
+                       qualityBand: step.qualityBand(crossover: wizard.configuration.crossover)) { [weak self] capture in
+            Task { @MainActor in
+                guard let self else { return }
+                self.wizardCaptureRunning = false
+                self.lastAcceptance = self.wizard.submit(capture)
+                if case .accepted = self.lastAcceptance, self.isSimulation { self.simulateGroupsForStep() }
+            }
+        }
+    }
+
+    func wizardCancelCapture() {
+        engine?.cancelCapture()
+        wizardCaptureRunning = false
+    }
+
+    func wizardBeginVerification() {
+        lastAcceptance = nil
+        wizard.beginVerification()
+        if isSimulation { simulateGroupsForStep() }
+    }
+
+    func wizardBack() {
+        wizardCancelCapture()
+        lastAcceptance = nil
+        wizard.goBack()
+        if isSimulation { simulateGroupsForStep() }
+    }
+
+    func wizardRestart() {
+        wizardCancelCapture()
+        lastAcceptance = nil
+        simulationSettingsApplied = false
+        let config = wizard.configuration
+        wizard = SetupWizard(configuration: config)
+        if let d = delay, d.isReliable, let engine {
+            wizard.lockDelay(d, epoch: engine.backend.discontinuities.value)
+        }
+    }
+
+    /// Simulation only: mute/unmute the virtual groups as the current step asks the user to.
+    func simulateGroupsForStep() {
+        guard isSimulation, let g = wizard.step.requiredGroups else { return }
+        simulationSubOn = g.sub
+        simulationMainOn = g.mains
+    }
+
+    /// Simulation only: enter the recommendation on the virtual processor (once).
+    func simulateApplyRecommendation() {
+        guard isSimulation, !simulationSettingsApplied, let a = wizard.alignment else { return }
+        simulationBackend?.applyAlignment(delaySeconds: a.roundedDelay, invertPolarity: a.best.invertPolarity,
+                                          subGainDB: a.subGainDB)
+        simulationSettingsApplied = true
+    }
+
     func setReferenceMode(_ mode: ReferenceMode) {
         referenceMode = mode
         engine?.setReferenceMode(mode)
@@ -348,7 +454,8 @@ final class AppModel: ObservableObject {
         simulationBackend?.setActiveGroups(sub: simulationSubOn, main: simulationMainOn)
     }
 
-    /// Demo room: sub and mains 1.5 m apart in depth, a floor bounce and two LF modes.
+    /// Demo room with a deliberately misaligned sub (2.5 m closer, polarity inverted, +3 dB),
+    /// a floor bounce and two LF modes — gives the wizard something to fix.
     static func demoSystem() -> VirtualSystem {
         let fs = 48000.0
         let room = VirtualRoom(
@@ -356,7 +463,7 @@ final class AppModel: ObservableObject {
                           VirtualReflection(delaySamples: 1900, gain: 0.2)],
             modes: [Biquad.design(.peaking, frequency: 63, q: 6, gainDB: 7, sampleRate: fs),
                     Biquad.design(.peaking, frequency: 160, q: 5, gainDB: 4, sampleRate: fs)])
-        return VirtualSystem.typicalPA(sampleRate: fs, crossover: 90, subDistance: 8, mainDistance: 9.5,
-                                       room: room, micNoiseDBFS: -75)
+        return VirtualSystem.typicalPA(sampleRate: fs, crossover: 90, subDistance: 7, mainDistance: 9.5,
+                                       subGainDB: 3, subInverted: true, room: room, micNoiseDBFS: -75)
     }
 }

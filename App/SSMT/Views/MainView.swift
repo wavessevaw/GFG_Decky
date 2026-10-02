@@ -9,13 +9,18 @@ struct MainView: View {
         VStack(spacing: 0) {
             TopBar()
             HStack(spacing: 0) {
-                SetupSidebar()
+                SetupSidebar(expert: model.appMode == .expert)
                 Rectangle().fill(Theme.hairline).frame(width: 1)
-                VStack(spacing: 12) {
-                    MeterPanel()
-                    graphs
+                switch model.appMode {
+                case .wizard:
+                    WizardView()
+                case .expert:
+                    VStack(spacing: 12) {
+                        MeterPanel()
+                        graphs
+                    }
+                    .padding(12)
                 }
-                .padding(12)
             }
         }
         .background(Theme.background)

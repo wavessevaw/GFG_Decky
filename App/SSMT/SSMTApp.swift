@@ -23,6 +23,16 @@ struct SSMTApp: App {
                     .keyboardShortcut("n", modifiers: [.command])
                 Button(localizer.t("delay.find")) { model.findDelay() }
                     .keyboardShortcut("d", modifiers: [.command])
+                Divider()
+                Button(localizer.t("mode.wizard")) { model.appMode = .wizard }
+                    .keyboardShortcut("1", modifiers: [.command])
+                Button(localizer.t("mode.expert")) { model.appMode = .expert }
+                    .keyboardShortcut("e", modifiers: [.command])
+                Button(localizer.t("mode.stage")) { model.stageMode.toggle() }
+                    .keyboardShortcut("l", modifiers: [.command])
+                Divider()
+                Button(localizer.t("wizard.begin")) { model.wizardStart() }
+                    .keyboardShortcut("b", modifiers: [.command])
             }
         }
     }
