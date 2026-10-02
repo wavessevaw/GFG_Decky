@@ -241,7 +241,8 @@ public struct SetupWizard: Codable, Sendable {
         eqs.coherenceThreshold = configuration.coherenceThreshold
         eqs.sampleRate = configuration.sampleRate
         let r = EQFitter.fit(average: a, target: configuration.target, settings: eqs,
-                             main: mainsResponse, sub: subOnly?.transfer, crossoverBand: alignment?.overlapBand)
+                             main: mainsResponse, sub: subOnly?.transfer, crossoverBand: alignment?.overlapBand,
+                             occupied: enteredFilters.map(\.frequency))
         eqResult = r
         step = .eqTuning
         return r
@@ -250,7 +251,8 @@ public struct SetupWizard: Codable, Sendable {
     /// The user entered the bands; measure the same points again.
     public mutating func beginEQVerification() {
         guard let r = eqResult else { return }
-        enteredFilters += r.filters.map { var f = $0; f.id = enteredFilters.count + $0.id; return f }
+        // All bands entered so far, in ascending frequency.
+        enteredFilters = EQFitter.sortedByFrequency(enteredFilters + r.filters)
         eqIteration += 1
         eqVerificationPoints = []
         eqAfterAverage = nil

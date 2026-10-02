@@ -122,7 +122,7 @@ struct ReportView: View {
                 GridRow {
                     Text("\(i + 1)").font(Theme.mono(12))
                     Text(loc.t(f.group == .sub ? "group.subs" : "group.mains")).font(Theme.label(12))
-                    Text(String(format: "%.0f Hz", f.frequency)).font(Theme.mono(12))
+                    Text(f.frequencyLabel).font(Theme.mono(12))
                     Text(String(format: "%+.1f dB", f.gainDB)).font(Theme.mono(12, weight: .semibold))
                     Text(String(format: "%.2f", f.q)).font(Theme.mono(12))
                 }

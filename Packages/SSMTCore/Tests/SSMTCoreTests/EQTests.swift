@@ -53,6 +53,34 @@ final class EQTests: XCTestCase {
         XCTAssertTrue(r.filters.contains { abs(log2($0.frequency / 125)) < 0.25 && $0.gainDB < -3 })
     }
 
+    /// Default: bands on the ISO 1/3-octave grid, in ascending order, numbered 1…N, no duplicates;
+    /// the fit stays as good as with free frequencies.
+    func testBandsOnStandardGridInOrder() {
+        let avg = average { f in
+            self.peakingDB(f, 118, 4, 7) + self.peakingDB(f, 2300, 1.5, 4) + self.peakingDB(f, 640, 1, -3)
+                + self.peakingDB(f, 6700, 2, 3)
+        }
+        let r = EQFitter.fit(average: avg, target: .preset(.flat))
+        let grid = Set(EQFrequencyGrid.thirdOctaveValues)
+        XCTAssertFalse(r.filters.isEmpty)
+        XCTAssertTrue(r.filters.allSatisfy { grid.contains($0.frequency) }, "\(r.filters.map(\.frequency))")
+        XCTAssertEqual(r.filters.map(\.frequency), r.filters.map(\.frequency).sorted())
+        XCTAssertEqual(Set(r.filters.map(\.frequency)).count, r.filters.count)
+        XCTAssertEqual(r.filters.map(\.id), Array(1...r.filters.count))
+        var free = EQSettings()
+        free.frequencyGrid = .free
+        let rf = EQFitter.fit(average: avg, target: .preset(.flat), settings: free)
+        XCTAssertLessThan(r.rmsAfterDB, rf.rmsAfterDB + 0.5, "grid \(r.rmsAfterDB) vs free \(rf.rmsAfterDB)")
+        XCTAssertLessThan(r.rmsAfterDB, max(1.0, r.rmsBeforeDB / 2))
+    }
+
+    /// A later EQ round does not reuse a frequency already on the processor.
+    func testOccupiedFrequenciesAreAvoided() {
+        let avg = average { f in self.peakingDB(f, 125, 4, 7) }
+        let r = EQFitter.fit(average: avg, target: .preset(.flat), occupied: [125])
+        XCTAssertFalse(r.filters.contains { $0.frequency == 125 }, "\(r.filters)")
+    }
+
     /// Narrow deep dip: never boosted, flagged as not correctable.
     func testNoBoostIntoNarrowDip() {
         let avg = average { f in self.peakingDB(f, 400, 14, -15) + self.peakingDB(f, 3000, 1, 4) }

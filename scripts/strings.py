@@ -353,7 +353,7 @@ STRINGS = {
     "eq.notCorrectable": ("Some areas are not corrected on purpose: narrow dips and big differences between points are room acoustics, not the system's response.",
                           "Некоторые участки специально не корректируются: узкие провалы и большой разброс между точками — это акустика зала, а не АЧХ системы."),
     "eq.bands": ("EQ bands", "Полосы EQ"),
-    "eq.band.title": ("Band %ld · %.0f Hz", "Полоса %ld · %.0f Гц"),
+    "eq.band.title": ("Band %ld · %@", "Полоса %ld · %@"),
     "eq.band.cutMore": ("Cut %.1f dB more", "Убавьте ещё %.1f dB"),
     "eq.band.boostMore": ("Add %.1f dB", "Прибавьте %.1f dB"),
     "eq.band.shape": ("Gain is right — check frequency and Q", "Усиление верное — проверьте частоту и Q"),
@@ -436,9 +436,14 @@ STRINGS = {
     "prep.mic.noProfile": ("Choose your microphone.", "Выберите свой микрофон."),
     "prep.mic.typical": ("Typical profile.", "Типовой профиль."),
     "graphics.reduced": ("Reduced graphics (older Macs)", "Облегчённая графика (старые Mac)"),
+    "eq.grid.title": ("Band frequencies", "Частоты полос"),
+    "eq.grid.thirdOctave": ("Standard 1/3 octave (ISO)", "Стандартные 1/3 октавы (ISO)"),
+    "eq.grid.sixthOctave": ("Fine 1/6 octave (ISO)", "Точные 1/6 октавы (ISO)"),
+    "eq.grid.free": ("Any frequency", "Любые частоты"),
 }
 
 DYNAMIC_PREFIXES = {
+    "eq.grid.": ["eq.grid.thirdOctave", "eq.grid.sixthOctave", "eq.grid.free"],
     "cal.section.": [f"cal.section.{k}" for k in ("measurement", "smallDiaphragm", "largeDiaphragm", "dynamic")],
     "stage.": [f"stage.{i}.{k}" for i in range(5) for k in ("title", "subtitle")],
     "graph.": ["graph.magnitude", "graph.phase", "graph.coherence"],

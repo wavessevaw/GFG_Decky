@@ -32,7 +32,7 @@ the sub is tuned first, then the mains delay. Ambiguous solutions are flagged wi
 **5. Verify.** All loudspeakers on → Capture. "Crossover dip" (green < 3 dB) and "Matches prediction"; if not,
 a concrete hint ("looks like the polarity was not changed").
 
-**6. Zone.** Pick a target curve (Flat, Live/PA, Speech, Club or your own via the editor). Measure the points
+**6. Zone.** EQ bands use standard centre frequencies (ISO 1/3 octave: 63, 80, 100, 125 … 10k, 12.5k, 16k) in ascending order; the target menu offers 1/6 octave or any frequency. Pick a target curve (Flat, Live/PA, Speech, Club or your own via the editor). Measure the points
 shown on the map (5 by default).
 
 **7. EQ by the needles.** Leave the mic at point 1, start the EQ tuner (6 s reference), enter the bands one by

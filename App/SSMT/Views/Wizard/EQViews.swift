@@ -81,6 +81,9 @@ struct EQPointsView: View {
             Divider()
             Button(loc.t("target.editor") + "…") { editingTarget = true }
             Divider()
+            Picker(loc.t("eq.grid.title"), selection: $model.wizard.configuration.eq.frequencyGrid) {
+                ForEach(EQFrequencyGrid.allCases, id: \.self) { Text(loc.t("eq.grid.\($0.rawValue)")).tag($0) }
+            }
             Picker(loc.t("eq.pointCount.title"), selection: $model.wizard.configuration.eqPointCount) {
                 ForEach(3...9, id: \.self) { Text("\($0)").tag($0) }
             }
@@ -257,7 +260,7 @@ struct EQTuningView: View {
                             .font(Theme.label(11))
                             .foregroundStyle(f.group == .sub ? Theme.dataSecondary : Theme.textSecondary)
                             .frame(width: 30)
-                        Text(String(format: "%.0f Hz", f.frequency)).font(Theme.mono(12)).frame(width: 70, alignment: .trailing)
+                        Text(f.frequencyLabel).font(Theme.mono(12)).frame(width: 74, alignment: .trailing)
                         Text(String(format: "%+.1f", f.gainDB)).font(Theme.mono(12, weight: .semibold)).frame(width: 40, alignment: .trailing)
                         Text(String(format: "Q %.1f", f.q)).font(Theme.mono(11)).foregroundStyle(Theme.textMuted).frame(width: 44, alignment: .trailing)
                         Spacer(minLength: 4)
@@ -280,7 +283,7 @@ struct EQTuningView: View {
         let b = model.eqTunerReading?.bands.first { $0.bandIndex == i }
         if let f = r.filters[safe: i] {
             TunerGauge(
-                title: loc.t("eq.band.title", i + 1, f.frequency),
+                title: loc.t("eq.band.title", i + 1, f.frequencyLabel),
                 value: b.map { $0.remainingGainDB / 6 },
                 tolerance: 0.5 / 6,
                 readout: b.map { String(format: "%+.1f", $0.remainingGainDB) } ?? "—",
@@ -327,7 +330,7 @@ struct EQTuningView: View {
             ForEach(Array(r.filters.enumerated()), id: \.offset) { i, f in
                 let entered = model.simulatedBandEntered(f)
                 HStack {
-                    Toggle(String(format: "%d · %.0f Hz", i + 1, f.frequency), isOn: Binding(
+                    Toggle("\(i + 1) · \(f.frequencyLabel)", isOn: Binding(
                         get: { entered != nil }, set: { _ in model.simulateToggleBand(f) }))
                         .frame(width: 140, alignment: .leading)
                     if let e = entered {

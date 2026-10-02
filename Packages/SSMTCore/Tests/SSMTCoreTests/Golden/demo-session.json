@@ -2,38 +2,38 @@
   "alignmentDelayMs" : 7.430000000000001,
   "crossover" : 90,
   "dipAfterDB" : 0,
-  "eqRmsAfter" : 0.7759237907124615,
+  "eqRmsAfter" : 0.8767363544572194,
   "eqRmsBefore" : 1.7288492106324616,
   "filters" : [
     {
-      "frequency" : 1840,
-      "gainDB" : -3.6,
-      "group" : "mains",
-      "q" : 2.32
+      "frequency" : 40,
+      "gainDB" : 1.5,
+      "group" : "sub",
+      "q" : 1.4
     },
     {
-      "frequency" : 161,
-      "gainDB" : 2.9,
-      "group" : "mains",
-      "q" : 1.97
+      "frequency" : 63,
+      "gainDB" : -1.9,
+      "group" : "sub",
+      "q" : 2.54
     },
     {
-      "frequency" : 446,
-      "gainDB" : 2.3,
+      "frequency" : 160,
+      "gainDB" : 2.8,
       "group" : "mains",
       "q" : 2
     },
     {
-      "frequency" : 37,
-      "gainDB" : 1.4,
-      "group" : "sub",
-      "q" : 1.29
+      "frequency" : 400,
+      "gainDB" : 2.3,
+      "group" : "mains",
+      "q" : 1.99
     },
     {
-      "frequency" : 60,
-      "gainDB" : -1.6,
-      "group" : "sub",
-      "q" : 2.49
+      "frequency" : 2000,
+      "gainDB" : -3.7,
+      "group" : "mains",
+      "q" : 2.25
     }
   ],
   "invertPolarity" : true,
