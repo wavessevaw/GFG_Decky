@@ -3708,6 +3708,23 @@
         }
       }
     },
+    "processor.source.ah-dlive": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "mix output delay up to 682 ms (firmware 1.80+), 4-band PEQ; with NEQ12 instead of the GEQ, set 12 bands in “My console”."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "задержка выходов до 682 мс (прошивка 1.80+), 4-полосный PEQ; если на выходе стоит NEQ12 вместо GEQ — задайте 12 полос в «Своём пульте»."
+          }
+        }
+      }
+    },
     "processor.source.ah-sq": {
       "extractionState": "manual",
       "localizations": {
@@ -3738,6 +3755,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "6-полосный PEQ на шинах, матрицах и мастере."
+          }
+        }
+      }
+    },
+    "processor.source.midas-hd96": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "flexi aux / matrix outputs: 4-band PEQ, delay up to 500 ms."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "выходы flexi aux / матрицы: 4-полосный PEQ, задержка до 500 мс."
           }
         }
       }

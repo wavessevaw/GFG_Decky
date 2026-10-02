@@ -61,11 +61,23 @@ public struct ProcessorProfile: Equatable, Codable, Sendable, Identifiable {
         x32.peqBandsMains = 6
         x32.source = "Buses, matrices and main: 6-band PEQ (manufacturer specifications)"
 
+        var dlive = ProcessorProfile(id: "ah-dlive", name: "Allen & Heath dLive")
+        dlive.maxDelayMs = 682
+        dlive.peqBandsSub = 4
+        dlive.peqBandsMains = 4
+        dlive.source = "Mix outputs: delay up to 682 ms (firmware 1.80+), 4-band PEQ; NEQ12 (12 bands) can replace the GEQ (manufacturer information)"
+
+        var hd96 = ProcessorProfile(id: "midas-hd96", name: "Midas HD96")
+        hd96.maxDelayMs = 500
+        hd96.peqBandsSub = 4
+        hd96.peqBandsMains = 4
+        hd96.source = "Flexi aux / matrix outputs: 4-band PEQ, delay up to 500 ms (manufacturer specifications)"
+
         var cl = ProcessorProfile(id: "yamaha-cl", name: "Yamaha CL / QL")
         cl.maxDelayMs = 1000
         cl.source = "Output delay 0–1000 ms (manufacturer specifications)"
 
-        return [generic, x32, sq, cl]
+        return [generic, x32, sq, dlive, hd96, cl]
     }()
 
     public static func profile(id: String) -> ProcessorProfile? { presets.first { $0.id == id } }

@@ -395,10 +395,12 @@ STRINGS = {
     "processor.gainStep": ("PEQ gain step", "Шаг усиления PEQ"),
     "processor.octaves": ("Band width in octaves (not Q)", "Ширина полосы в октавах (а не Q)"),
     "processor.delayTooLong": ("%.2f ms is more than this console's maximum delay (%.0f ms). Delay the other group instead or use an external processor.", "%.2f мс — больше максимальной задержки этого пульта (%.0f мс). Задержите другую группу или используйте внешний процессор."),
+    "processor.source.ah-dlive": ("mix output delay up to 682 ms (firmware 1.80+), 4-band PEQ; with NEQ12 instead of the GEQ, set 12 bands in “My console”.", "задержка выходов до 682 мс (прошивка 1.80+), 4-полосный PEQ; если на выходе стоит NEQ12 вместо GEQ — задайте 12 полос в «Своём пульте»."),
+    "processor.source.midas-hd96": ("flexi aux / matrix outputs: 4-band PEQ, delay up to 500 ms.", "выходы flexi aux / матрицы: 4-полосный PEQ, задержка до 500 мс."),
 }
 
 DYNAMIC_PREFIXES = {
-    "processor.source.": ["processor.source.behringer-x32", "processor.source.ah-sq", "processor.source.yamaha-cl"],
+    "processor.source.": ["processor.source.behringer-x32", "processor.source.ah-sq", "processor.source.ah-dlive", "processor.source.midas-hd96", "processor.source.yamaha-cl"],
     "error.": ["error.audioLost"],
     "eq.grid.": ["eq.grid.thirdOctave", "eq.grid.sixthOctave", "eq.grid.free"],
     "cal.section.": [f"cal.section.{k}" for k in ("measurement", "smallDiaphragm", "largeDiaphragm", "dynamic")],
