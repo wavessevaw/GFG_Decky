@@ -127,9 +127,9 @@ final class SnapshotTests: XCTestCase {
             .environment(\.colorScheme, .dark)
             .background(Theme.background)
         let host = NSHostingView(rootView: root)
+        let target = size ?? host.fittingSize
         // Fixed snapshot size: do not let the hosting view resize the window to its content.
         host.sizingOptions = []
-        let target = size ?? host.fittingSize
         host.frame = CGRect(origin: .zero, size: target)
         let window = NSWindow(contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: false)
         window.appearance = NSAppearance(named: .darkAqua)
