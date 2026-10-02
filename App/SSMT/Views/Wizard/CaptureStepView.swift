@@ -9,7 +9,7 @@ struct CaptureStepView: View {
     private var step: WizardStep { model.wizard.step }
 
     var body: some View {
-        StepScaffold(title: loc.t("capture.\(step.rawValue).title"), subtitle: loc.t("capture.\(step.rawValue).short"),
+        StepScaffold(title: loc.t("capture.\(step.rawValue).title"), subtitle: subtitle,
                      info: loc.t("capture.\(step.rawValue).text")) {
             VStack(spacing: 22) {
                 groupPills
@@ -30,6 +30,16 @@ struct CaptureStepView: View {
         }
     }
 
+    /// "Capture 1 of 3 · Subs muted, satellites on" for the alignment captures.
+    private var subtitle: String {
+        let short = loc.t("capture.\(step.rawValue).short")
+        let c = model.wizard.configuration
+        guard step.isAlignmentCapture, c.hasSubwoofer else { return short }
+        let order: [WizardStep] = c.fastMode ? [.mainsOnly, .subOnly] : [.mainsOnly, .subOnly, .baseline]
+        guard let i = order.firstIndex(of: step) else { return short }
+        return String(format: loc.t("capture.counter"), i + 1, order.count) + " · " + short
+    }
+
     private var retry: Bool {
         if case .rejected = model.lastAcceptance { return true }
         return false
@@ -39,8 +49,8 @@ struct CaptureStepView: View {
     private var groupPills: some View {
         let g = step.requiredGroups ?? (sub: true, mains: true)
         return HStack(spacing: 12) {
-            pill(loc.t("group.subs"), on: g.sub)
             pill(loc.t("group.mains"), on: g.mains)
+            pill(loc.t("group.subs"), on: g.sub)
         }
     }
 

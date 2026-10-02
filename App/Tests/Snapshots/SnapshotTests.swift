@@ -220,7 +220,7 @@ enum SimulatedSession {
         guard let d = delay else { throw XCTSkip("delay not found") }
         w.lockDelay(d, epoch: backend.discontinuities.value)
         w.start()
-        for step in [WizardStep.baseline, .subOnly, .mainsOnly] {
+        for step in [WizardStep.mainsOnly, .subOnly, .baseline] {
             let g = step.requiredGroups!
             backend.setActiveGroups(sub: g.sub, main: g.mains)
             run(0.5)

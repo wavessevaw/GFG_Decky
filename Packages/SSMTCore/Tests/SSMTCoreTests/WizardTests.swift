@@ -61,10 +61,11 @@ final class WizardTests: XCTestCase {
         XCTAssertTrue(delay.isReliable)
         wizard.lockDelay(delay, epoch: rig.backend.discontinuities.value)
         wizard.start()
-        XCTAssertEqual(wizard.step, .baseline)
+        XCTAssertEqual(wizard.step, .mainsOnly)
 
-        for step in [WizardStep.baseline, .subOnly, .mainsOnly] {
-            if fastMode && step == .mainsOnly { break }
+        // Satellites alone, then subs alone, then the whole system as it is ("before"; not in fast mode).
+        for step in [WizardStep.mainsOnly, .subOnly, .baseline] {
+            if fastMode && step == .baseline { break }
             XCTAssertEqual(wizard.step, step)
             let g = step.requiredGroups!
             rig.backend.setActiveGroups(sub: g.sub, main: g.mains)
@@ -164,7 +165,7 @@ final class WizardTests: XCTestCase {
         let delay = try XCTUnwrap(rig.findDelay())
         wizard.lockDelay(delay, epoch: rig.backend.discontinuities.value)
         wizard.start()
-        for step in [WizardStep.baseline, .subOnly, .mainsOnly] {
+        for step in [WizardStep.mainsOnly, .subOnly, .baseline] {
             let g = step.requiredGroups!
             rig.backend.setActiveGroups(sub: g.sub, main: g.mains)
             rig.run(seconds: 0.5)
@@ -183,7 +184,8 @@ final class WizardTests: XCTestCase {
 
     func testFastModeWizard() throws {
         let w = try runWizard(fastMode: true)
-        XCTAssertNil(w.mainsOnly)
+        XCTAssertNil(w.baseline)
+        XCTAssertNotNil(w.mainsOnly)
         XCTAssertLessThan(w.report?.after?.dipDepthDB ?? 99, 3)
     }
 
@@ -210,6 +212,6 @@ final class WizardTests: XCTestCase {
         let c = try XCTUnwrap(rig.capture("baseline", seconds: 3))
         guard case .rejected(let reasons) = wizard.submit(c) else { return XCTFail() }
         XCTAssertTrue(reasons.contains(.clipping))
-        XCTAssertEqual(wizard.step, .baseline)
+        XCTAssertEqual(wizard.step, .mainsOnly)
     }
 }

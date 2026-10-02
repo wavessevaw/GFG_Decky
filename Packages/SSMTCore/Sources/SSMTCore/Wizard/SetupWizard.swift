@@ -4,7 +4,8 @@ public struct WizardConfiguration: Equatable, Codable, Sendable {
     public var hasSubwoofer = true
     /// Known crossover frequency; nil = detect automatically.
     public var crossover: Double?
-    /// Fast mode: skip the "mains only" capture and derive it as H_total − H_sub (lower accuracy).
+    /// Fast mode: skip the whole-system ("before") capture; mains and subs are still measured
+    /// separately. The verification then has no "before" curve to compare with.
     public var fastMode = false
     public var captureSeconds: Double = 12
     public var delayStep: Double = 0.00001
@@ -31,6 +32,9 @@ public struct WizardConfiguration: Equatable, Codable, Sendable {
     }
 }
 
+/// Wizard steps. Raw values are stored in session files and stay fixed; the order in which the
+/// alignment captures are taken is defined by `SetupWizard` (mains → subs → whole system), not by
+/// the raw values.
 public enum WizardStep: Int, Codable, Sendable, CaseIterable, Comparable {
     case preparation = 0
     case baseline
@@ -44,6 +48,9 @@ public enum WizardStep: Int, Codable, Sendable, CaseIterable, Comparable {
     case finished
 
     public static func < (a: WizardStep, b: WizardStep) -> Bool { a.rawValue < b.rawValue }
+
+    /// One of the three captures for the sub ↔ mains alignment.
+    public var isAlignmentCapture: Bool { self == .mainsOnly || self == .subOnly || self == .baseline }
 
     /// Band in which the capture quality (coherence) is judged for this step.
     public func qualityBand(crossover: Double?) -> ClosedRange<Double> {
@@ -131,18 +138,20 @@ public struct SetupWizard: Codable, Sendable {
 
     // MARK: Navigation
 
+    /// Capture order: mains (satellites) alone, then subwoofers alone, then the whole system as it
+    /// is now ("before", skipped in fast mode). Without subwoofers only the whole system is measured.
     public mutating func start() {
         guard isPrepared else { return }
-        step = .baseline
+        step = configuration.hasSubwoofer ? .mainsOnly : .baseline
     }
 
     public mutating func goBack() {
         switch step {
         case .preparation: break
-        case .baseline: step = .preparation
-        case .subOnly: step = .baseline
-        case .mainsOnly: step = .subOnly
-        case .results: step = configuration.fastMode ? .subOnly : .mainsOnly
+        case .mainsOnly: step = .preparation
+        case .subOnly: step = .mainsOnly
+        case .baseline: step = configuration.hasSubwoofer ? .subOnly : .preparation
+        case .results: step = configuration.fastMode ? .subOnly : .baseline
         case .verification: step = .results
         case .eqPoints: step = configuration.hasSubwoofer ? .verification : .baseline
         case .eqTuning: step = .eqPoints
@@ -172,19 +181,19 @@ public struct SetupWizard: Codable, Sendable {
             return .rejected(capture.assessment.reasons)
         }
         switch step {
-        case .baseline:
-            baseline = capture
-            step = configuration.hasSubwoofer ? .subOnly : .eqPoints
+        case .mainsOnly:
+            mainsOnly = capture
+            step = .subOnly
         case .subOnly:
             subOnly = capture
             if configuration.fastMode {
                 computeResults()
             } else {
-                step = .mainsOnly
+                step = .baseline
             }
-        case .mainsOnly:
-            mainsOnly = capture
-            computeResults()
+        case .baseline:
+            baseline = capture
+            if configuration.hasSubwoofer { computeResults() } else { step = .eqPoints }
         case .verification:
             verification = capture
             evaluateVerification()
