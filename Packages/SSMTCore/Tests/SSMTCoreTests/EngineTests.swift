@@ -92,3 +92,31 @@ final class EngineTests: XCTestCase {
         engine.stop()
     }
 }
+
+final class EngineDelayTests: XCTestCase {
+    func testEngineFindsAndLocksDelay() {
+        var system = VirtualSystem.typicalPA(subDistance: 9.5, mainDistance: 9.5)
+        system.sub.enabled = false
+        var safety = GeneratorSafety()
+        safety.fadeInSeconds = 0.01
+        safety.startLevelDBFS = -20
+        let backend = SimulatedAudioBackend(system: system, deviceLatency: 777, safety: safety, seed: 5)
+        let engine = MeasurementEngine(backend: backend)
+        backend.generatorControl.targetLevelDBFS.value = -20
+        backend.generatorControl.run.value = true
+        for _ in 0..<10 { backend.pump(frames: 1200) }
+        engine.drainNow()
+        let done = expectation(description: "delay")
+        var estimate: DelayEstimate?
+        engine.findDelay(seconds: 2) { e in
+            estimate = e
+            done.fulfill()
+        }
+        for _ in 0..<90 {
+            backend.pump(frames: 1200)
+            engine.drainNow()
+        }
+        wait(for: [done], timeout: 5)
+        XCTAssertEqual(estimate?.samples ?? 0, Double(777 + system.main.delaySamples), accuracy: 1)
+    }
+}

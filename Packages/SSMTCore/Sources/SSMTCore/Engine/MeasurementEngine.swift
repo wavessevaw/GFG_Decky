@@ -68,6 +68,8 @@ public final class MeasurementEngine: @unchecked Sendable {
     private var micMeter: MeterAccumulator
     private var refMeter: MeterAccumulator
     private var referenceDelay = 0
+    private var rawCollection: (frames: Int, reference: [Float], measurement: [Float],
+                                completion: ([Float], [Float]) -> Void)?
     private var lastSnapshotTime = Date.distantPast
     private var snapshotHandler: (@Sendable (LiveSnapshot) -> Void)?
 
@@ -137,6 +139,24 @@ public final class MeasurementEngine: @unchecked Sendable {
         }
     }
 
+    /// Collects `seconds` of raw (reference, measurement) samples, runs GCC-PHAT and,
+    /// if reliable and `lock` is true, locks the reference delay. Completion on the engine queue.
+    public func findDelay(seconds: Double = 3, maxLagSeconds: Double = 0.5, lock: Bool = true,
+                          completion: @escaping (DelayEstimate?) -> Void) {
+        queue.async {
+            let frames = Int(seconds * self.backend.sampleRate)
+            self.rawCollection = (frames, [], [], { ref, mic in
+                let e = DelayFinder.estimate(reference: ref, measurement: mic, sampleRate: self.backend.sampleRate,
+                                             maxLagSeconds: maxLagSeconds)
+                if lock, let e, e.isReliable {
+                    self.referenceDelay = Int(e.samples.rounded())
+                    self.live.setReferenceDelay(samples: self.referenceDelay)
+                }
+                completion(e)
+            })
+        }
+    }
+
     public func cancelCapture() {
         queue.async {
             self.captureAnalyzer = nil
@@ -172,6 +192,16 @@ public final class MeasurementEngine: @unchecked Sendable {
             micMeter.process(mic)
             refMeter.process(refIn)
             live.ingest(reference: reference, measurement: mic)
+            if var raw = rawCollection {
+                raw.reference.append(contentsOf: reference)
+                raw.measurement.append(contentsOf: mic)
+                if raw.reference.count >= raw.frames {
+                    rawCollection = nil
+                    raw.completion(raw.reference, raw.measurement)
+                } else {
+                    rawCollection = raw
+                }
+            }
             if let a = captureAnalyzer, var st = captureState {
                 a.ingest(reference: reference, measurement: mic)
                 st.elapsed += Double(mic.count) / backend.sampleRate
