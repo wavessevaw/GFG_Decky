@@ -12,12 +12,14 @@ struct PolarityLamp: View {
         HStack(spacing: 14) {
             IndicatorLamp(color: color, size: large ? 36 : 28)
                 .opacity(wrong == true && blink ? 0.35 : 1)
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 5) {
                 Text(loc.t("card.polarity").uppercased()).font(Theme.label(11)).tracking(1.2)
                     .foregroundStyle(Color(hex: 0xECE6D6).opacity(0.7))
+                    .fixedSize()
                 VFDStrip(text: text, color: color, size: large ? 15 : 13)
                     .frame(height: large ? 40 : 34)
             }
+            .fixedSize(horizontal: false, vertical: true)
             NixieReadout(text: wrong == true ? "180°" : (wrong == false ? "0°" : "—"), size: large ? 28 : 22)
                 .frame(width: large ? 120 : 96)
         }

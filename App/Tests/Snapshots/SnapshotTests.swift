@@ -106,7 +106,7 @@ final class SnapshotTests: XCTestCase {
     }
 
     func testMiniWindow() throws {
-        try snapshot(MiniDiagnosticsView(), size: CGSize(width: 380, height: 430), name: "mini-window", loc: Self.ru)
+        try snapshot(MiniDiagnosticsView(), size: CGSize(width: 380, height: 330), name: "mini-window", loc: Self.ru)
     }
 
     func testReport() throws {

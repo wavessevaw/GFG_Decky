@@ -244,8 +244,8 @@ struct EQTuningView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(spacing: 8) {
                             Text("\(i + 1)").font(Theme.mono(12, weight: .bold)).frame(width: 18)
-                            Text(loc.t(f.group == .sub ? "group.subs" : "group.mains")).font(Theme.label(10))
-                                .foregroundStyle(Theme.textSecondary).frame(width: 74, alignment: .leading)
+                            Text(loc.t(f.group == .sub ? "group.subs.short" : "group.mains.short")).font(Theme.label(11))
+                                .foregroundStyle(Theme.textSecondary).frame(width: 44, alignment: .leading)
                             Text(String(format: "%6.0f Hz", f.frequency)).font(Theme.mono(12))
                             Text(String(format: "%+5.1f dB", f.gainDB)).font(Theme.mono(12, weight: .semibold))
                             Text(String(format: "Q %4.2f", f.q)).font(Theme.mono(12))

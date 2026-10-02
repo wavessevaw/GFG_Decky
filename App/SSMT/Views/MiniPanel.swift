@@ -40,7 +40,7 @@ final class MiniPanelController: NSObject, NSWindowDelegate {
     func show() {
         guard let model, let localizer else { return }
         if panel == nil {
-            let p = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 380, height: 430),
+            let p = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 380, height: 330),
                             styleMask: [.borderless, .nonactivatingPanel, .resizable],
                             backing: .buffered, defer: false)
             p.isFloatingPanel = true
@@ -55,7 +55,7 @@ final class MiniPanelController: NSObject, NSWindowDelegate {
             p.contentView = NSHostingView(rootView: MiniDiagnosticsView()
                 .environmentObject(model).environmentObject(localizer))
             if let screen = NSScreen.main?.visibleFrame {
-                p.setFrameOrigin(NSPoint(x: screen.maxX - 400, y: screen.maxY - 450))
+                p.setFrameOrigin(NSPoint(x: screen.maxX - 400, y: screen.maxY - 350))
             }
             panel = p
         }
@@ -165,6 +165,7 @@ struct MiniDiagnosticsView: View {
             }
         }
         .padding(12)
+        .frame(maxHeight: .infinity, alignment: .top)
         .background(Bakelite())
         .preferredColorScheme(.dark)
     }

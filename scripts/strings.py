@@ -185,6 +185,8 @@ STRINGS = {
     "reason.streamDiscontinuity": ("audio dropout during the capture.", "пропуск аудио во время замера."),
     "group.subs": ("Subwoofers", "Сабвуферы"),
     "group.mains": ("Mains (satellites)", "Сателлиты (топы)"),
+    "group.subs.short": ("Subs", "Сабы"),
+    "group.mains.short": ("Mains", "Топы"),
     "group.on": ("ON", "ВКЛ"),
     "group.muted": ("MUTED", "МЬЮТ"),
     "sim.doIt": ("Simulation: do it for me", "Симуляция: сделать за меня"),

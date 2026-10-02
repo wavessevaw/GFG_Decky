@@ -2314,6 +2314,23 @@
         }
       }
     },
+    "group.mains.short": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mains"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Топы"
+          }
+        }
+      }
+    },
     "group.muted": {
       "extractionState": "manual",
       "localizations": {
@@ -2361,6 +2378,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Сабвуферы"
+          }
+        }
+      }
+    },
+    "group.subs.short": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subs"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сабы"
           }
         }
       }

@@ -348,8 +348,9 @@ struct VFDStrip: View {
                 .shadow(color: color.opacity(0.8), radius: 4)
                 .lineLimit(2).minimumScaleFactor(0.7)
                 .padding(.horizontal, 8)
+                .padding(.vertical, 4)
         }
-        .frame(height: size * 4)
+        .frame(minHeight: size * 2.4, maxHeight: .infinity)
     }
 }
 

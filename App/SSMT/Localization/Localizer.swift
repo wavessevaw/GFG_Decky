@@ -25,6 +25,15 @@ final class Localizer: ObservableObject {
         bundle = Self.bundle(for: AppLanguage(rawValue: stored) ?? .system)
     }
 
+    /// Locale matching the selected interface language (for dates and numbers).
+    var locale: Locale {
+        switch language {
+        case .system: return .current
+        case .en: return Locale(identifier: "en_US")
+        case .ru: return Locale(identifier: "ru_RU")
+        }
+    }
+
     func t(_ key: String) -> String {
         bundle.localizedString(forKey: key, value: nil, table: "Localizable")
     }

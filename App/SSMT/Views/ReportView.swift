@@ -27,7 +27,7 @@ struct ReportView: View {
             BrandMark(variant: .full, height: 56)
             VStack(alignment: .leading, spacing: 4) {
                 Text(loc.t("report.title")).font(Theme.heading(26)).foregroundStyle(Theme.textPrimary)
-                Text(report.date.formatted(date: .long, time: .shortened)).font(Theme.mono(12)).foregroundStyle(Theme.textSecondary)
+                Text(report.date.formatted(.dateTime.day().month(.wide).year().hour().minute().locale(loc.locale))).font(Theme.mono(12)).foregroundStyle(Theme.textSecondary)
             }
             Spacer()
             Text("SSMT").font(Theme.heading(14)).tracking(3).foregroundStyle(Theme.accent)
