@@ -64,8 +64,11 @@ struct CueListView: View {
         }
         .font(Theme.label(11))
         .foregroundStyle(Theme.textSecondary)
+        .lineLimit(1)
+        .minimumScaleFactor(0.8)
         .padding(.horizontal, 8)
         .padding(.bottom, 6)
+        .fixedSize(horizontal: false, vertical: true)
         .overlay(alignment: .bottom) { Rectangle().fill(Theme.hairline).frame(height: 1) }
     }
 

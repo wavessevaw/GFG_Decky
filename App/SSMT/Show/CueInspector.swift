@@ -64,8 +64,8 @@ private struct CueInspectorContent: View {
 
         section(loc.t("show.timing"), icon: "timer") {
             HStack(spacing: 8) {
-                seconds(loc.t("show.col.pre"), bind(\.preWait))
-                seconds(loc.t("show.col.post"), bind(\.postWait)).disabled(cue.continueMode != .autoContinue)
+                seconds(loc.t("show.preWait"), bind(\.preWait))
+                seconds(loc.t("show.postWait"), bind(\.postWait)).disabled(cue.continueMode != .autoContinue)
             }
             VStack(alignment: .leading, spacing: 4) {
                 caption(loc.t("show.continue"))

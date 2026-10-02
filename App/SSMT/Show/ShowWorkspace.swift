@@ -375,7 +375,7 @@ struct ShowToolbar: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            Button { show.chooseAudioFiles() } label: { Label(loc.t("cue.kind.audio"), systemImage: "plus") }
+            Button { show.chooseAudioFiles() } label: { Label(loc.t("cue.kind.audio"), systemImage: "plus").fixedSize() }
                 .buttonStyle(SSMTButtonStyle(kind: .primary))
                 .help(loc.t("show.addAudio.help"))
             ForEach([CueKind.fade, .group, .wait, .stop, .memo], id: \.self) { k in
@@ -400,7 +400,7 @@ struct ShowToolbar: View {
             .menuStyle(.borderlessButton)
             .fixedSize()
             .help(loc.t("show.add.more"))
-            Divider().frame(height: 22)
+            Rectangle().fill(Theme.hairline).frame(width: 1, height: 22).padding(.horizontal, 2)
             let none = show.selection.isEmpty
             tool("plus.square.on.square", loc.t("action.duplicate")) { show.duplicateSelection() }.disabled(none)
             tool("arrow.up", loc.t("show.up")) { show.moveSelection(by: -1) }.disabled(none)
@@ -409,19 +409,34 @@ struct ShowToolbar: View {
                 .disabled(!show.selection.contains { show.doc.cue($0)?.kind == .group })
             tool("trash", loc.t("action.delete")) { show.deleteSelection() }.disabled(none)
             tool("list.number", loc.t("show.renumber")) { show.renumberSelection() }
-            Spacer()
+            Spacer(minLength: 0)
             Button { showIssues = true } label: {
-                Label(loc.t("show.check"), systemImage: "checklist")
+                Label(loc.t("show.check"), systemImage: "checklist").labelStyle(.iconOnly).frame(width: 16)
             }
-            .buttonStyle(SSMTButtonStyle())
+            .buttonStyle(ToolButtonStyle())
+            .help(loc.t("show.check"))
             .popover(isPresented: $showIssues, arrowEdge: .bottom) { ShowIssuesView().environmentObject(show).environmentObject(loc) }
         }
     }
 
     private func tool(_ icon: String, _ help: String, action: @escaping () -> Void) -> some View {
         Button(action: action) { Image(systemName: icon).frame(width: 16) }
-            .buttonStyle(SSMTButtonStyle())
+            .buttonStyle(ToolButtonStyle())
             .help(help)
+    }
+}
+
+/// Compact square button for the cue toolbar.
+struct ToolButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
+        return configuration.label
+            .font(.system(size: 13))
+            .foregroundStyle(Theme.textPrimary)
+            .padding(.horizontal, 8).padding(.vertical, 7)
+            .background(shape.fill(Color.white.opacity(configuration.isPressed ? 0.14 : 0.07)))
+            .overlay(shape.strokeBorder(Color.white.opacity(0.1)))
+            .contentShape(shape)
     }
 }
 
