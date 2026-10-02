@@ -62,7 +62,7 @@ struct TunerGauge: View {
     // MARK: Body
 
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 10) {
             Text(title)
                 .font(.system(size: large ? 15 : 13, weight: .medium))
                 .foregroundStyle(Theme.textSecondary)
