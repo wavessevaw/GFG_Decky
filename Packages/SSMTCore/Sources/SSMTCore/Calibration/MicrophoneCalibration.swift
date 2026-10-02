@@ -1,8 +1,15 @@
 import Foundation
 
-/// Microphone magnitude calibration imported from a user file.
-/// Only magnitude is applied (phase columns are read and ignored). No built-in model data.
+/// Microphone magnitude calibration: an individual file imported by the user, or a built-in
+/// typical curve (see `MicrophoneProfiles`). Only magnitude is applied (phase columns are ignored).
 public struct MicrophoneCalibration: Equatable, Codable, Sendable, Identifiable {
+    public enum Source: String, Codable, Sendable {
+        /// Individual calibration file of this very microphone.
+        case file
+        /// Typical response of the model from published data (±2–3 dB).
+        case typical
+    }
+
     public var id: UUID
     public var name: String
     /// Ascending frequencies (Hz) and microphone response deviation (dB) at each.
@@ -13,9 +20,14 @@ public struct MicrophoneCalibration: Equatable, Codable, Sendable, Identifiable 
     /// Parsed numeric value of the header, in dB, if present.
     public var sensitivityDB: Double?
     public var serialNumber: String?
+    /// nil in files saved before built-in profiles existed → treated as `.file`.
+    public var source: Source?
+
+    public var isTypical: Bool { source == .typical }
 
     public init(id: UUID = UUID(), name: String, frequencies: [Double], deviationDB: [Double],
-                sensitivityHeader: String? = nil, sensitivityDB: Double? = nil, serialNumber: String? = nil) {
+                sensitivityHeader: String? = nil, sensitivityDB: Double? = nil, serialNumber: String? = nil,
+                source: Source = .file) {
         self.id = id
         self.name = name
         self.frequencies = frequencies
@@ -23,6 +35,7 @@ public struct MicrophoneCalibration: Equatable, Codable, Sendable, Identifiable 
         self.sensitivityHeader = sensitivityHeader
         self.sensitivityDB = sensitivityDB
         self.serialNumber = serialNumber
+        self.source = source
     }
 
     public enum ParseError: Error, Equatable {

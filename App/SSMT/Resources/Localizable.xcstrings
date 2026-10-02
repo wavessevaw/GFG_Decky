@@ -393,6 +393,23 @@
         }
       }
     },
+    "cal.cardioid.note": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cardioid: in a room the top end reads lower than on axis. Point it at the system; for EQ an omni measurement mic is more honest."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Кардиоида: в зале верх читается ниже, чем на оси. Направьте на систему; для EQ честнее всенаправленный измерительный микрофон."
+          }
+        }
+      }
+    },
     "cal.import": {
       "extractionState": "manual",
       "localizations": {
@@ -406,6 +423,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Импорт файла калибровки…"
+          }
+        }
+      }
+    },
+    "cal.individual": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Individual calibration"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Индивидуальная калибровка"
           }
         }
       }
@@ -433,13 +467,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "None"
+            "value": "No correction"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Нет"
+            "value": "Без коррекции"
           }
         }
       }
@@ -450,13 +484,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Microphone not calibrated"
+            "value": "No microphone correction"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Микрофон не откалиброван"
+            "value": "Без коррекции микрофона"
           }
         }
       }
@@ -491,6 +525,91 @@
           "stringUnit": {
             "state": "translated",
             "value": "Удалить из библиотеки"
+          }
+        }
+      }
+    },
+    "cal.section.dynamic": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dynamic"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Динамические"
+          }
+        }
+      }
+    },
+    "cal.section.files": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your calibration files"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ваши файлы калибровки"
+          }
+        }
+      }
+    },
+    "cal.section.largeDiaphragm": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Large-diaphragm condensers"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Конденсаторные, большая мембрана"
+          }
+        }
+      }
+    },
+    "cal.section.measurement": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Measurement microphones"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Измерительные микрофоны"
+          }
+        }
+      }
+    },
+    "cal.section.smallDiaphragm": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Small-diaphragm condensers"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Конденсаторные, малая мембрана"
           }
         }
       }
@@ -542,6 +661,74 @@
           "stringUnit": {
             "state": "translated",
             "value": "Калибровка"
+          }
+        }
+      }
+    },
+    "cal.typical": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Typical curve ±2–3 dB"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Типовая кривая ±2–3 дБ"
+          }
+        }
+      }
+    },
+    "cal.typical.flat": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nominally flat"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Номинально ровный"
+          }
+        }
+      }
+    },
+    "cal.typical.flat.note": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Almost no correction. Use the individual calibration file supplied with the microphone."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Коррекция почти нулевая. Используйте индивидуальный файл калибровки из комплекта микрофона."
+          }
+        }
+      }
+    },
+    "cal.typical.note": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Model response from published charts, not your sample. Load the individual file if you have one."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "АЧХ модели по графикам производителя, а не вашего экземпляра. Есть индивидуальный файл — загрузите его."
           }
         }
       }
@@ -3606,6 +3793,23 @@
         }
       }
     },
+    "prep.mic.noProfile": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose your microphone."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выберите свой микрофон."
+          }
+        }
+      }
+    },
     "prep.mic.ok": {
       "extractionState": "manual",
       "localizations": {
@@ -3619,6 +3823,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "Сигнал есть, клиппинга нет."
+          }
+        }
+      }
+    },
+    "prep.mic.profile": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Microphone profile"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Профиль микрофона"
+          }
+        }
+      }
+    },
+    "prep.mic.typical": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Typical profile."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Типовой профиль."
           }
         }
       }

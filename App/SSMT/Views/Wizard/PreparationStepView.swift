@@ -38,8 +38,11 @@ struct PreparationStepView: View {
                 }
                 divider
                 ChecklistRow(done: micPresent && !micClipped, failed: micClipped, icon: "mic.fill", title: loc.t("prep.mic"),
-                             detail: loc.t(micClipped ? "prep.mic.clip" : (micPresent ? "prep.mic.ok" : "prep.mic.hint"))) {
-                    LevelStrip(dbfs: model.snapshot?.microphone.rmsDBFS, clipped: micClipped)
+                             detail: micDetail) {
+                    HStack(spacing: 14) {
+                        MicProfileMenu()
+                        LevelStrip(dbfs: model.snapshot?.microphone.rmsDBFS, clipped: micClipped)
+                    }
                 }
                 divider
                 ChecklistRow(done: levelState == 1, failed: levelState == 0, icon: "dial.medium", title: loc.t("prep.level"),
@@ -128,6 +131,13 @@ struct PreparationStepView: View {
 
     private var micClipped: Bool { model.snapshot?.microphone.clipped ?? false }
     private var micPresent: Bool { (model.snapshot?.microphone.rmsDBFS ?? -120) > -70 }
+    private var micDetail: String {
+        let state = loc.t(micClipped ? "prep.mic.clip" : (micPresent ? "prep.mic.ok" : "prep.mic.hint"))
+        guard micPresent && !micClipped else { return state }
+        if model.calibration.selectedMicrophone == nil { return state + " " + loc.t("prep.mic.noProfile") }
+        if model.calibration.selectedProfile != nil { return state + " " + loc.t("prep.mic.typical") }
+        return state
+    }
 
     private var levelValue: String {
         switch model.autoLevelState {

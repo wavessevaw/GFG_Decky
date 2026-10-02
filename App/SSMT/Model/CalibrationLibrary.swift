@@ -2,14 +2,19 @@ import Foundation
 import SSMTCore
 
 /// User's microphone calibration library and SPL calibration, persisted in Application Support.
-/// Contains only files imported by the user — no built-in microphone data.
+/// The selection can be an imported individual file or a built-in typical profile.
 struct CalibrationLibrary: Codable {
     var microphones: [MicrophoneCalibration] = []
     var selectedMicrophoneID: UUID?
     var spl: SPLCalibration?
 
     var selectedMicrophone: MicrophoneCalibration? {
-        microphones.first { $0.id == selectedMicrophoneID }
+        guard let id = selectedMicrophoneID else { return nil }
+        return microphones.first { $0.id == id } ?? MicrophoneProfiles.profile(id: id)?.calibration
+    }
+
+    var selectedProfile: MicrophoneProfile? {
+        selectedMicrophoneID.flatMap { MicrophoneProfiles.profile(id: $0) }
     }
 
     private static var fileURL: URL {
