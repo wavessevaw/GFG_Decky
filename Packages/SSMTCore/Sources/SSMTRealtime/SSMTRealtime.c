@@ -163,3 +163,51 @@ float ssmt_float_store_max(SSMTAtomicFloat *value, float candidate) {
         }
     }
 }
+
+struct SSMTPointerQueue {
+    void **items;
+    uint64_t capacity; // power of two
+    uint64_t mask;
+    _Atomic uint64_t head; // next write, monotonic
+    _Atomic uint64_t tail; // next read, monotonic
+};
+
+SSMTPointerQueue *ssmt_ptrq_create(uint32_t minCapacity) {
+    if (minCapacity == 0) return NULL;
+    SSMTPointerQueue *q = calloc(1, sizeof(SSMTPointerQueue));
+    if (!q) return NULL;
+    q->capacity = next_pow2(minCapacity);
+    q->mask = q->capacity - 1;
+    q->items = calloc(q->capacity, sizeof(void *));
+    if (!q->items) {
+        free(q);
+        return NULL;
+    }
+    atomic_init(&q->head, 0);
+    atomic_init(&q->tail, 0);
+    return q;
+}
+
+void ssmt_ptrq_destroy(SSMTPointerQueue *queue) {
+    if (!queue) return;
+    free(queue->items);
+    free(queue);
+}
+
+bool ssmt_ptrq_push(SSMTPointerQueue *queue, void *item) {
+    uint64_t h = atomic_load_explicit(&queue->head, memory_order_relaxed);
+    uint64_t t = atomic_load_explicit(&queue->tail, memory_order_acquire);
+    if (h - t >= queue->capacity) return false;
+    queue->items[h & queue->mask] = item;
+    atomic_store_explicit(&queue->head, h + 1, memory_order_release);
+    return true;
+}
+
+void *ssmt_ptrq_pop(SSMTPointerQueue *queue) {
+    uint64_t t = atomic_load_explicit(&queue->tail, memory_order_relaxed);
+    uint64_t h = atomic_load_explicit(&queue->head, memory_order_acquire);
+    if (t == h) return NULL;
+    void *item = queue->items[t & queue->mask];
+    atomic_store_explicit(&queue->tail, t + 1, memory_order_release);
+    return item;
+}

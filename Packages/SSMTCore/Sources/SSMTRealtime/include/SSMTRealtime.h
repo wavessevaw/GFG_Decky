@@ -59,6 +59,16 @@ void ssmt_float_store(SSMTAtomicFloat *value, float newValue);
 /// Stores max(current, candidate). Returns the resulting value.
 float ssmt_float_store_max(SSMTAtomicFloat *value, float candidate);
 
+/// Single-producer / single-consumer queue of opaque pointers (commands to the audio thread and
+/// objects handed back for release). Push and pop never allocate, lock or block.
+typedef struct SSMTPointerQueue SSMTPointerQueue;
+SSMTPointerQueue *ssmt_ptrq_create(uint32_t minCapacity);
+void ssmt_ptrq_destroy(SSMTPointerQueue *queue);
+/// Returns false when the queue is full.
+bool ssmt_ptrq_push(SSMTPointerQueue *queue, void *item);
+/// Returns NULL when the queue is empty.
+void *ssmt_ptrq_pop(SSMTPointerQueue *queue);
+
 #ifdef __cplusplus
 }
 #endif

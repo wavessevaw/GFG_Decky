@@ -1,0 +1,560 @@
+import Foundation
+
+/// A cue that is currently waiting or playing, as shown in the UI.
+public struct RunningCue: Equatable, Identifiable, Sendable {
+    public enum Phase: String, Sendable { case preWait, running, stopping }
+    public var id: UUID
+    public var phase: Phase
+    /// Seconds elapsed in the current phase.
+    public var elapsed: Double
+    /// Pre-wait length (pre-wait phase) or action length (running); nil = open-ended (loops, groups).
+    public var duration: Double?
+    public var paused: Bool
+    /// Current loop iteration (1-based) of a looping audio cue.
+    public var iteration: Int?
+
+    public var remaining: Double? { duration.map { max(0, $0 - elapsed) } }
+    public var progress: Double? { duration.map { $0 > 0 ? min(1, max(0, elapsed / $0)) : 1 } }
+}
+
+public struct ShowSnapshot: Equatable, Sendable {
+    public var listID: UUID?
+    public var playhead: UUID?
+    public var running: [RunningCue]
+    /// Cues that could not play (missing file…), most recent last.
+    public var problems: [UUID: String]
+    public static let empty = ShowSnapshot(listID: nil, playhead: nil, running: [], problems: [:])
+}
+
+/// Show logic: GO, playhead, pre/post-wait, auto-continue/follow, groups and control cues.
+/// Time is the mixer's output frame clock, so audio starts land on exact samples. Actions are
+/// scheduled `lookahead` frames ahead of the clock and sent to the mixer as `MixerOp`s.
+/// Not thread-safe: confine to one serial queue.
+public final class ShowEngine {
+    public var document: ShowDocument
+    public let sampleRate: Double
+    public var lookahead: Int64
+    /// Receives mixer operations.
+    public var send: (MixerOp) -> Void
+    /// Returns the decoded clip of an audio cue (nil = not available).
+    public var clipProvider: (Cue) -> AudioClip?
+    /// Called by Load cues.
+    public var preload: (Cue) -> Void = { _ in }
+    /// Called when a cue changes the document (Arm, Disarm, Target).
+    public var documentChanged: (ShowDocument) -> Void = { _ in }
+    /// Random source for random groups and shuffled playlists (0..<1).
+    public var random: () -> Double = { Double.random(in: 0..<1) }
+
+    public private(set) var listID: UUID?
+    public private(set) var playhead: UUID?
+    public private(set) var problems: [UUID: String] = [:]
+
+    struct Instance {
+        enum Phase { case preWait, running }
+        var cueID: UUID
+        var kind: CueKind
+        var listID: UUID
+        var parent: UUID?
+        var phase: Phase = .preWait
+        var triggered: Int64
+        var actionAt: Int64
+        var actionEnd: Int64?
+        var actionEnded = false
+        var postWaitAt: Int64?
+        var follow = false
+        var paused = false
+        var pausedAt: Int64 = 0
+        var pausedTotal: Int64 = 0
+        var hasVoice = false
+        var stopping = false
+        var regionLength = 1
+        var rate = 1.0
+        var plays = 1
+        var playlist: [UUID] = []
+        var playlistIndex = 0
+        var stopTargetsAtEnd: [UUID] = []
+        var holdTargets: [UUID] = []
+        var onEnd: (cue: UUID, list: UUID, parent: UUID?)?
+    }
+
+    private(set) var instances: [UUID: Instance] = [:]
+    private var lastGo: Int64?
+    private var lastPanic: Int64?
+
+    public init(document: ShowDocument, sampleRate: Double, lookahead: Int64 = 1024,
+                send: @escaping (MixerOp) -> Void, clipProvider: @escaping (Cue) -> AudioClip?) {
+        self.document = document
+        self.sampleRate = sampleRate
+        self.lookahead = lookahead
+        self.send = send
+        self.clipProvider = clipProvider
+        listID = document.lists.first?.id
+        playhead = document.lists.first?.cues.first?.id
+    }
+
+    private func frames(_ seconds: Double) -> Int64 { Int64((max(0, seconds) * sampleRate).rounded()) }
+
+    // MARK: Public control
+
+    public func selectList(_ id: UUID) {
+        guard let l = document.lists.first(where: { $0.id == id }) else { return }
+        listID = id
+        if !l.cues.contains(where: { $0.id == playhead }) { playhead = l.cues.first?.id }
+    }
+
+    /// Puts the playhead on a top-level cue of the current list (nil = end of list).
+    public func setPlayhead(_ id: UUID?) {
+        guard let id else { playhead = nil; return }
+        for l in document.lists where l.cues.contains(where: { $0.id == id }) {
+            listID = l.id
+            playhead = id
+            return
+        }
+    }
+
+    /// GO: triggers the cue on the playhead and moves the playhead past its continue chain.
+    /// Returns false when ignored (no cue, or double-GO protection).
+    @discardableResult
+    public func go(now: Int64) -> Bool {
+        if let last = lastGo, now - last < frames(document.doubleGoGuard) { return false }
+        guard let lid = listID, let list = document.list(lid), let ph = playhead,
+              let index = list.cues.firstIndex(where: { $0.id == ph }) else { return false }
+        lastGo = now
+        trigger(list.cues[index].id, list: lid, parent: nil, at: now + lookahead)
+        var j = index
+        while j < list.cues.count - 1, list.cues[j].continueMode != .none { j += 1 }
+        playhead = j + 1 < list.cues.count ? list.cues[j + 1].id : nil
+        advance(to: now)
+        return true
+    }
+
+    /// Triggers any cue directly (hotkeys, "play this cue" from the list); the playhead stays.
+    public func start(_ id: UUID, now: Int64) {
+        guard let (lid, parent) = location(of: id) else { return }
+        trigger(id, list: lid, parent: parent, at: now + lookahead)
+        advance(to: now)
+    }
+
+    public func stop(_ id: UUID, now: Int64, fade: Double = 0) {
+        terminate(id, at: now + lookahead, fade: frames(fade))
+        advance(to: now)
+    }
+
+    public func pause(_ id: UUID, now: Int64) {
+        pauseInstance(id, at: now + lookahead)
+    }
+
+    public func resume(_ id: UUID, now: Int64) {
+        resumeInstance(id, at: now + lookahead)
+        advance(to: now)
+    }
+
+    public func pauseAll(now: Int64) {
+        for id in instances.keys where instances[id]?.parent == nil { pauseInstance(id, at: now + lookahead) }
+    }
+
+    public func resumeAll(now: Int64) {
+        for id in instances.keys where instances[id]?.parent == nil { resumeInstance(id, at: now + lookahead) }
+        advance(to: now)
+    }
+
+    public var anyPaused: Bool { instances.values.contains { $0.paused } }
+    public var isActive: Bool { !instances.isEmpty }
+
+    /// Panic: the first press fades everything out over `panicFade`; a second press during that fade
+    /// (or any press with `hard`) cuts everything at once.
+    public func panic(now: Int64, hard: Bool = false) {
+        let fade = frames(document.panicFade)
+        let isSecond = lastPanic.map { now - $0 <= fade + frames(0.5) } ?? false
+        let t = now + lookahead
+        if hard || isSecond || fade == 0 {
+            send(.stopAll(at: now, fadeFrames: 0))
+            instances.removeAll()
+            lastPanic = nil
+        } else {
+            for id in Array(instances.keys) where instances[id]?.parent == nil { terminate(id, at: t, fade: fade) }
+            send(.stopAll(at: t, fadeFrames: fade))
+            lastPanic = now
+        }
+        advance(to: now)
+    }
+
+    /// Processes everything due up to `now + lookahead`. Call often (every few milliseconds).
+    public func advance(to now: Int64) {
+        let horizon = now + lookahead
+        var guardCount = 0
+        while let (id, t, event) = nextEvent(upTo: horizon) {
+            guardCount += 1
+            if guardCount > 100_000 { break } // malformed show (e.g. zero-length loops)
+            switch event {
+            case .action: beginAction(id, at: t)
+            case .postWait: postWaitElapsed(id, at: t)
+            case .end: actionFinished(id, at: t)
+            }
+        }
+    }
+
+    public func snapshot(now: Int64) -> ShowSnapshot {
+        var running: [RunningCue] = []
+        for inst in instances.values {
+            if inst.phase == .running && inst.actionEnded { continue }
+            let clock = inst.paused ? inst.pausedAt : now
+            switch inst.phase {
+            case .preWait:
+                let pre = Double(inst.actionAt - inst.triggered) / sampleRate
+                running.append(RunningCue(id: inst.cueID, phase: .preWait,
+                                          elapsed: max(0, Double(clock - inst.triggered) / sampleRate),
+                                          duration: pre, paused: inst.paused, iteration: nil))
+            case .running:
+                let elapsedFrames = max(0, clock - inst.actionAt - inst.pausedTotal)
+                let dur = inst.actionEnd.map { Double($0 - inst.actionAt - inst.pausedTotal) / sampleRate }
+                var iteration: Int?
+                if inst.hasVoice && inst.plays != 1 {
+                    iteration = Int(Double(elapsedFrames) * inst.rate / Double(max(1, inst.regionLength))) + 1
+                }
+                running.append(RunningCue(id: inst.cueID, phase: inst.stopping ? .stopping : .running,
+                                          elapsed: Double(elapsedFrames) / sampleRate, duration: dur,
+                                          paused: inst.paused, iteration: iteration))
+            }
+        }
+        // Stable order: as in the show.
+        let order = Dictionary(uniqueKeysWithValues: document.allCues.enumerated().map { ($1.id, $0) })
+        running.sort { (order[$0.id] ?? .max) < (order[$1.id] ?? .max) }
+        return ShowSnapshot(listID: listID, playhead: playhead, running: running, problems: problems)
+    }
+
+    // MARK: Structure
+
+    /// List and parent group of a cue.
+    private func location(of id: UUID) -> (UUID, UUID?)? {
+        for l in document.lists {
+            if l.cues.contains(where: { $0.id == id }) { return (l.id, nil) }
+            if let p = parentGroup(of: id, in: l.cues) { return (l.id, p) }
+        }
+        return nil
+    }
+
+    private func parentGroup(of id: UUID, in cues: [Cue]) -> UUID? {
+        for c in cues {
+            if c.children.contains(where: { $0.id == id }) { return c.id }
+            if let p = parentGroup(of: id, in: c.children) { return p }
+        }
+        return nil
+    }
+
+    private func siblings(list: UUID, parent: UUID?) -> [Cue] {
+        if let parent { return document.cue(parent)?.children ?? [] }
+        return document.list(list)?.cues ?? []
+    }
+
+    /// The cue after `id` among its siblings.
+    private func next(after id: UUID, list: UUID, parent: UUID?) -> Cue? {
+        let s = siblings(list: list, parent: parent)
+        guard let i = s.firstIndex(where: { $0.id == id }), i + 1 < s.count else { return nil }
+        return s[i + 1]
+    }
+
+    // MARK: Scheduling
+
+    private enum Event { case action, postWait, end }
+
+    private func nextEvent(upTo horizon: Int64) -> (UUID, Int64, Event)? {
+        var best: (UUID, Int64, Event)?
+        func consider(_ id: UUID, _ t: Int64, _ e: Event) {
+            guard t <= horizon else { return }
+            if best == nil || t < best!.1 { best = (id, t, e) }
+        }
+        for (id, inst) in instances where !inst.paused {
+            switch inst.phase {
+            case .preWait: consider(id, inst.actionAt, .action)
+            case .running:
+                if let p = inst.postWaitAt { consider(id, p, .postWait) }
+                if !inst.actionEnded, let e = inst.actionEnd { consider(id, e, .end) }
+            }
+        }
+        return best
+    }
+
+    private func trigger(_ id: UUID, list: UUID, parent: UUID?, at t: Int64) {
+        guard let cue = document.cue(id) else { return }
+        if let existing = instances[id] {
+            if existing.paused { resumeInstance(id, at: t); return }
+            if !existing.stopping { return } // already running: a second trigger is ignored
+            instances[id] = nil
+        }
+        instances[id] = Instance(cueID: id, kind: cue.kind, listID: list, parent: parent,
+                                 triggered: t, actionAt: t + frames(cue.preWait))
+    }
+
+    private func beginAction(_ id: UUID, at t: Int64) {
+        guard var inst = instances[id], let cue = document.cue(id) else { instances[id] = nil; return }
+        inst.phase = .running
+        inst.actionAt = t
+        inst.actionEnd = t
+        inst.follow = cue.continueMode == .autoFollow
+        inst.postWaitAt = cue.continueMode == .autoContinue ? t + frames(cue.postWait) : nil
+        instances[id] = inst
+        guard cue.armed else { return } // disarmed: no action, waits and continue still apply
+        problems[id] = nil
+
+        switch cue.kind {
+        case .audio:
+            startAudio(cue, at: t)
+        case .wait:
+            instances[id]?.actionEnd = t + frames(cue.duration)
+        case .memo:
+            break
+        case .fade:
+            startFade(cue, at: t)
+        case .group:
+            startGroup(cue, inst: inst, at: t)
+        case .start:
+            if let target = cue.target, let (lid, parent) = location(of: target) {
+                trigger(target, list: lid, parent: parent, at: t)
+            }
+        case .stop:
+            if let target = cue.target {
+                terminate(target, at: t, fade: frames(cue.stopFade))
+            } else {
+                for other in Array(instances.keys) where other != id && instances[other]?.parent == nil {
+                    terminate(other, at: t, fade: frames(cue.stopFade))
+                }
+            }
+        case .pause:
+            if let target = cue.target { pauseInstance(target, at: t) }
+        case .load:
+            if let target = cue.target, let c = document.cue(target) {
+                preloadTree(c)
+            }
+        case .reset:
+            if let target = cue.target { terminate(target, at: t, fade: 0) }
+        case .goTo:
+            if let target = cue.target { setPlayhead(target) }
+        case .target:
+            if let target = cue.target {
+                let newTarget = cue.newTarget
+                if document.updateCue(target, { $0.target = newTarget }) { documentChanged(document) }
+            }
+        case .arm, .disarm:
+            if let target = cue.target {
+                let armed = cue.kind == .arm
+                if document.updateCue(target, { $0.armed = armed }) { documentChanged(document) }
+            }
+        case .devamp:
+            if let target = cue.target { devamp(target, by: cue, at: t) }
+        }
+    }
+
+    private func preloadTree(_ c: Cue) {
+        if c.kind == .audio { preload(c) }
+        c.children.forEach(preloadTree)
+    }
+
+    private func startAudio(_ cue: Cue, at t: Int64) {
+        guard let p = cue.audio, let clip = clipProvider(cue) else {
+            problems[cue.id] = "error.show.missingFile"
+            return
+        }
+        let sr = clip.sampleRate
+        let start = min(max(0, Int(p.start * sr)), max(0, clip.frames - 1))
+        let end = min(clip.frames, p.end.map { Int($0 * sr) } ?? clip.frames)
+        let length = max(1, end - start)
+        let outs = max(1, document.outputs.count)
+        let setup = VoiceSetup(
+            regionStart: start, regionLength: length, plays: max(0, p.plays), rate: max(0.05, p.rate),
+            levelDB: p.level,
+            outputLevelsDB: (0..<outs).map { p.outputLevel($0) },
+            crosspointsDB: (0..<clip.channelCount).map { c in
+                (0..<outs).map { p.crosspoint(channel: c, output: $0, fileChannels: clip.channelCount) }
+            },
+            fadeInFrames: Int(p.fadeIn * sr), fadeOutFrames: Int(p.fadeOut * sr))
+        send(.start(cue.id, clip: clip, setup: setup, at: t))
+        instances[cue.id]?.hasVoice = true
+        instances[cue.id]?.regionLength = length
+        instances[cue.id]?.rate = setup.rate
+        instances[cue.id]?.plays = setup.plays
+        instances[cue.id]?.actionEnd = setup.outputFrames.map { t + $0 }
+    }
+
+    /// Audio cues with a voice under `id` (itself or the children of a group).
+    private func voiceTargets(_ id: UUID) -> [UUID] {
+        guard let c = document.cue(id) else { return [] }
+        var out: [UUID] = []
+        func walk(_ c: Cue) {
+            if c.kind == .audio, instances[c.id]?.hasVoice == true, instances[c.id]?.actionEnded == false { out.append(c.id) }
+            c.children.forEach(walk)
+        }
+        walk(c)
+        return out
+    }
+
+    private func startFade(_ cue: Cue, at t: Int64) {
+        guard let target = cue.target, let f = cue.fade else { return }
+        let len = frames(f.duration)
+        let targets = voiceTargets(target)
+        for v in targets {
+            send(.fade(v, at: t, frames: len, curve: f.curve, levelDB: f.level, outputsDB: f.outputLevels))
+        }
+        instances[cue.id]?.actionEnd = t + len
+        instances[cue.id]?.holdTargets = targets
+        if f.stopWhenDone && !targets.isEmpty { instances[cue.id]?.stopTargetsAtEnd = [target] }
+    }
+
+    private func startGroup(_ cue: Cue, inst: Instance, at t: Int64) {
+        instances[cue.id]?.actionEnd = nil
+        let kids = cue.children
+        guard !kids.isEmpty else { instances[cue.id]?.actionEnd = t; return }
+        switch cue.groupMode {
+        case .sequence:
+            trigger(kids[0].id, list: inst.listID, parent: cue.id, at: t)
+        case .simultaneous:
+            for k in kids { trigger(k.id, list: inst.listID, parent: cue.id, at: t) }
+        case .random:
+            let i = min(kids.count - 1, Int(random() * Double(kids.count)))
+            trigger(kids[i].id, list: inst.listID, parent: cue.id, at: t)
+        case .playlist:
+            let order = cue.shuffle ? shuffled(kids.map(\.id)) : kids.map(\.id)
+            instances[cue.id]?.playlist = order
+            instances[cue.id]?.playlistIndex = 0
+            trigger(order[0], list: inst.listID, parent: cue.id, at: t)
+        }
+    }
+
+    private func shuffled(_ ids: [UUID]) -> [UUID] {
+        var a = ids
+        guard a.count > 1 else { return a }
+        for i in stride(from: a.count - 1, to: 0, by: -1) {
+            let j = min(i, Int(random() * Double(i + 1)))
+            a.swapAt(i, j)
+        }
+        return a
+    }
+
+    private func devamp(_ target: UUID, by cue: Cue, at t: Int64) {
+        guard var inst = instances[target], inst.hasVoice, !inst.actionEnded, inst.phase == .running else { return }
+        let played = Double(max(0, t - inst.actionAt - inst.pausedTotal)) * inst.rate
+        let newPlays = Int(played / Double(inst.regionLength)) + 1
+        if inst.plays == 0 || inst.plays > newPlays {
+            inst.plays = newPlays
+            inst.actionEnd = inst.actionAt + inst.pausedTotal
+                + Int64((Double(inst.regionLength) * Double(newPlays) / inst.rate).rounded(.up))
+        }
+        if cue.devampStartsNext, let (lid, parent) = location(of: cue.id), let n = next(after: cue.id, list: lid, parent: parent) {
+            inst.onEnd = (n.id, lid, parent)
+        }
+        instances[target] = inst
+        send(.devamp(target, at: t))
+    }
+
+    private func postWaitElapsed(_ id: UUID, at t: Int64) {
+        guard var inst = instances[id] else { return }
+        inst.postWaitAt = nil
+        instances[id] = inst
+        continueAfter(inst, at: t)
+        removeIfDone(id, at: t)
+    }
+
+    private func actionFinished(_ id: UUID, at t: Int64) {
+        guard var inst = instances[id] else { return }
+        inst.actionEnded = true
+        instances[id] = inst
+        for s in inst.stopTargetsAtEnd { terminate(s, at: t, fade: 0) }
+        if let onEnd = inst.onEnd { trigger(onEnd.cue, list: onEnd.list, parent: onEnd.parent, at: t) }
+        if inst.follow { continueAfter(inst, at: t) }
+        removeIfDone(id, at: t)
+    }
+
+    /// Auto-continue / auto-follow: the next sibling, or the next playlist entry.
+    private func continueAfter(_ inst: Instance, at t: Int64) {
+        if let parent = inst.parent, let group = document.cue(parent), group.groupMode != .sequence {
+            return // only sequence groups chain through their children's continue modes
+        }
+        if let n = next(after: inst.cueID, list: inst.listID, parent: inst.parent) {
+            trigger(n.id, list: inst.listID, parent: inst.parent, at: t)
+        }
+    }
+
+    private func removeIfDone(_ id: UUID, at t: Int64) {
+        guard let inst = instances[id], inst.actionEnded, inst.postWaitAt == nil else { return }
+        if inst.kind == .group && instances.values.contains(where: { $0.parent == id }) { return }
+        instances[id] = nil
+        if let parent = inst.parent { childFinished(inst, group: parent, at: t) }
+    }
+
+    private func childFinished(_ child: Instance, group: UUID, at t: Int64) {
+        guard var g = instances[group], let cue = document.cue(group) else { return }
+        if cue.groupMode == .playlist && !g.stopping && !child.stopping {
+            var i = g.playlistIndex + 1
+            if i >= g.playlist.count, cue.loopPlaylist, !g.playlist.isEmpty {
+                g.playlist = cue.shuffle ? shuffled(cue.children.map(\.id)) : cue.children.map(\.id)
+                i = 0
+            }
+            g.playlistIndex = i
+            instances[group] = g
+            if i < g.playlist.count {
+                trigger(g.playlist[i], list: g.listID, parent: group, at: t)
+                return
+            }
+        }
+        if !instances.values.contains(where: { $0.parent == group }) && g.phase == .running && !g.actionEnded {
+            g.actionEnd = t
+            instances[group] = g
+            actionFinished(group, at: t)
+        }
+    }
+
+    /// Stops a cue (and the children of a group). Stopped cues do not continue.
+    private func terminate(_ id: UUID, at t: Int64, fade: Int64) {
+        guard instances[id] != nil else { return }
+        for (cid, c) in instances where c.parent == id { terminate(cid, at: t, fade: fade) }
+        guard var inst = instances[id] else { return }
+        inst.postWaitAt = nil
+        inst.follow = false
+        inst.onEnd = nil
+        inst.stopTargetsAtEnd = []
+        inst.stopping = true
+        inst.paused = false
+        if inst.phase == .preWait {
+            instances[id] = nil
+            if let parent = inst.parent { childFinished(inst, group: parent, at: t) }
+            return
+        }
+        if inst.hasVoice && !inst.actionEnded {
+            send(.stop(id, at: t, fadeFrames: fade))
+            inst.actionEnd = t + fade
+        } else if !inst.actionEnded {
+            if inst.kind == .fade { for v in inst.holdTargets { send(.holdLevels(v, at: t)) } }
+            inst.actionEnd = t
+        }
+        instances[id] = inst
+        if inst.kind == .group && !instances.values.contains(where: { $0.parent == id }) {
+            instances[id]?.actionEnd = t
+        }
+    }
+
+    private func pauseInstance(_ id: UUID, at t: Int64) {
+        guard var inst = instances[id], !inst.paused, !inst.actionEnded || inst.postWaitAt != nil else { return }
+        inst.paused = true
+        inst.pausedAt = t
+        instances[id] = inst
+        if inst.hasVoice { send(.pause(id, at: t)) }
+        for (cid, c) in instances where c.parent == id { pauseInstance(cid, at: t) }
+    }
+
+    private func resumeInstance(_ id: UUID, at t: Int64) {
+        guard var inst = instances[id], inst.paused else { return }
+        let delta = max(0, t - inst.pausedAt)
+        inst.paused = false
+        if inst.phase == .preWait {
+            inst.actionAt += delta
+            inst.triggered += delta
+        } else {
+            inst.pausedTotal += delta
+            if let e = inst.actionEnd, !inst.actionEnded { inst.actionEnd = e + delta }
+            if let p = inst.postWaitAt { inst.postWaitAt = p + delta }
+        }
+        instances[id] = inst
+        if inst.hasVoice { send(.resume(id, at: t)) }
+        for (cid, c) in instances where c.parent == id { resumeInstance(cid, at: t) }
+    }
+}

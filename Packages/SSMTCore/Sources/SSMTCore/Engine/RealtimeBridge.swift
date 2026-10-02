@@ -81,6 +81,8 @@ public final class AtomicFloat: @unchecked Sendable {
         get { ssmt_float_load(raw) }
         set { ssmt_float_store(raw, newValue) }
     }
+    /// Stores max(current, candidate) atomically (real-time safe).
+    @inline(__always) public func storeMax(_ candidate: Float) { _ = ssmt_float_store_max(raw, candidate) }
 }
 
 public final class AtomicCounter: @unchecked Sendable {
