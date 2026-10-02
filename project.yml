@@ -63,8 +63,10 @@ targets:
           - "References/**"
     dependencies:
       - target: SSMT
+      # Module visible for `import`, code comes from the host app (BUNDLE_LOADER): one copy only.
       - package: SSMTCore
         product: SSMTCore
+        link: false
     settings:
       base:
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/SSMT.app/Contents/MacOS/SSMT"
