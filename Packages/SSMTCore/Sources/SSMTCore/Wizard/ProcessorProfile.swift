@@ -73,11 +73,24 @@ public struct ProcessorProfile: Equatable, Codable, Sendable, Identifiable {
         hd96.peqBandsMains = 4
         hd96.source = "Flexi aux / matrix outputs: 4-band PEQ, delay up to 500 ms (manufacturer specifications)"
 
-        var cl = ProcessorProfile(id: "yamaha-cl", name: "Yamaha CL / QL")
+        var cl = ProcessorProfile(id: "yamaha-cl", name: "Yamaha CL (CL1/CL3/CL5)")
         cl.maxDelayMs = 1000
-        cl.source = "Output delay 0–1000 ms (manufacturer specifications)"
+        cl.peqBandsSub = 4
+        cl.peqBandsMains = 4
+        cl.source = "Output channels: 4-band PEQ, delay 0–1000 ms (manufacturer specifications)"
 
-        return [generic, x32, sq, dlive, hd96, cl]
+        var tf = ProcessorProfile(id: "yamaha-tf", name: "Yamaha TF")
+        tf.peqBandsSub = 4
+        tf.peqBandsMains = 4
+        tf.source = "AUX and STEREO: 4-band PEQ (reference manual); output delay not confirmed"
+
+        var rivage = ProcessorProfile(id: "yamaha-rivage", name: "Yamaha RIVAGE PM")
+        rivage.maxDelayMs = 1000
+        rivage.peqBandsSub = 8
+        rivage.peqBandsMains = 8
+        rivage.source = "Output channels: 8-band PEQ, delay 0–1000 ms (manufacturer specifications)"
+
+        return [generic, x32, sq, dlive, hd96, cl, tf, rivage]
     }()
 
     public static func profile(id: String) -> ProcessorProfile? { presets.first { $0.id == id } }

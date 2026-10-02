@@ -388,7 +388,7 @@ STRINGS = {
     "processor.rest": ("Everything else uses generic values.", "Остальное — общие значения."),
     "processor.source.behringer-x32": ("6-band PEQ on buses, matrices and main.", "6-полосный PEQ на шинах, матрицах и мастере."),
     "processor.source.ah-sq": ("output delay up to 682 ms, 4-band PEQ, width 1/9–1.5 octave.", "задержка выходов до 682 мс, 4-полосный PEQ, ширина 1/9–1.5 октавы."),
-    "processor.source.yamaha-cl": ("output delay 0–1000 ms.", "задержка выходов 0–1000 мс."),
+    "processor.source.yamaha-cl": ("output channels: 4-band PEQ, delay 0–1000 ms (an 8-band PEQ can also be mounted in the effect rack).", "выходные каналы: 4-полосный PEQ, задержка 0–1000 мс (8-полосный PEQ можно поставить и в рэк эффектов)."),
     "processor.maxDelay": ("Maximum output delay, ms (0 = unknown)", "Максимальная задержка выхода, мс (0 — неизвестно)"),
     "processor.bandsSub": ("PEQ bands on the sub output: %ld", "Полос PEQ на выходе сабов: %ld"),
     "processor.bandsMains": ("PEQ bands on the satellite output: %ld", "Полос PEQ на выходе сателлитов: %ld"),
@@ -397,10 +397,12 @@ STRINGS = {
     "processor.delayTooLong": ("%.2f ms is more than this console's maximum delay (%.0f ms). Delay the other group instead or use an external processor.", "%.2f мс — больше максимальной задержки этого пульта (%.0f мс). Задержите другую группу или используйте внешний процессор."),
     "processor.source.ah-dlive": ("mix output delay up to 682 ms (firmware 1.80+), 4-band PEQ; with NEQ12 instead of the GEQ, set 12 bands in “My console”.", "задержка выходов до 682 мс (прошивка 1.80+), 4-полосный PEQ; если на выходе стоит NEQ12 вместо GEQ — задайте 12 полос в «Своём пульте»."),
     "processor.source.midas-hd96": ("flexi aux / matrix outputs: 4-band PEQ, delay up to 500 ms.", "выходы flexi aux / матрицы: 4-полосный PEQ, задержка до 500 мс."),
+    "processor.source.yamaha-tf": ("AUX and STEREO: 4-band PEQ. Output delay is not confirmed — check on your console; if there is none, delay the subs or satellites in an external processor.", "AUX и STEREO: 4-полосный PEQ. Задержка на выходах не подтверждена — проверьте на пульте; если её нет, задержку вводите во внешнем процессоре."),
+    "processor.source.yamaha-rivage": ("output channels: 8-band PEQ, delay 0–1000 ms.", "выходные каналы: 8-полосный PEQ, задержка 0–1000 мс."),
 }
 
 DYNAMIC_PREFIXES = {
-    "processor.source.": ["processor.source.behringer-x32", "processor.source.ah-sq", "processor.source.ah-dlive", "processor.source.midas-hd96", "processor.source.yamaha-cl"],
+    "processor.source.": ["processor.source.behringer-x32", "processor.source.ah-sq", "processor.source.ah-dlive", "processor.source.midas-hd96", "processor.source.yamaha-cl", "processor.source.yamaha-tf", "processor.source.yamaha-rivage"],
     "error.": ["error.audioLost"],
     "eq.grid.": ["eq.grid.thirdOctave", "eq.grid.sixthOctave", "eq.grid.free"],
     "cal.section.": [f"cal.section.{k}" for k in ("measurement", "smallDiaphragm", "largeDiaphragm", "dynamic")],

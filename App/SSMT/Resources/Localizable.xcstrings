@@ -3782,13 +3782,47 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "output delay 0–1000 ms."
+            "value": "output channels: 4-band PEQ, delay 0–1000 ms (an 8-band PEQ can also be mounted in the effect rack)."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "задержка выходов 0–1000 мс."
+            "value": "выходные каналы: 4-полосный PEQ, задержка 0–1000 мс (8-полосный PEQ можно поставить и в рэк эффектов)."
+          }
+        }
+      }
+    },
+    "processor.source.yamaha-rivage": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "output channels: 8-band PEQ, delay 0–1000 ms."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "выходные каналы: 8-полосный PEQ, задержка 0–1000 мс."
+          }
+        }
+      }
+    },
+    "processor.source.yamaha-tf": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AUX and STEREO: 4-band PEQ. Output delay is not confirmed — check on your console; if there is none, delay the subs or satellites in an external processor."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AUX и STEREO: 4-полосный PEQ. Задержка на выходах не подтверждена — проверьте на пульте; если её нет, задержку вводите во внешнем процессоре."
           }
         }
       }

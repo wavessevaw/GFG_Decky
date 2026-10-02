@@ -26,7 +26,7 @@ final class ProcessorProfileTests: XCTestCase {
         XCTAssertLessThanOrEqual(c.eq.maxQ, 8)
         XCTAssertGreaterThanOrEqual(c.eq.minQ, 0.5)
         XCTAssertFalse(sq.canEnter(delaySeconds: 0.7))
-        for id in ["behringer-x32", "ah-sq", "ah-dlive", "midas-hd96"] { XCTAssertNotNil(ProcessorProfile.profile(id: id), id) }
+        for id in ["behringer-x32", "ah-sq", "ah-dlive", "midas-hd96", "yamaha-cl", "yamaha-tf", "yamaha-rivage"] { XCTAssertNotNil(ProcessorProfile.profile(id: id), id) }
         XCTAssertEqual(ProcessorProfile.profile(id: "midas-hd96")?.maxDelayMs, 500)
         XCTAssertTrue(sq.canEnter(delaySeconds: 0.68))
     }
