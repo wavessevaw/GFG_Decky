@@ -40,9 +40,12 @@ final class WizardTests: XCTestCase {
         let fs = 48000.0
         let room = VirtualRoom(reflections: [VirtualReflection(delaySamples: 168, gain: 0.3)],
                                modes: [Biquad.design(.peaking, frequency: 63, q: 6, gainDB: 6, sampleRate: fs)])
-        // Sub 2.5 m closer, polarity inverted by mistake, 3 dB hot.
-        return VirtualSystem.typicalPA(sampleRate: fs, crossover: 90, subDistance: 7, mainDistance: 9.5,
-                                       subGainDB: 3, subInverted: true, room: room, micNoiseDBFS: -75)
+        // Sub 2.5 m closer, polarity inverted by mistake, 3 dB hot; mains with a honky mid and bright top.
+        var sys = VirtualSystem.typicalPA(sampleRate: fs, crossover: 90, subDistance: 7, mainDistance: 9.5,
+                                          subGainDB: 3, subInverted: true, room: room, micNoiseDBFS: -75)
+        sys.main.filters += [Biquad.design(.peaking, frequency: 1800, q: 1.2, gainDB: 5, sampleRate: fs),
+                             Biquad.design(.peaking, frequency: 9000, q: 0.8, gainDB: 3, sampleRate: fs)]
+        return sys
     }
 
     func runWizard(fastMode: Bool) throws -> SetupWizard {
@@ -82,7 +85,8 @@ final class WizardTests: XCTestCase {
         rig.run(seconds: 0.5)
         let v = try XCTUnwrap(rig.capture("verify", seconds: config.captureSeconds))
         _ = wizard.submit(v)
-        XCTAssertEqual(wizard.step, .finished)
+        XCTAssertEqual(wizard.step, .verification)
+        XCTAssertNotNil(wizard.report)
         return wizard
     }
 
@@ -107,6 +111,74 @@ final class WizardTests: XCTestCase {
         } else {
             XCTFail("expected sub delay card, got \(w.actionCards[0])")
         }
+    }
+
+    /// Steps 6–8: zone points → EQ → enter filters (virtual processor) → verification points.
+    func testEQStepsInSimulation() throws {
+        var w = try runWizardKeepingRig()
+        let rig = w.rig
+        w.wizard.beginEQ()
+        XCTAssertEqual(w.wizard.step, .eqPoints)
+        for p in 0..<w.wizard.configuration.eqPointCount {
+            rig.backend.moveMicrophone(toPoint: p)
+            rig.run(seconds: 0.5)
+            let c = try XCTUnwrap(rig.capture("eq\(p)", seconds: 8))
+            XCTAssertEqual(w.wizard.submit(c), .accepted(c.assessment.quality), "point \(p): \(c.assessment)")
+        }
+        let r = try XCTUnwrap(w.wizard.computeEQ())
+        XCTAssertEqual(w.wizard.step, .eqTuning)
+        XCTAssertFalse(r.filters.isEmpty)
+        // Enter the filters on the virtual processor.
+        var knobs = rig.backend.processorSettings
+        knobs.subEQ = r.filters.filter { $0.group == .sub }
+        knobs.mainsEQ = r.filters.filter { $0.group == .mains }
+        rig.backend.setProcessor(knobs)
+        w.wizard.beginEQVerification()
+        XCTAssertEqual(w.wizard.step, .eqVerification)
+        for p in 0..<w.wizard.configuration.eqPointCount {
+            rig.backend.moveMicrophone(toPoint: p)
+            rig.run(seconds: 0.5)
+            let c = try XCTUnwrap(rig.capture("v\(p)", seconds: 8))
+            _ = w.wizard.submit(c)
+        }
+        let scores = try XCTUnwrap(w.wizard.eqScores())
+        let after = try XCTUnwrap(scores.after)
+        XCTAssertLessThan(after.rmsDeviationDB, scores.before.rmsDeviationDB * 0.75,
+                          "EQ must reduce the deviation (before \(scores.before.rmsDeviationDB), after \(after.rmsDeviationDB))")
+        XCTAssertGreaterThanOrEqual(after.score, scores.before.score)
+        XCTAssertTrue(w.wizard.canIterateEQ)
+        w.wizard.iterateEQ()
+        XCTAssertEqual(w.wizard.step, .eqTuning)
+        w.wizard.beginEQVerification()
+        XCTAssertEqual(w.wizard.eqIteration, 2)
+        XCTAssertFalse(w.wizard.canIterateEQ, "max 2 consecutive EQ iterations")
+    }
+
+    func runWizardKeepingRig() throws -> (wizard: SetupWizard, rig: Rig) {
+        let rig = Rig(system: demoSystem())
+        var config = WizardConfiguration()
+        config.crossover = 90
+        config.captureSeconds = 8
+        config.target = .preset(.flat)
+        var wizard = SetupWizard(configuration: config)
+        let delay = try XCTUnwrap(rig.findDelay())
+        wizard.lockDelay(delay, epoch: rig.backend.discontinuities.value)
+        wizard.start()
+        for step in [WizardStep.baseline, .subOnly, .mainsOnly] {
+            let g = step.requiredGroups!
+            rig.backend.setActiveGroups(sub: g.sub, main: g.mains)
+            rig.run(seconds: 0.5)
+            let c = try XCTUnwrap(rig.capture("\(step)", seconds: config.captureSeconds,
+                                              band: step.qualityBand(crossover: config.crossover)))
+            wizard.submit(c)
+        }
+        let a = try XCTUnwrap(wizard.alignment)
+        rig.backend.applyAlignment(delaySeconds: a.roundedDelay, invertPolarity: a.best.invertPolarity, subGainDB: a.subGainDB)
+        rig.backend.setActiveGroups(sub: true, main: true)
+        wizard.beginVerification()
+        rig.run(seconds: 0.5)
+        wizard.submit(try XCTUnwrap(rig.capture("verify", seconds: config.captureSeconds)))
+        return (wizard, rig)
     }
 
     func testFastModeWizard() throws {

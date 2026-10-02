@@ -12,6 +12,12 @@ public struct WizardConfiguration: Equatable, Codable, Sendable {
     public var temperatureCelsius: Double = 20
     public var coherenceThreshold: Double = 0.6
     public var sampleRate: Double = 48000
+    /// Zone-averaged EQ (spec 5, steps 6–7).
+    public var eqPointCount = 5
+    public var target = TargetCurve.preset(.livePA)
+    public var eq = EQSettings()
+    /// Consecutive EQ iterations allowed before suggesting to stop (spec 7).
+    public var maxEQIterations = 2
 
     public init() {}
 
@@ -32,6 +38,9 @@ public enum WizardStep: Int, Codable, Sendable, CaseIterable, Comparable {
     case mainsOnly
     case results
     case verification
+    case eqPoints
+    case eqTuning
+    case eqVerification
     case finished
 
     public static func < (a: WizardStep, b: WizardStep) -> Bool { a.rawValue < b.rawValue }
@@ -49,7 +58,7 @@ public enum WizardStep: Int, Codable, Sendable, CaseIterable, Comparable {
     /// Which loudspeaker groups must be on during this step's capture.
     public var requiredGroups: (sub: Bool, mains: Bool)? {
         switch self {
-        case .baseline, .verification: return (true, true)
+        case .baseline, .verification, .eqPoints, .eqVerification: return (true, true)
         case .subOnly: return (true, false)
         case .mainsOnly: return (false, true)
         default: return nil
@@ -93,6 +102,16 @@ public struct SetupWizard: Codable, Sendable {
     public private(set) var prediction: TransferFunction?
     public private(set) var report: VerificationReport?
 
+    // EQ
+    public private(set) var eqPoints: [Capture] = []
+    public private(set) var eqVerificationPoints: [Capture] = []
+    public private(set) var eqAverage: SpatialAverage?
+    public private(set) var eqResult: EQResult?
+    public private(set) var eqAfterAverage: SpatialAverage?
+    public private(set) var eqIteration = 0
+    /// All filters entered so far (cumulative over iterations).
+    public private(set) var enteredFilters: [PEQFilter] = []
+
     public init(configuration: WizardConfiguration = WizardConfiguration()) {
         self.configuration = configuration
     }
@@ -125,7 +144,10 @@ public struct SetupWizard: Codable, Sendable {
         case .mainsOnly: step = .subOnly
         case .results: step = configuration.fastMode ? .subOnly : .mainsOnly
         case .verification: step = .results
-        case .finished: step = .verification
+        case .eqPoints: step = configuration.hasSubwoofer ? .verification : .baseline
+        case .eqTuning: step = .eqPoints
+        case .eqVerification: step = .eqTuning
+        case .finished: step = .eqVerification
         }
     }
 
@@ -152,7 +174,7 @@ public struct SetupWizard: Codable, Sendable {
         switch step {
         case .baseline:
             baseline = capture
-            step = configuration.hasSubwoofer ? .subOnly : .finished
+            step = configuration.hasSubwoofer ? .subOnly : .eqPoints
         case .subOnly:
             subOnly = capture
             if configuration.fastMode {
@@ -166,7 +188,13 @@ public struct SetupWizard: Codable, Sendable {
         case .verification:
             verification = capture
             evaluateVerification()
-            step = .finished
+        case .eqPoints:
+            guard eqPoints.count < configuration.eqPointCount else { return .rejected([]) }
+            eqPoints.append(capture)
+        case .eqVerification:
+            guard eqVerificationPoints.count < eqPoints.count else { return .rejected([]) }
+            eqVerificationPoints.append(capture)
+            if eqVerificationPoints.count == eqPoints.count { evaluateEQ() }
         default:
             return .rejected([])
         }
@@ -182,7 +210,90 @@ public struct SetupWizard: Codable, Sendable {
 
     public mutating func beginVerification() {
         guard alignment != nil else { return }
+        verification = nil
+        report = nil
         step = .verification
+    }
+
+    // MARK: EQ
+
+    /// From the alignment verification (or the baseline without subs) to the zone measurement.
+    public mutating func beginEQ() {
+        eqPoints = []
+        eqVerificationPoints = []
+        eqAverage = nil
+        eqResult = nil
+        eqAfterAverage = nil
+        step = .eqPoints
+    }
+
+    public var canComputeEQ: Bool { eqPoints.count >= min(3, configuration.eqPointCount) }
+
+    /// Averages the points, fits the EQ and moves to the EQ tuner.
+    @discardableResult
+    public mutating func computeEQ(microphone: MicrophoneCalibration? = nil) -> EQResult? {
+        guard canComputeEQ,
+              let avg = SpatialAverage.compute(eqPoints.map(\.transfer), coherenceThreshold: configuration.coherenceThreshold)
+        else { return nil }
+        let a = avg.removingMicrophone(microphone)
+        eqAverage = a
+        var eqs = configuration.eq
+        eqs.coherenceThreshold = configuration.coherenceThreshold
+        eqs.sampleRate = configuration.sampleRate
+        let r = EQFitter.fit(average: a, target: configuration.target, settings: eqs,
+                             main: mainsResponse, sub: subOnly?.transfer, crossoverBand: alignment?.overlapBand)
+        eqResult = r
+        step = .eqTuning
+        return r
+    }
+
+    /// The user entered the bands; measure the same points again.
+    public mutating func beginEQVerification() {
+        guard let r = eqResult else { return }
+        enteredFilters += r.filters.map { var f = $0; f.id = enteredFilters.count + $0.id; return f }
+        eqIteration += 1
+        eqVerificationPoints = []
+        eqAfterAverage = nil
+        step = .eqVerification
+    }
+
+    /// Another correction round on top of the entered filters (limited to `maxEQIterations`).
+    public var canIterateEQ: Bool { eqIteration < configuration.maxEQIterations && eqAfterAverage != nil }
+
+    public mutating func iterateEQ(microphone: MicrophoneCalibration? = nil) {
+        guard canIterateEQ else { return }
+        eqPoints = eqVerificationPoints
+        eqVerificationPoints = []
+        computeEQ(microphone: microphone)
+    }
+
+    public mutating func finish() { step = .finished }
+
+    private mutating func evaluateEQ() {
+        eqAfterAverage = SpatialAverage.compute(eqVerificationPoints.map(\.transfer),
+                                                coherenceThreshold: configuration.coherenceThreshold)
+    }
+
+    /// Deviation from the target and quality score, before and after the EQ round.
+    public func eqScores(microphone: MicrophoneCalibration? = nil) -> (before: QualityScore, after: QualityScore?)? {
+        guard let r = eqResult, let before = eqAverage else { return nil }
+        let dip = report?.after?.dipDepthDB ?? report?.before?.dipDepthDB
+        let qb = QualityScore.compute(levelDB: r.measuredDB, targetDB: r.targetDB, average: before, crossoverDipDB: dip)
+        guard let after = eqAfterAverage?.removingMicrophone(microphone) else { return (qb, nil) }
+        let f = after.frequencies
+        let smoothed = Smoothing.smoothPower(after.levelDB.map { $0.isFinite ? Decibel.toPower($0) : .nan },
+                                             frequencies: f, octaves: 1.0 / 6).map { Decibel.fromPower($0) }
+        // Same target alignment as the fit, re-based on the new level.
+        let offset = median(f.indices.filter { f[$0] >= 200 && f[$0] <= 4000 && smoothed[$0].isFinite }
+            .map { smoothed[$0] - configuration.target.value(at: f[$0]) })
+        let target = f.map { configuration.target.value(at: $0) + offset }
+        let qa = QualityScore.compute(levelDB: smoothed, targetDB: target, average: after, crossoverDipDB: dip)
+        return (qb, qa)
+    }
+
+    private func median(_ v: [Double]) -> Double {
+        let s = v.sorted()
+        return s.isEmpty ? 0 : s[s.count / 2]
     }
 
     // MARK: Results
@@ -232,6 +343,11 @@ public struct SetupWizard: Codable, Sendable {
         alignment = nil
         prediction = nil
         report = nil
+        eqPoints = []
+        eqVerificationPoints = []
+        eqAverage = nil
+        eqResult = nil
+        eqAfterAverage = nil
         if step > .preparation { step = .preparation }
     }
 }

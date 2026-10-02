@@ -58,6 +58,24 @@ public final class SimulatedAudioBackend: AudioIOBackend, @unchecked Sendable {
 
     public var system: VirtualSystem { processor.system }
 
+    /// Moves the virtual microphone to listening position `index` (0 = main position).
+    /// Keeps the processor knobs (delay, polarity, level, EQ) and the group mutes as they are.
+    public func moveMicrophone(toPoint index: Int) {
+        let base = baseSystem.atListeningPoint(index)
+        stateLock.lock()
+        let current = processorSettings
+        pendingRoom = base.room
+        stateLock.unlock()
+        let fs = sampleRate
+        applyProcessorChange { sys in
+            var s = sys
+            s.room = base.room
+            s.sub.delaySamples = base.sub.delaySamples + Int((current.subDelayMs / 1000 * fs).rounded())
+            s.main.delaySamples = base.main.delaySamples + Int((current.mainsDelayMs / 1000 * fs).rounded())
+            return s
+        }
+    }
+
     /// Simulates the user muting/unmuting loudspeaker groups on the processor.
     public func setActiveGroups(sub: Bool, main: Bool) {
         stateLock.lock()
@@ -70,7 +88,12 @@ public final class SimulatedAudioBackend: AudioIOBackend, @unchecked Sendable {
     /// Simulates entering settings on the loudspeaker processor (applied on the next block).
     public func applyProcessorChange(_ change: @escaping (VirtualSystem) -> VirtualSystem) {
         stateLock.lock()
-        pendingProcessor = change
+        // Chain with changes not yet applied, so quick successive changes are never lost.
+        if let previous = pendingProcessor {
+            pendingProcessor = { change(previous($0)) }
+        } else {
+            pendingProcessor = change
+        }
         stateLock.unlock()
     }
 
