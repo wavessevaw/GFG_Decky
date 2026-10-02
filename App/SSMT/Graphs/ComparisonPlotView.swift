@@ -15,17 +15,19 @@ struct ComparisonPlotView: View {
     var curves: [Curve]
     var band: ClosedRange<Double>?
     var range: ClosedRange<Double> = 20...1000
+    /// Draw dB values as they are (0 dB line = 0) instead of normalizing to the first curve.
+    var absolute = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Canvas { ctx, size in
                 let plot = CGRect(x: 36, y: 6, width: size.width - 42, height: size.height - 22)
                 let axis = FrequencyAxis(minFrequency: range.lowerBound, maxFrequency: range.upperBound)
-                let smoothed = curves.map { Smoothing.smooth($0.transfer, resolution: .oct6) }
+                let smoothed = curves.map { absolute ? $0.transfer : Smoothing.smooth($0.transfer, resolution: .oct6) }
                 // Common vertical reference: the median of the first curve in the plotted range.
-                let ref = medianDB(smoothed.first)
+                let ref = absolute ? 0 : medianDB(smoothed.first)
                 func y(_ db: Double) -> CGFloat {
-                    let t = (db - ref + 24) / 36
+                    let t = absolute ? (db - ref + 15) / 24 : (db - ref + 24) / 36
                     return plot.maxY - CGFloat(min(max(t, 0), 1)) * plot.height
                 }
                 if let b = band {
@@ -42,7 +44,7 @@ struct ComparisonPlotView: View {
                     ctx.draw(Text(FrequencyAxis.label(f)).font(Theme.mono(9)).foregroundColor(Theme.textMuted),
                              at: CGPoint(x: x, y: plot.maxY + 9))
                 }
-                for db in stride(from: -18.0, through: 12, by: 6) {
+                for db in stride(from: absolute ? -12.0 : -18.0, through: absolute ? 6 : 12, by: absolute ? 3 : 6) {
                     let yy = y(ref + db)
                     ctx.stroke(Path { $0.move(to: CGPoint(x: plot.minX, y: yy)); $0.addLine(to: CGPoint(x: plot.maxX, y: yy)) },
                                with: .color(.white.opacity(db == 0 ? 0.16 : 0.06)), lineWidth: 1)
@@ -79,5 +81,16 @@ struct ComparisonPlotView: View {
         let v = tf.frequencies.indices.filter { range.contains(tf.frequencies[$0]) && tf.isValid($0) }
             .map { Decibel.fromAmplitude(tf.response[$0].magnitude) }.sorted()
         return v.isEmpty ? 0 : v[v.count / 2]
+    }
+}
+
+
+extension TransferFunction {
+    /// Zero-phase transfer function from a dB curve (for plotting EQ/target curves).
+    static func fromDB(_ db: [Double], frequencies: [Double]) -> TransferFunction {
+        TransferFunction(frequencies: frequencies,
+                         response: db.map { $0.isFinite ? Complex(Decibel.toAmplitude($0)) : Complex(.nan, .nan) },
+                         coherence: db.map { _ in 1 }, measurementPower: db.map { _ in 1 },
+                         referencePower: db.map { _ in 1 }, averages: 1)
     }
 }

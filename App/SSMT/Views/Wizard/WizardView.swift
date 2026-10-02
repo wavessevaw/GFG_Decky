@@ -13,8 +13,12 @@ struct WizardView: View {
                 Group {
                     switch model.wizard.step {
                     case .preparation: PreparationStepView()
-                    case .baseline, .subOnly, .mainsOnly, .verification: CaptureStepView()
+                    case .baseline, .subOnly, .mainsOnly: CaptureStepView()
+                    case .verification:
+                        if model.wizard.report == nil { CaptureStepView() } else { AlignmentCheckView() }
                     case .results: ResultsStepView()
+                    case .eqPoints, .eqVerification: EQPointsView()
+                    case .eqTuning: EQTuningView()
                     case .finished: FinishedStepView()
                     }
                 }
@@ -31,12 +35,13 @@ struct StepIndicator: View {
     @EnvironmentObject var loc: Localizer
     var step: WizardStep
 
-    private let steps: [WizardStep] = [.preparation, .baseline, .subOnly, .mainsOnly, .results, .verification]
+    private let steps: [WizardStep] = [.preparation, .baseline, .subOnly, .mainsOnly, .results, .verification,
+                                       .eqPoints, .eqTuning, .eqVerification]
 
     var body: some View {
         HStack(spacing: 6) {
             ForEach(steps, id: \.self) { s in
-                let active = s == step || (step == .finished && s == .verification)
+                let active = s == step || (step == .finished && s == .eqVerification)
                 let done = s < step
                 HStack(spacing: 8) {
                     Text("\(s.rawValue)")
@@ -47,14 +52,14 @@ struct StepIndicator: View {
                         .overlay(CutCornerShape(cut: 5).stroke(done ? Theme.accent : Theme.hairlineStrong, lineWidth: 1))
                         .shadow(color: active ? Theme.accent.opacity(0.6) : .clear, radius: 6)
                     Text(loc.t("wizard.step.\(s.rawValue)").uppercased())
-                        .font(Theme.label(11)).tracking(0.8)
+                        .font(Theme.label(10)).tracking(0.5)
                         .foregroundStyle(active ? Theme.textPrimary : Theme.textMuted)
                         .lineLimit(1)
                     if done { Image(systemName: "checkmark").font(.system(size: 10, weight: .bold)).foregroundStyle(Theme.accent) }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 if s != steps.last {
-                    Rectangle().fill(done ? Theme.accent : Theme.hairline).frame(width: 16, height: 1)
+                    Rectangle().fill(done ? Theme.accent : Theme.hairline).frame(width: 8, height: 1)
                 }
             }
         }

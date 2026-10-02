@@ -682,6 +682,23 @@
         }
       }
     },
+    "capture.ready": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wait for the needle to turn green, then press Capture."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Дождитесь зелёной стрелки и нажмите «Замер»."
+          }
+        }
+      }
+    },
     "capture.rejected": {
       "extractionState": "manual",
       "localizations": {
@@ -712,6 +729,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Повторить замер"
+          }
+        }
+      }
+    },
+    "capture.running": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Measuring — keep quiet, don't move the microphone."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Идёт замер — тишина, микрофон не двигать."
           }
         }
       }
@@ -950,6 +984,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "До"
+          }
+        }
+      }
+    },
+    "curve.entered": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entered"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Введено"
+          }
+        }
+      }
+    },
+    "curve.plan": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plan"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "План"
           }
         }
       }
@@ -1226,19 +1294,852 @@
         }
       }
     },
-    "finished.noSub": {
+    "eq.band.boostMore": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Baseline saved"
+            "value": "Add %.1f dB"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Контрольный замер сохранён"
+            "value": "Прибавьте %.1f dB"
+          }
+        }
+      }
+    },
+    "eq.band.cutMore": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cut %.1f dB more"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Убавьте ещё %.1f dB"
+          }
+        }
+      }
+    },
+    "eq.band.shape": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gain is right — check frequency and Q"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Усиление верное — проверьте частоту и Q"
+          }
+        }
+      }
+    },
+    "eq.band.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Band %ld · %.0f Hz"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Полоса %ld · %.0f Гц"
+          }
+        }
+      }
+    },
+    "eq.bands": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "EQ bands"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Полосы EQ"
+          }
+        }
+      }
+    },
+    "eq.capturePoint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capture point %ld"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Замер точки %ld"
+          }
+        }
+      }
+    },
+    "eq.compute": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calculate EQ"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Рассчитать EQ"
+          }
+        }
+      }
+    },
+    "eq.curves": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "EQ: plan and entered"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "EQ: план и введено"
+          }
+        }
+      }
+    },
+    "eq.finish": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finish"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Завершить"
+          }
+        }
+      }
+    },
+    "eq.iterate": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "One more correction round"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ещё одна итерация коррекции"
+          }
+        }
+      }
+    },
+    "eq.iterationLimit": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Two correction rounds done — better stop here and not over-tweak the system."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Две итерации коррекции сделаны — лучше остановиться и не «закручивать» систему."
+          }
+        }
+      }
+    },
+    "eq.map": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Measurement points"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Точки замера"
+          }
+        }
+      }
+    },
+    "eq.map.stage": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "STAGE"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "СЦЕНА"
+          }
+        }
+      }
+    },
+    "eq.notCorrectable": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Some areas are not corrected on purpose: narrow dips and big differences between points are room acoustics, not the system's response."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Некоторые участки специально не корректируются: узкие провалы и большой разброс между точками — это акустика зала, а не АЧХ системы."
+          }
+        }
+      }
+    },
+    "eq.nothingToDo": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The response is already close to the target — no EQ needed."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "АЧХ уже близка к цели — EQ не нужен."
+          }
+        }
+      }
+    },
+    "eq.overall": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "EQ vs plan"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "EQ против плана"
+          }
+        }
+      }
+    },
+    "eq.overall.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep entering the bands"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Продолжайте вводить полосы"
+          }
+        }
+      }
+    },
+    "eq.point.rejected": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Point not accepted:"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Точка не принята:"
+          }
+        }
+      }
+    },
+    "eq.pointCount": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Points: %ld"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Точек: %ld"
+          }
+        }
+      }
+    },
+    "eq.points.text": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Put the microphone at point %ld of %ld (see the map), at ear height. Wait for the green needle and capture."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Поставьте микрофон в точку %ld из %ld (см. схему) на высоте ушей. Дождитесь зелёной стрелки и сделайте замер."
+          }
+        }
+      }
+    },
+    "eq.points.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Measure the listening area"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Замер по зоне прослушивания"
+          }
+        }
+      }
+    },
+    "eq.target": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Target curve"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Целевая кривая"
+          }
+        }
+      }
+    },
+    "eq.tune.allSet": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All in tune → check over the area"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Всё в строю → проверка по зоне"
+          }
+        }
+      }
+    },
+    "eq.tune.entered": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bands entered → check over the area"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Полосы введены → проверка по зоне"
+          }
+        }
+      }
+    },
+    "eq.tune.reference": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing entered yet? The tuner first listens for 6 s to remember the starting point."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ещё ничего не введено? Тюнер сначала 6 с слушает, чтобы запомнить исходное состояние."
+          }
+        }
+      }
+    },
+    "eq.tune.start": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start EQ tuner"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Запустить тюнер EQ"
+          }
+        }
+      }
+    },
+    "eq.tune.text": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leave the microphone at point 1. Start the tuner, then enter the bands one by one on the processor: the needle shows how many dB are still missing."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Оставьте микрофон в точке 1. Запустите тюнер и вводите полосы по одной в процессор: стрелка показывает, сколько dB ещё не хватает."
+          }
+        }
+      }
+    },
+    "eq.tune.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter the EQ by the needles"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Введите EQ по стрелкам"
+          }
+        }
+      }
+    },
+    "eq.verify.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check the EQ over the area"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Проверка EQ по зоне"
+          }
+        }
+      }
+    },
+    "export.copy": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy filters"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Скопировать фильтры"
+          }
+        }
+      }
+    },
+    "export.csv": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save as CSV…"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сохранить как CSV…"
+          }
+        }
+      }
+    },
+    "export.text": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save as text…"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сохранить как текст…"
+          }
+        }
+      }
+    },
+    "finished.text": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings for the processor and the result in numbers. Export the filters or start a new setup."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Настройки для процессора и результат в цифрах. Экспортируйте фильтры или начните новую настройку."
+          }
+        }
+      }
+    },
+    "finished.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Setup complete"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Настройка завершена"
+          }
+        }
+      }
+    },
+    "gauge.before": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "before: %.1f dB"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "было: %.1f dB"
+          }
+        }
+      }
+    },
+    "gauge.beforeScore": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "before: %ld"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "было: %ld"
+          }
+        }
+      }
+    },
+    "gauge.deviation": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deviation from target"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Отклонение от цели"
+          }
+        }
+      }
+    },
+    "gauge.differs": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Differs from the prediction"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Отличается от прогноза"
+          }
+        }
+      }
+    },
+    "gauge.matches": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Matches the prediction"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Совпадает с прогнозом"
+          }
+        }
+      }
+    },
+    "gauge.quality": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signal quality"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Качество сигнала"
+          }
+        }
+      }
+    },
+    "gauge.quality.bad": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bad — check the group is on and the room is quiet"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Плохо — проверьте, что группа включена и в зале тихо"
+          }
+        }
+      }
+    },
+    "gauge.quality.clip": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clipping — turn the mic preamp down"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Клиппинг — уменьшите усиление микрофона"
+          }
+        }
+      }
+    },
+    "gauge.quality.good": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Good — ready to measure"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Хорошо — можно мерить"
+          }
+        }
+      }
+    },
+    "gauge.quality.weak": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weak — quieter room or louder signal"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Слабо — тише в зале или громче сигнал"
+          }
+        }
+      }
+    },
+    "gauge.score": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quality score"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Оценка качества"
+          }
+        }
+      }
+    },
+    "gauge.score.note": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The score is a guide, not a guarantee."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Оценка — ориентир, а не гарантия."
+          }
+        }
+      }
+    },
+    "gauge.snr": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signal / noise"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сигнал / шум"
+          }
+        }
+      }
+    },
+    "gauge.snr.good": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enough above the room noise"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Достаточно выше шума зала"
+          }
+        }
+      }
+    },
+    "gauge.snr.low": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Too close to the room noise — raise the level"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Слишком близко к шуму зала — поднимите уровень"
+          }
+        }
+      }
+    },
+    "gauge.snr.needNoise": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Run auto level first"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сначала запустите автоуровень"
           }
         }
       }
@@ -2909,6 +3810,23 @@
         }
       }
     },
+    "sim.movePoint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Simulation: move the microphone to point %ld"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Симуляция: перенести микрофон в точку %ld"
+          }
+        }
+      }
+    },
     "sim.sub": {
       "extractionState": "manual",
       "localizations": {
@@ -2956,6 +3874,108 @@
           "stringUnit": {
             "state": "translated",
             "value": "Сбросить SPL"
+          }
+        }
+      }
+    },
+    "target.club": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Club"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Клуб"
+          }
+        }
+      }
+    },
+    "target.flat": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flat"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Плоская"
+          }
+        }
+      }
+    },
+    "target.livePA": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live / PA"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Живой звук / PA"
+          }
+        }
+      }
+    },
+    "target.speech": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speech"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Речь"
+          }
+        }
+      }
+    },
+    "tuner.boost": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "boost"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "подъём"
+          }
+        }
+      }
+    },
+    "tuner.cut": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cut"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "срез"
           }
         }
       }
@@ -3538,6 +4558,23 @@
         }
       }
     },
+    "vproc.eq.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Simulation: switch the bands on as if entering them on the processor; change the gain to see the needle move."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Симуляция: включайте полосы, как будто вводите их в процессор; меняйте усиление и смотрите на стрелку."
+          }
+        }
+      }
+    },
     "vproc.hint": {
       "extractionState": "manual",
       "localizations": {
@@ -3680,13 +4717,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Next: zone-averaged EQ (stage 4)."
+            "value": "Next: EQ over the listening area"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Далее: усреднённый замер и EQ (этап 4)."
+            "value": "Далее: EQ по зоне прослушивания"
           }
         }
       }
@@ -3731,13 +4768,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Whole system"
+            "value": "System"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Вся система"
+            "value": "Система"
           }
         }
       }
@@ -3748,13 +4785,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Subs only"
+            "value": "Subs"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Только сабы"
+            "value": "Сабы"
           }
         }
       }
@@ -3765,13 +4802,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mains only"
+            "value": "Mains"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Только топы"
+            "value": "Топы"
           }
         }
       }
@@ -3782,13 +4819,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Result"
+            "value": "Tune"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Результат"
+            "value": "Тюнер"
           }
         }
       }
@@ -3811,6 +4848,57 @@
       }
     },
     "wizard.step.6": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zone"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Зона"
+          }
+        }
+      }
+    },
+    "wizard.step.7": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "EQ"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "EQ"
+          }
+        }
+      }
+    },
+    "wizard.step.8": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "EQ check"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Проверка EQ"
+          }
+        }
+      }
+    },
+    "wizard.step.9": {
       "extractionState": "manual",
       "localizations": {
         "en": {

@@ -1,3 +1,4 @@
+import AppKit
 import AVFoundation
 import Foundation
 import SSMTAudio
@@ -97,6 +98,12 @@ final class AppModel: ObservableObject {
     }
     private var tuner: AlignmentTuner?
     private var lastTunerUpdate = Date.distantPast
+
+    // EQ tuner
+    @Published private(set) var eqTunerReading: EQTuner.Reading?
+    @Published private(set) var eqReferenceCapturing = false
+    @Published var eqSelectedBand = 0
+    private var eqTuner: EQTuner?
 
     // Display
     @Published var smoothing: SmoothingResolution = .oct12
@@ -205,10 +212,14 @@ final class AppModel: ObservableObject {
 
     private func receive(_ snap: LiveSnapshot) {
         snapshot = snap
-        guard tunerActive, let tuner, let tf = snap.transfer,
-              snap.timestamp.timeIntervalSince(lastTunerUpdate) >= 0.25 else { return }
-        lastTunerUpdate = snap.timestamp
-        tunerReading = tuner.read(live: tf)
+        guard let tf = snap.transfer, snap.timestamp.timeIntervalSince(lastTunerUpdate) >= 0.25 else { return }
+        if tunerActive, let tuner {
+            lastTunerUpdate = snap.timestamp
+            tunerReading = tuner.read(live: tf)
+        } else if let eqTuner {
+            lastTunerUpdate = snap.timestamp
+            eqTunerReading = eqTuner.read(live: tf)
+        }
     }
 
     private func makeHardwareBackend() throws -> AudioIOBackend {
@@ -407,7 +418,10 @@ final class AppModel: ObservableObject {
                 guard let self else { return }
                 self.wizardCaptureRunning = false
                 self.lastAcceptance = self.wizard.submit(capture)
-                if case .accepted = self.lastAcceptance, self.isSimulation { self.simulateGroupsForStep() }
+                if case .accepted = self.lastAcceptance, self.isSimulation {
+                    self.simulateGroupsForStep()
+                    if step == .eqPoints || step == .eqVerification { self.simulateMoveToNextPoint() }
+                }
             }
         }
     }
@@ -433,6 +447,8 @@ final class AppModel: ObservableObject {
     }
 
     func wizardRestart() {
+        stopEQTuner()
+        stopTuner()
         wizardCancelCapture()
         lastAcceptance = nil
         simulationSettingsApplied = false
@@ -481,6 +497,120 @@ final class AppModel: ObservableObject {
         tuner = nil
         tunerReading = nil
         engine?.setLiveAveraging(seconds: 1.5)
+    }
+
+    // MARK: - EQ steps
+
+    func wizardBeginEQ() {
+        stopTuner()
+        lastAcceptance = nil
+        wizard.beginEQ()
+        if isSimulation { simulateGroupsForStep(); simulationBackend?.moveMicrophone(toPoint: 0) }
+    }
+
+    /// Simulation only: move the virtual microphone to the next point to measure.
+    func simulateMoveToNextPoint() {
+        let index = wizard.step == .eqVerification ? wizard.eqVerificationPoints.count : wizard.eqPoints.count
+        simulationBackend?.moveMicrophone(toPoint: index)
+        engine?.resetLiveAverages()
+    }
+
+    func wizardComputeEQ() {
+        lastAcceptance = nil
+        wizard.computeEQ(microphone: calibration.selectedMicrophone)
+        eqSelectedBand = 0
+        if isSimulation { simulationBackend?.moveMicrophone(toPoint: 0) }
+    }
+
+    /// EQ tuner: captures a short reference at the current microphone position (nothing entered yet),
+    /// then compares the live response with it to show what has been entered on the processor.
+    func startEQTuner() {
+        guard let engine, let r = wizard.eqResult, !eqReferenceCapturing else { return }
+        if !noiseOn { setNoise(on: true) }
+        eqReferenceCapturing = true
+        eqTuner = nil
+        eqTunerReading = nil
+        engine.setLiveAveraging(seconds: 1.0)
+        engine.capture(label: "eq-reference", duration: 6) { [weak self] c in
+            Task { @MainActor in
+                guard let self else { return }
+                self.eqReferenceCapturing = false
+                self.eqTuner = EQTuner(reference: c.transfer, filters: r.filters, workingRange: r.workingRange)
+                self.engine?.resetLiveAverages()
+            }
+        }
+    }
+
+    var eqTunerReady: Bool { eqTuner != nil }
+
+    func stopEQTuner() {
+        eqTuner = nil
+        eqTunerReading = nil
+        engine?.setLiveAveraging(seconds: 1.5)
+    }
+
+    func wizardBeginEQVerification() {
+        stopEQTuner()
+        lastAcceptance = nil
+        wizard.beginEQVerification()
+        if isSimulation { simulationBackend?.moveMicrophone(toPoint: 0) }
+    }
+
+    func wizardIterateEQ() {
+        lastAcceptance = nil
+        wizard.iterateEQ(microphone: calibration.selectedMicrophone)
+        eqSelectedBand = 0
+        if isSimulation { simulationBackend?.moveMicrophone(toPoint: 0) }
+    }
+
+    func wizardFinish() {
+        stopEQTuner()
+        wizard.finish()
+    }
+
+    /// Simulation only: enter (or remove) one planned EQ band on the virtual processor, exactly.
+    func simulateToggleBand(_ filter: PEQFilter) {
+        var p = simProcessor
+        if filter.group == .sub {
+            if let i = p.subEQ.firstIndex(where: { $0.id == filter.id }) { p.subEQ.remove(at: i) } else { p.subEQ.append(filter) }
+        } else {
+            if let i = p.mainsEQ.firstIndex(where: { $0.id == filter.id }) { p.mainsEQ.remove(at: i) } else { p.mainsEQ.append(filter) }
+        }
+        simProcessor = p
+    }
+
+    func simulatedBandEntered(_ filter: PEQFilter) -> PEQFilter? {
+        (simProcessor.subEQ + simProcessor.mainsEQ).first { $0.id == filter.id }
+    }
+
+    /// Simulation only: change the gain of an entered band (to watch the needle move).
+    func simulateSetBandGain(_ filter: PEQFilter, gain: Double) {
+        var p = simProcessor
+        if let i = p.subEQ.firstIndex(where: { $0.id == filter.id }) { p.subEQ[i].gainDB = gain }
+        if let i = p.mainsEQ.firstIndex(where: { $0.id == filter.id }) { p.mainsEQ[i].gainDB = gain }
+        simProcessor = p
+    }
+
+    // MARK: - Export
+
+    var exportText: String { PEQExport.filterSettingsText(wizard.enteredFilters.isEmpty ? (wizard.eqResult?.filters ?? []) : wizard.enteredFilters) }
+    var exportCSV: String { PEQExport.csv(wizard.enteredFilters.isEmpty ? (wizard.eqResult?.filters ?? []) : wizard.enteredFilters) }
+
+    func saveExport(csv: Bool) {
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = csv ? "SSMT-filters.csv" : "SSMT-filters.txt"
+        panel.canCreateDirectories = true
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            try (csv ? exportCSV : exportText).write(to: url, atomically: true, encoding: .utf8)
+        } catch {
+            lastError = error.localizedDescription
+        }
+    }
+
+    func copyExportToClipboard() {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(exportText, forType: .string)
     }
 
     /// Simulation only: mute/unmute the virtual groups as the current step asks the user to.

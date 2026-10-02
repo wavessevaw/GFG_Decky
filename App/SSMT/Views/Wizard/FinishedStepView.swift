@@ -1,8 +1,8 @@
 import SSMTCore
 import SwiftUI
 
-/// Step 5 result: verdict, before/after metrics and concrete advice.
-struct FinishedStepView: View {
+/// Step 5 after the verification capture: tuner gauges for the crossover result.
+struct AlignmentCheckView: View {
     @EnvironmentObject var model: AppModel
     @EnvironmentObject var loc: Localizer
 
@@ -11,26 +11,34 @@ struct FinishedStepView: View {
             if let r = model.wizard.report {
                 InstructionHeader(marking: "STEP 5 · VERIFY", title: loc.t("verdict.\(r.verdict.rawValue)"),
                                   text: loc.t("verdict.\(r.verdict.rawValue).text"))
-                HStack(spacing: 12) {
-                    metric(loc.t("verify.dip"), before: r.before?.dipDepthDB, after: r.after?.dipDepthDB, lowerIsBetter: true)
-                    metric(loc.t("verify.sum"), before: r.before?.summationGainDB, after: r.after?.summationGainDB, lowerIsBetter: false)
-                    metricSingle(loc.t("verify.predictionError"), value: r.predictionErrorDB)
+                HStack(alignment: .top, spacing: 12) {
+                    let dip = r.after?.dipDepthDB
+                    TunerGauge(title: loc.t("verify.dip"), value: dip.map { 1 - $0 / 9 }, mode: .oneSided,
+                               tolerance: 1 - 3.0 / 9,
+                               readout: dip.map { String(format: "%.1f dB", $0) } ?? "—",
+                               instruction: r.before.map { String(format: loc.t("gauge.before"), $0.dipDepthDB) } ?? "",
+                               large: model.stageMode)
+                    TunerGauge(title: loc.t("verify.predictionError"),
+                               value: r.predictionErrorDB.isFinite ? 1 - r.predictionErrorDB / 4 : 0, mode: .oneSided,
+                               tolerance: 1 - 2.0 / 4,
+                               readout: r.predictionErrorDB.isFinite ? String(format: "±%.1f dB", r.predictionErrorDB) : "—",
+                               instruction: loc.t(r.predictionErrorDB < 2 ? "gauge.matches" : "gauge.differs"),
+                               large: model.stageMode)
                 }
                 if r.advice != .none {
                     HazardNotice(text: loc.t("advice.\(r.advice.rawValue)"),
                                  color: r.verdict == .checkSettings ? Theme.statusError : Theme.signalYellow)
                 }
                 Panel(title: loc.t("verify.curves"), marking: "A/B") {
-                    ComparisonPlotView(curves: curves, band: model.wizard.alignment?.overlapBand).frame(height: 240)
+                    ComparisonPlotView(curves: curves, band: model.wizard.alignment?.overlapBand).frame(height: 220)
                 }
-            } else {
-                InstructionHeader(marking: "DONE", title: loc.t("finished.noSub"), text: "")
-            }
-            HStack(spacing: 12) {
-                Button(loc.t("verify.again")) { model.wizardBeginVerification() }.buttonStyle(SSMTButtonStyle())
-                Button(loc.t("wizard.restart")) { model.wizardRestart() }.buttonStyle(SSMTButtonStyle())
-                Spacer()
-                Text(loc.t("wizard.next.eq")).font(.system(size: 12)).foregroundStyle(Theme.textMuted)
+                HStack(spacing: 12) {
+                    Button(loc.t("wizard.back")) { model.wizardBack() }.buttonStyle(SSMTButtonStyle())
+                    Button(loc.t("verify.again")) { model.wizardBeginVerification() }.buttonStyle(SSMTButtonStyle())
+                    WizardPrimaryButton(title: loc.t("wizard.next.eq"), systemImage: "slider.horizontal.3") {
+                        model.wizardBeginEQ()
+                    }
+                }
             }
         }
     }
@@ -39,39 +47,44 @@ struct FinishedStepView: View {
         var c: [ComparisonPlotView.Curve] = []
         if let b = model.wizard.baseline?.transfer { c.append(.init(label: loc.t("curve.before"), transfer: b, color: Theme.textMuted)) }
         if let p = model.wizard.prediction { c.append(.init(label: loc.t("curve.prediction"), transfer: p, color: Theme.dataBlue, dashed: true)) }
-        if let v = model.wizard.verification?.transfer { c.append(.init(label: loc.t("curve.after"), transfer: v, color: Theme.accent)) }
+        if let v = model.wizard.verification?.transfer {
+            let dip = model.wizard.report?.after?.dipDepthDB ?? 9
+            c.append(.init(label: loc.t("curve.after"), transfer: v, color: Theme.closeness(1 - max(0, dip - 3) / 6)))
+        }
         return c
     }
+}
 
-    private func metric(_ title: String, before: Double?, after: Double?, lowerIsBetter: Bool) -> some View {
-        let improved: Bool? = {
-            guard let b = before, let a = after else { return nil }
-            return lowerIsBetter ? a < b : a > b
-        }()
-        return VStack(alignment: .leading, spacing: 6) {
-            Text(title.uppercased()).font(Theme.label(11)).tracking(1).foregroundStyle(Theme.textSecondary)
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(before.map { String(format: "%.1f", $0) } ?? "—").font(Theme.mono(18)).foregroundStyle(Theme.textMuted)
-                Image(systemName: "arrow.right").foregroundStyle(Theme.textMuted)
-                Text(after.map { String(format: "%.1f dB", $0) } ?? "—").font(Theme.mono(26, weight: .bold))
-                    .foregroundStyle(improved == false ? Theme.statusWarning : Theme.textPrimary)
+/// Final summary: alignment settings, entered EQ, scores and export.
+struct FinishedStepView: View {
+    @EnvironmentObject var model: AppModel
+    @EnvironmentObject var loc: Localizer
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            InstructionHeader(marking: "DONE", title: loc.t("finished.title"), text: loc.t("finished.text"))
+            if !model.wizard.actionCards.isEmpty {
+                HStack(alignment: .top, spacing: 12) {
+                    ForEach(Array(model.wizard.actionCards.enumerated()), id: \.offset) { _, card in
+                        ActionCardView(card: card)
+                    }
+                }
+            }
+            EQResultGauges()
+            Panel(title: loc.t("eq.bands"), marking: "EXPORT") {
+                Text(model.exportText).font(Theme.mono(11)).foregroundStyle(Theme.textPrimary)
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                HStack {
+                    Button(loc.t("export.copy")) { model.copyExportToClipboard() }.buttonStyle(SSMTButtonStyle())
+                    Button(loc.t("export.text")) { model.saveExport(csv: false) }.buttonStyle(SSMTButtonStyle())
+                    Button(loc.t("export.csv")) { model.saveExport(csv: true) }.buttonStyle(SSMTButtonStyle())
+                }
+            }
+            HStack(spacing: 12) {
+                Button(loc.t("wizard.back")) { model.wizardBack() }.buttonStyle(SSMTButtonStyle())
+                Button(loc.t("wizard.restart")) { model.wizardRestart() }.buttonStyle(SSMTButtonStyle())
             }
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(CutCornerShape().fill(Theme.panel))
-        .overlay(CutCornerShape().stroke(Theme.hairline, lineWidth: 1))
-    }
-
-    private func metricSingle(_ title: String, value: Double) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title.uppercased()).font(Theme.label(11)).tracking(1).foregroundStyle(Theme.textSecondary)
-            Text(value.isFinite ? String(format: "%.1f dB", value) : "—").font(Theme.mono(26, weight: .bold))
-                .foregroundStyle(Theme.textPrimary)
-        }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(CutCornerShape().fill(Theme.panel))
-        .overlay(CutCornerShape().stroke(Theme.hairline, lineWidth: 1))
     }
 }
