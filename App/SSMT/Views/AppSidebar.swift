@@ -39,8 +39,14 @@ struct AppSidebar: View {
             brand
                 .padding(.horizontal, 18)
                 .padding(.top, 20)
-                .padding(.bottom, 22)
-            if model.appMode == .wizard {
+                .padding(.bottom, 14)
+            sectionSwitch
+                .padding(.horizontal, 10)
+                .padding(.bottom, 16)
+            if model.section == .inputList {
+                inputListItems
+                Spacer(minLength: 16)
+            } else if model.appMode == .wizard {
                 stages
                 Spacer(minLength: 16)
                 Rectangle().fill(Theme.hairline).frame(height: 1).padding(.horizontal, 18)
@@ -52,6 +58,56 @@ struct AppSidebar: View {
         .frame(width: 272)
         .frame(maxHeight: .infinity, alignment: .top)
         .background(GlassBackground(radius: 22))
+    }
+
+    /// Function #1 / function #2.
+    private var sectionSwitch: some View {
+        VStack(spacing: 4) {
+            sectionRow(.setup, icon: "dial.medium", title: loc.t("section.setup"))
+            sectionRow(.inputList, icon: "list.bullet.rectangle", title: loc.t("section.inputList"))
+        }
+        .padding(4)
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.black.opacity(0.18)))
+    }
+
+    private func sectionRow(_ s: AppSection, icon: String, title: String) -> some View {
+        let on = model.section == s
+        return Button { model.section = s } label: {
+            HStack(spacing: 10) {
+                Image(systemName: icon).frame(width: 20)
+                Text(title).font(.system(size: 13, weight: on ? .semibold : .regular))
+                Spacer()
+            }
+            .foregroundStyle(on ? Theme.textPrimary : Theme.textSecondary)
+            .padding(.horizontal, 10).padding(.vertical, 8)
+            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(on ? Theme.accent.opacity(0.16) : Color.clear))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Document actions of the input list tab.
+    private var inputListItems: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            UtilityRow(icon: "doc", title: loc.t("il.new")) { model.inputList.newDocument() }
+            UtilityRow(icon: "folder", title: loc.t("il.open")) { model.inputList.open() }
+            UtilityRow(icon: "square.and.arrow.down", title: loc.t("il.save")) { model.inputList.save() }
+            UtilityRow(icon: "square.and.arrow.down.on.square", title: loc.t("il.saveAs")) { model.inputList.save(as: true) }
+            Rectangle().fill(Theme.hairline).frame(height: 1).padding(.vertical, 8).padding(.horizontal, 8)
+            UtilityRow(icon: "doc.richtext", title: loc.t("il.export.pdf")) {
+                InputListExporter.export(.pdf, store: model.inputList, loc: loc)
+            }
+            UtilityRow(icon: "photo", title: loc.t("il.export.pngList")) {
+                InputListExporter.export(.pngList, store: model.inputList, loc: loc)
+            }
+            UtilityRow(icon: "photo.on.rectangle", title: loc.t("il.export.pngStage")) {
+                InputListExporter.export(.pngStage, store: model.inputList, loc: loc)
+            }
+            UtilityRow(icon: "tablecells", title: loc.t("il.export.csvChannels")) {
+                InputListExporter.export(.csvChannels, store: model.inputList, loc: loc)
+            }
+        }
+        .padding(.horizontal, 10)
     }
 
     private var brand: some View {

@@ -34,6 +34,15 @@ enum NoiseChoice: Int, CaseIterable, Identifiable {
     }
 }
 
+/// Top-level functions of the app.
+enum AppSection: String, CaseIterable, Identifiable {
+    /// Function #1: automatic system setup.
+    case setup
+    /// Function #2: input list and stage plan.
+    case inputList
+    var id: String { rawValue }
+}
+
 enum AppMode: String, CaseIterable, Identifiable {
     case wizard, expert
     var id: String { rawValue }
@@ -125,6 +134,9 @@ final class AppModel: ObservableObject {
     @Published var coherenceThreshold: Double = 0.6
     @Published var visibleGraphs: Set<GraphKind> = [.magnitude, .phase, .coherence]
     @Published var stageMode = false
+    @Published var section: AppSection = .setup
+    /// Function #2 document (input list + stage plan).
+    let inputList = InputListStore()
     /// Reduced graphics effects (automatic on Intel / low-core Macs; see `GraphicsQuality`).
     @Published var reducedEffects = GraphicsQuality.initialReduced {
         didSet { UserDefaults.standard.set(reducedEffects, forKey: GraphicsQuality.defaultsKey) }

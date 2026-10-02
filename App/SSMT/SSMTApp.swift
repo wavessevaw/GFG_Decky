@@ -19,10 +19,22 @@ struct SSMTApp: App {
         .windowStyle(.hiddenTitleBar)
         .commands {
             CommandGroup(replacing: .newItem) {
-                Button(localizer.t("session.open")) { model.openSession() }
-                    .keyboardShortcut("o", modifiers: [.command])
-                Button(localizer.t("session.save")) { model.saveSession() }
-                    .keyboardShortcut("s", modifiers: [.command])
+                // ⌘O / ⌘S act on the open tab: the setup session or the input list document.
+                Button(localizer.t(model.section == .inputList ? "il.open" : "session.open")) {
+                    model.section == .inputList ? model.inputList.open() : model.openSession()
+                }
+                .keyboardShortcut("o", modifiers: [.command])
+                Button(localizer.t(model.section == .inputList ? "il.save" : "session.save")) {
+                    model.section == .inputList ? model.inputList.save() : model.saveSession()
+                }
+                .keyboardShortcut("s", modifiers: [.command])
+                if model.section == .inputList {
+                    Button(localizer.t("il.saveAs")) { model.inputList.save(as: true) }
+                        .keyboardShortcut("s", modifiers: [.command, .shift])
+                    Button(localizer.t("il.new")) { model.inputList.newDocument() }
+                    Button(localizer.t("il.export.pdf")) { InputListExporter.export(.pdf, store: model.inputList, loc: localizer) }
+                        .keyboardShortcut("e", modifiers: [.command])
+                }
                 Divider()
                 Button(localizer.t("report.pdf")) { model.exportReport(pdf: true, localizer: localizer) }
                     .keyboardShortcut("p", modifiers: [.command, .shift])

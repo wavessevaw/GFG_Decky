@@ -112,6 +112,56 @@ final class SnapshotTests: XCTestCase {
         try snapshot(ReportView(report: report, wizard: Self.model.wizard), size: nil, name: "report", loc: Self.ru)
     }
 
+    // MARK: Input list (function #2)
+
+    static var sampleInputList: InputListDocument {
+        var d = InputListDocument()
+        d.artist = "The Sample Band"
+        d.event = "Club show"
+        d.venue = "Main hall"
+        d.date = Date(timeIntervalSince1970: 1_800_000_000)
+        d.engineer = "FOH: A. Engineer"
+        d.contact = "+7 900 000-00-00"
+        d.notes = "Drum riser 2.4 × 2 m, 4 power drops on stage."
+        for t in ["drums", "bass", "guitar", "keys", "leadVocal", "backingVocals", "playback"] {
+            d.insert(ChannelTemplate.template(id: t)!)
+        }
+        d.assignStagebox(prefix: "SB1-")
+        for (name, type) in [("Lead vocal", MixType.iem), ("Guitar", .wedge), ("Bass", .wedge), ("Drums", .drumfill), ("Keys", .iem)] {
+            d.addMix(type: type)
+            d.mixes[d.mixes.count - 1].name = name
+            d.mixes[d.mixes.count - 1].stereo = type == .iem
+        }
+        var p = StagePlan()
+        p.width = 10; p.depth = 6
+        p.add(.riser, at: (5, 4.6), label: "Riser")
+        p.add(.drumKit, at: (5, 4.6), label: "Drums")
+        p.add(.bassAmp, at: (2.2, 4.8), label: "Bass")
+        p.add(.guitarAmp, at: (7.8, 4.8), label: "Guitar")
+        p.add(.keyboard, at: (8.4, 2.6), label: "Keys")
+        p.add(.person, at: (5, 1.6), label: "Lead vocal")
+        p.add(.vocalMic, at: (5, 1.0))
+        for x in [3.0, 5.0, 7.0] { p.add(.wedge, at: (x, 0.4)) }
+        p.add(.diBox, at: (8.4, 3.2))
+        p.add(.powerDrop, at: (1.0, 5.6))
+        p.add(.text, at: (5, 3.0), label: "Stage left ← → Stage right")
+        d.stage = p
+        return d
+    }
+
+    func testInputListWorkspace() throws {
+        Self.model.inputList.doc = Self.sampleInputList
+        try snapshot(InputListWorkspace().padding(16).background(Backdrop()), size: CGSize(width: 1300, height: 2100),
+                     name: "input-list", loc: Self.ru)
+    }
+
+    func testInputListPrintSheets() throws {
+        let doc = Self.sampleInputList
+        try snapshot(ChannelSheet(doc: doc, rows: doc.channelPages(rowsPerPage: InputListPrint.rowsPerPage)[0], page: "1 / 3"),
+                     size: InputListPrint.page, name: "input-list-print", loc: Self.ru)
+        try snapshot(StageSheet(doc: doc, page: "3 / 3"), size: InputListPrint.page, name: "stage-plan-print", loc: Self.ru)
+    }
+
     // MARK: Rendering and comparison
 
     private func snapshot<V: View>(_ view: V, size: CGSize?, name: String, loc: Localizer,

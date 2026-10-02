@@ -20,6 +20,7 @@ extension View {
     /// Injects the model, its live-data stores and the localizer.
     func ssmtEnvironment(_ model: AppModel, _ loc: Localizer) -> some View {
         environmentObject(model)
+            .environmentObject(model.inputList)
             .environmentObject(model.live)
             .environmentObject(model.tuning)
             .environmentObject(loc)

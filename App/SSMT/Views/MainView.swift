@@ -17,10 +17,11 @@ struct MainView: View {
                 VStack(spacing: 8) {
                     TopBar()
                     if let e = model.lastError { ErrorBanner(text: e.hasPrefix("error.") ? loc.t(e) : e) { model.lastError = nil } }
-                    switch model.appMode {
-                    case .wizard:
+                    if model.section == .inputList {
+                        InputListWorkspace()
+                    } else if model.appMode == .wizard {
                         WizardView()
-                    case .expert:
+                    } else {
                         VStack(spacing: 14) {
                             MeterPanel()
                             ExpertGraphs()
