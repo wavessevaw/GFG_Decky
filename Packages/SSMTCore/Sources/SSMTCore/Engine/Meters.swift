@@ -52,4 +52,6 @@ public struct MeterAccumulator: Sendable {
     }
 
     public mutating func resetClip() { clipCount = 0 }
+
+    public var isClipped: Bool { clipCount > 0 }
 }

@@ -26,7 +26,7 @@ struct MainView: View {
     }
 
     private var graphs: some View {
-        let tf = model.snapshot?.transfer
+        let tf = model.displayTransfer
         let kinds = GraphKind.allCases.filter { model.visibleGraphs.contains($0) }
         return Panel(title: loc.t("graphs.title"), marking: model.smoothing == .none ? "RAW" : "1/\(model.smoothing.rawValue) OCT") {
             if tf == nil {

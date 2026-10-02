@@ -12,6 +12,8 @@ public struct LiveSnapshot: Sendable {
     public var overflowCount: UInt64
     public var discontinuities: UInt64
     public var capture: CaptureProgress?
+    public var soundLevel: SoundLevelReading
+    public var autoLevelRunning: Bool
 }
 
 public struct CaptureProgress: Equatable, Sendable {
@@ -72,6 +74,9 @@ public final class MeasurementEngine: @unchecked Sendable {
                                 completion: ([Float], [Float]) -> Void)?
     private var lastSnapshotTime = Date.distantPast
     private var snapshotHandler: (@Sendable (LiveSnapshot) -> Void)?
+    private var splMeter: SoundLevelMeter
+    private var autoLevel: (controller: AutoLevelController, start: Date, clippedAtStart: Int,
+                            completion: (Double, AutoLevelController.Outcome) -> Void)?
 
     public init(backend: AudioIOBackend, configuration: Configuration = Configuration()) {
         self.backend = backend
@@ -80,6 +85,7 @@ public final class MeasurementEngine: @unchecked Sendable {
                                                      averaging: .exponential(timeConstant: configuration.liveAveragingSeconds)))
         micMeter = MeterAccumulator(clipThresholdDBFS: configuration.clipThresholdDBFS, sampleRate: backend.sampleRate)
         refMeter = MeterAccumulator(clipThresholdDBFS: configuration.clipThresholdDBFS, sampleRate: backend.sampleRate)
+        splMeter = SoundLevelMeter(sampleRate: backend.sampleRate)
     }
 
     /// Snapshot callback, invoked on the engine queue. Hop to the main actor in the UI layer.
@@ -157,6 +163,37 @@ public final class MeasurementEngine: @unchecked Sendable {
         }
     }
 
+    public func setSPLCalibration(_ c: SPLCalibration?) {
+        queue.async { self.splMeter.calibration = c }
+    }
+
+    public func resetSoundLevel() { queue.async { self.splMeter.reset() } }
+
+    /// Measures the room noise with the generator silent: returns the measurement auto-spectrum
+    /// on the analysis grid (density, same scale as `TransferFunction.measurementPower`).
+    public func measureNoiseFloor(seconds: Double = 5, completion: @escaping ([Double]) -> Void) {
+        backend.generatorControl.run.value = false
+        capture(label: "noise-floor", duration: seconds) { c in
+            completion(c.transfer.measurementPower)
+        }
+    }
+
+    /// Runs the auto-level procedure on the live analysis. The generator must be running.
+    public func runAutoLevel(settings: AutoLevelController.Settings, noiseFloor: [Double],
+                             completion: @escaping (Double, AutoLevelController.Outcome) -> Void) {
+        queue.async {
+            let controller = AutoLevelController(settings: settings, noiseFloor: noiseFloor,
+                                                 frequencies: self.live.grid.frequencies)
+            self.backend.generatorControl.targetLevelDBFS.value = Float(settings.startLevelDBFS)
+            self.backend.generatorControl.run.value = true
+            self.live.reset()
+            self.micMeter.resetClip()
+            self.autoLevel = (controller, Date(), 0, completion)
+        }
+    }
+
+    public func cancelAutoLevel() { queue.async { self.autoLevel = nil } }
+
     public func cancelCapture() {
         queue.async {
             self.captureAnalyzer = nil
@@ -190,8 +227,10 @@ public final class MeasurementEngine: @unchecked Sendable {
             let refIn = input[1]
             let reference = configuration.referenceMode == .internalSignal ? output[0] : refIn
             micMeter.process(mic)
+            splMeter.process(mic)
             refMeter.process(refIn)
             live.ingest(reference: reference, measurement: mic)
+            processedSeconds += Double(mic.count) / backend.sampleRate
             if var raw = rawCollection {
                 raw.reference.append(contentsOf: reference)
                 raw.measurement.append(contentsOf: mic)
@@ -210,10 +249,35 @@ public final class MeasurementEngine: @unchecked Sendable {
                 if st.elapsed >= st.duration { finishCapture() }
             }
         }
+        stepAutoLevel()
         let now = Date()
         if now.timeIntervalSince(lastSnapshotTime) >= configuration.snapshotInterval {
             lastSnapshotTime = now
             publishSnapshot(now)
+        }
+    }
+
+    /// Time base for auto-level: seconds of audio processed (works in real time and in tests).
+    private var processedSeconds = 0.0
+    private var lastAutoLevelEvaluation = -Double.infinity
+
+    private func stepAutoLevel() {
+        guard var al = autoLevel else { return }
+        // Evaluate twice per second of audio; clipping is checked every time.
+        let clipped = micMeter.isClipped
+        guard clipped || processedSeconds - lastAutoLevelEvaluation >= 0.5 else { return }
+        lastAutoLevelEvaluation = processedSeconds
+        let tf = live.snapshot()
+        switch al.controller.update(time: processedSeconds, measurementPower: tf.measurementPower, clipped: clipped) {
+        case .wait:
+            autoLevel = al
+        case .setLevel(let l):
+            backend.generatorControl.targetLevelDBFS.value = Float(l)
+            autoLevel = al
+        case .finished(let level, let outcome):
+            backend.generatorControl.targetLevelDBFS.value = Float(level)
+            autoLevel = nil
+            al.completion(level, outcome)
         }
     }
 
@@ -240,7 +304,8 @@ public final class MeasurementEngine: @unchecked Sendable {
             referenceMode: configuration.referenceMode,
             referenceDelaySeconds: Double(referenceDelay) / backend.sampleRate,
             overflowCount: backend.inputRing.overflowCount + backend.outputRing.overflowCount,
-            discontinuities: backend.discontinuities.value, capture: progress)
+            discontinuities: backend.discontinuities.value, capture: progress,
+            soundLevel: splMeter.reading(), autoLevelRunning: autoLevel != nil)
         handler(snap)
     }
 }

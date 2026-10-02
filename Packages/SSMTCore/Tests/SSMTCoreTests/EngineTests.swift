@@ -120,3 +120,88 @@ final class EngineDelayTests: XCTestCase {
         XCTAssertEqual(estimate?.samples ?? 0, Double(777 + system.main.delaySamples), accuracy: 1)
     }
 }
+
+final class AutoLevelTests: XCTestCase {
+    func makeBackend(micNoise: Double, preamp: Double = 0) -> SimulatedAudioBackend {
+        var system = VirtualSystem.typicalPA(subDistance: 9.5, mainDistance: 9.5)
+        system.micNoiseDBFS = micNoise
+        var safety = GeneratorSafety()
+        safety.fadeInSeconds = 0.2
+        safety.startLevelDBFS = -60
+        safety.maximumLevelDBFS = -6
+        let b = SimulatedAudioBackend(system: system, deviceLatency: 512, safety: safety, seed: 11)
+        b.micPreampDB = preamp
+        return b
+    }
+
+    /// Drives a full noise-floor + auto-level sequence synchronously.
+    func runSequence(_ backend: SimulatedAudioBackend, settings: AutoLevelController.Settings)
+        -> (Double, AutoLevelController.Outcome)? {
+        let engine = MeasurementEngine(backend: backend)
+        engine.setReferenceDelay(samples: 512 + backend.system.main.delaySamples)
+        var floor: [Double]?
+        engine.measureNoiseFloor(seconds: 3) { floor = $0 }
+        for _ in 0..<(4 * 40) where floor == nil {
+            backend.pump(frames: 1200)
+            engine.drainNow()
+        }
+        guard let nf = floor else { XCTFail("no noise floor"); return nil }
+        XCTAssertTrue(nf.filter { $0.isFinite && $0 > 0 }.count > 200)
+        var result: (Double, AutoLevelController.Outcome)?
+        engine.runAutoLevel(settings: settings, noiseFloor: nf) { result = ($0, $1) }
+        for _ in 0..<(120 * 40) where result == nil {
+            backend.pump(frames: 1200)
+            engine.drainNow()
+        }
+        return result
+    }
+
+    func testReachesTargetSNR() {
+        var s = AutoLevelController.Settings()
+        s.maximumLevelDBFS = -6
+        let r = runSequence(makeBackend(micNoise: -70), settings: s)
+        guard case .targetReached(let snr)? = r?.1 else { return XCTFail("unexpected \(String(describing: r))") }
+        XCTAssertGreaterThanOrEqual(snr, 20)
+        XCTAssertLessThanOrEqual(r!.0, -6)
+        XCTAssertGreaterThan(r!.0, -60)
+    }
+
+    func testStopsAtUserMaximum() {
+        var s = AutoLevelController.Settings()
+        s.maximumLevelDBFS = -50
+        let r = runSequence(makeBackend(micNoise: -45), settings: s)
+        guard case .maximumReached? = r?.1 else { return XCTFail("unexpected \(String(describing: r))") }
+        XCTAssertEqual(r!.0, -50, accuracy: 1e-9)
+    }
+
+    func testBacksOffOnClipping() {
+        var s = AutoLevelController.Settings()
+        s.maximumLevelDBFS = 0
+        s.targetSNRDB = 200 // unreachable: forces raising until clipping
+        let r = runSequence(makeBackend(micNoise: -90, preamp: 30), settings: s)
+        XCTAssertEqual(r?.1, .clipped)
+    }
+}
+
+final class SPLEngineTests: XCTestCase {
+    func testSnapshotCarriesSoundLevel() {
+        let backend = SimulatedAudioBackend(system: .typicalPA(), seed: 1)
+        let engine = MeasurementEngine(backend: backend)
+        engine.setSPLCalibration(SPLCalibration(dBFSAt94dBSPL: -30))
+        let got = expectation(description: "snapshot")
+        got.assertForOverFulfill = false
+        var reading: SoundLevelReading?
+        engine.setSnapshotHandler { s in
+            reading = s.soundLevel
+            got.fulfill()
+        }
+        backend.generatorControl.targetLevelDBFS.value = -20
+        backend.generatorControl.run.value = true
+        for _ in 0..<40 { backend.pump(frames: 1200) }
+        engine.drainNow()
+        wait(for: [got], timeout: 2)
+        XCTAssertTrue(reading?.isCalibrated ?? false)
+        // Generator is still fading in after 1 s (safe start); only check a sensible calibrated value.
+        XCTAssertGreaterThan(reading?.laeq ?? 0, 30)
+    }
+}

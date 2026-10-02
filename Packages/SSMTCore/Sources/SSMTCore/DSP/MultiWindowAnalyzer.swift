@@ -162,14 +162,16 @@ public final class MultiWindowAnalyzer {
                 sxy += bxy * (bw / bwt)
                 wsum += bw
             }
-            guard wsum > 0, sxx > 0 else { continue }
+            guard wsum > 0 else { continue }
             sxx /= wsum
             syy /= wsum
             sxy = sxy / wsum
-            response[i] = sxy / sxx
-            coherence[i] = syy > 0 ? min(1, sxy.magnitudeSquared / (sxx * syy)) : 0
             pyy[i] = syy
             pxx[i] = sxx
+            // Without reference energy (e.g. room-noise measurement) only the auto-spectra are valid.
+            guard sxx > 0 else { continue }
+            response[i] = sxy / sxx
+            coherence[i] = syy > 0 ? min(1, sxy.magnitudeSquared / (sxx * syy)) : 0
         }
         let used = accumulators.map(\.frameCount).filter { $0 > 0 }
         return TransferFunction(frequencies: grid.frequencies, response: response, coherence: coherence,

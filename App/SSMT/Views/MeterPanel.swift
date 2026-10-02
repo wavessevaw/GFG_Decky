@@ -24,11 +24,29 @@ struct MeterPanel: View {
                 Spacer()
                 coherenceBadge
             }
+            TechDivider()
+            splRow
+        }
+    }
+
+    @ViewBuilder private var splRow: some View {
+        let r = model.snapshot?.soundLevel
+        let unit = (r?.isCalibrated ?? false) ? "dB" : "dBFS"
+        HStack(spacing: 16) {
+            stat("LAeq", value: r.map { String(format: "%.1f %@", $0.laeq, unit) } ?? "—")
+            stat("LCeq", value: r.map { String(format: "%.1f %@", $0.lceq, unit) } ?? "—")
+            stat("LCpeak", value: r.map { String(format: "%.1f %@", $0.lpeak, unit) } ?? "—")
+            stat("LAFmax", value: r.map { String(format: "%.1f %@", $0.lmax, unit) } ?? "—")
+            Spacer()
+            if !(r?.isCalibrated ?? false) {
+                StatusBadge(level: .idle, text: loc.t("cal.spl.none"))
+            }
+            Button(loc.t("spl.reset")) { model.resetSoundLevel() }.buttonStyle(SSMTButtonStyle())
         }
     }
 
     private var medianCoherence: Double? {
-        guard let tf = model.snapshot?.transfer else { return nil }
+        guard let tf = model.displayTransfer else { return nil }
         let v = tf.frequencies.indices.filter { tf.frequencies[$0] >= 40 && tf.frequencies[$0] <= 16000 && tf.coherence[$0].isFinite }
             .map { tf.coherence[$0] }.sorted()
         return v.isEmpty ? nil : v[v.count / 2]

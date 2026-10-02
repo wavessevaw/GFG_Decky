@@ -11,6 +11,7 @@ struct SetupSidebar: View {
             VStack(spacing: 12) {
                 sourcePanel
                 generatorPanel
+                CalibrationPanel()
                 if model.source == .simulation { simulationPanel }
                 displayPanel
                 languagePanel
@@ -25,21 +26,49 @@ struct SetupSidebar: View {
 
     private var sourcePanel: some View {
         Panel(title: loc.t("setup.source"), marking: "IO-01") {
-            Picker(loc.t("setup.interface"), selection: $model.source) {
-                Text(loc.t("setup.simulation")).tag(SignalSource.simulation)
-                ForEach(model.devices.filter(\.isDuplex)) { d in
-                    Text(d.name).tag(SignalSource.device(uid: d.uid))
-                }
-            }
-            .disabled(model.isRunning)
+            Toggle(loc.t("setup.split"), isOn: Binding(
+                get: { model.isSplitSource },
+                set: { split in
+                    if split {
+                        let input = model.devices.first { $0.inputChannels > 0 }
+                        let output = model.devices.first { $0.outputChannels > 0 }
+                        if let i = input, let o = output { model.source = .split(inputUID: i.uid, outputUID: o.uid) }
+                    } else {
+                        model.source = .simulation
+                    }
+                }))
+                .disabled(model.isRunning)
 
-            if let d = model.selectedDevice {
-                channelPicker(loc.t("setup.mic.channel"), selection: $model.microphoneChannel, count: d.inputChannels)
-                channelPicker(loc.t("setup.output.channel"), selection: $model.outputChannel, count: d.outputChannels)
-                if model.referenceMode != .internalSignal {
-                    channelPicker(loc.t("setup.ref.channel"), selection: $model.referenceChannel, count: d.inputChannels)
+            if case .split(let inUID, let outUID) = model.source {
+                Picker(loc.t("setup.input.device"), selection: Binding(
+                    get: { inUID }, set: { model.source = .split(inputUID: $0, outputUID: outUID) })) {
+                    ForEach(model.devices.filter { $0.inputChannels > 0 }) { Text($0.name).tag($0.uid) }
                 }
-                if !d.supports(sampleRate: 48000) {
+                .disabled(model.isRunning)
+                Picker(loc.t("setup.output.device"), selection: Binding(
+                    get: { outUID }, set: { model.source = .split(inputUID: inUID, outputUID: $0) })) {
+                    ForEach(model.devices.filter { $0.outputChannels > 0 }) { Text($0.name).tag($0.uid) }
+                }
+                .disabled(model.isRunning)
+                Text(loc.t("setup.split.hint")).font(.system(size: 11)).foregroundStyle(Theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Picker(loc.t("setup.interface"), selection: $model.source) {
+                    Text(loc.t("setup.simulation")).tag(SignalSource.simulation)
+                    ForEach(model.devices.filter(\.isDuplex)) { d in
+                        Text(d.name).tag(SignalSource.device(uid: d.uid))
+                    }
+                }
+                .disabled(model.isRunning)
+            }
+
+            if let i = model.inputDevice, let o = model.outputDevice {
+                channelPicker(loc.t("setup.mic.channel"), selection: $model.microphoneChannel, count: i.inputChannels)
+                channelPicker(loc.t("setup.output.channel"), selection: $model.outputChannel, count: o.outputChannels)
+                if model.referenceMode != .internalSignal {
+                    channelPicker(loc.t("setup.ref.channel"), selection: $model.referenceChannel, count: i.inputChannels)
+                }
+                if !i.supports(sampleRate: 48000) || !o.supports(sampleRate: 48000) {
                     StatusBadge(level: .error, text: loc.t("setup.no48k"))
                 }
             }
@@ -99,6 +128,7 @@ struct SetupSidebar: View {
                     Text(String(format: "%.1f dBFS", s.generatorLevelDBFS)).font(Theme.mono(12))
                 }
             }
+            autoLevelRow
             hazard(loc.t("safety.hf.warning"))
             Button {
                 model.findDelay()
@@ -111,6 +141,39 @@ struct SetupSidebar: View {
             .keyboardShortcut("d", modifiers: [.command])
             if let d = model.delay, !d.isReliable {
                 warning(loc.t("delay.unreliable"))
+            }
+        }
+    }
+
+    @ViewBuilder private var autoLevelRow: some View {
+        HStack {
+            switch model.autoLevelState {
+            case .measuringNoise, .raising:
+                ProgressView().controlSize(.small)
+                Text(loc.t(model.autoLevelState == .measuringNoise ? "autolevel.noise" : "autolevel.raising"))
+                    .font(.system(size: 11)).foregroundStyle(Theme.textSecondary)
+                Spacer()
+                Button(loc.t("action.cancel")) { model.cancelAutoLevel() }.buttonStyle(SSMTButtonStyle())
+            default:
+                Button {
+                    model.runAutoLevel()
+                } label: {
+                    Label(loc.t("autolevel.run"), systemImage: "dial.medium")
+                }
+                .buttonStyle(SSMTButtonStyle())
+                .disabled(!model.isRunning)
+                .help(loc.t("autolevel.help"))
+                Spacer()
+            }
+        }
+        if case .done(let outcome, let level) = model.autoLevelState {
+            switch outcome {
+            case .targetReached(let snr):
+                StatusBadge(level: .good, text: loc.t("autolevel.ok", level, snr))
+            case .maximumReached(let snr):
+                StatusBadge(level: .warning, text: loc.t("autolevel.max", snr))
+            case .clipped:
+                StatusBadge(level: .error, text: loc.t("autolevel.clipped"))
             }
         }
     }

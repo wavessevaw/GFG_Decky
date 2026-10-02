@@ -7,7 +7,17 @@ import SwiftUI
 /// Signal source for the measurement session.
 enum SignalSource: Hashable {
     case simulation
+    /// One duplex interface.
     case device(uid: String)
+    /// Microphone and output on different interfaces → private aggregate device (drift-compensated).
+    case split(inputUID: String, outputUID: String)
+}
+
+enum AutoLevelState: Equatable {
+    case idle
+    case measuringNoise
+    case raising
+    case done(AutoLevelController.Outcome, level: Double)
 }
 
 /// Noise types offered in the UI (index into the generator bank).
@@ -55,6 +65,11 @@ final class AppModel: ObservableObject {
     @Published var lastError: String?
     @Published private(set) var microphonePermission: AVAuthorizationStatus = .notDetermined
 
+    // Calibration
+    @Published private(set) var calibration = CalibrationLibrary.load()
+    @Published private(set) var autoLevelState: AutoLevelState = .idle
+    @Published private(set) var noiseFloor: [Double]?
+
     // Display
     @Published var smoothing: SmoothingResolution = .oct12
     @Published var coherenceThreshold: Double = 0.6
@@ -67,6 +82,7 @@ final class AppModel: ObservableObject {
 
     private(set) var engine: MeasurementEngine?
     private var simulationBackend: SimulatedAudioBackend?
+    private var aggregate: AggregateDevice?
 
     init() {
         refreshDevices()
@@ -74,8 +90,29 @@ final class AppModel: ObservableObject {
     }
 
     var selectedDevice: AudioDeviceInfo? {
-        if case .device(let uid) = source { return devices.first { $0.uid == uid } }
-        return nil
+        switch source {
+        case .device(let uid): return devices.first { $0.uid == uid }
+        default: return nil
+        }
+    }
+
+    var inputDevice: AudioDeviceInfo? {
+        switch source {
+        case .device(let uid), .split(let uid, _): return devices.first { $0.uid == uid }
+        case .simulation: return nil
+        }
+    }
+
+    var outputDevice: AudioDeviceInfo? {
+        switch source {
+        case .device(let uid), .split(_, let uid): return devices.first { $0.uid == uid }
+        case .simulation: return nil
+        }
+    }
+
+    var isSplitSource: Bool {
+        if case .split = source { return true }
+        return false
     }
 
     var safety: GeneratorSafety {
@@ -100,17 +137,15 @@ final class AppModel: ObservableObject {
             simulationBackend = sim
             backend = sim
             applySimulationGroups()
-        case .device(let uid):
+        case .device, .split:
             guard microphonePermission == .authorized else {
                 requestMicrophoneAccess()
                 return
             }
             do {
-                let routing = HALRouting(deviceUID: uid, microphoneChannel: microphoneChannel,
-                                         referenceChannel: referenceMode == .internalSignal ? nil : referenceChannel,
-                                         outputChannels: [outputChannel])
-                backend = try HALAudioBackend(routing: routing, safety: safety)
+                backend = try makeHardwareBackend()
             } catch {
+                aggregate = nil
                 lastError = String(describing: error)
                 return
             }
@@ -128,18 +163,44 @@ final class AppModel: ObservableObject {
             lastError = String(describing: error)
             return
         }
+        engine.setSPLCalibration(calibration.spl)
         self.engine = engine
         isRunning = true
         delay = nil
+        noiseFloor = nil
+        autoLevelState = .idle
+    }
+
+    private func makeHardwareBackend() throws -> AudioIOBackend {
+        let refChannel = referenceMode == .internalSignal ? nil : referenceChannel
+        switch source {
+        case .device(let uid):
+            return try HALAudioBackend(routing: HALRouting(deviceUID: uid, microphoneChannel: microphoneChannel,
+                                                           referenceChannel: refChannel,
+                                                           outputChannels: [outputChannel]), safety: safety)
+        case .split(let inUID, let outUID):
+            let agg = try AggregateDevice(inputUID: inUID, outputUID: outUID)
+            aggregate = agg
+            return try HALAudioBackend(
+                routing: HALRouting(deviceUID: agg.uid,
+                                    microphoneChannel: agg.inputChannelOffset + microphoneChannel,
+                                    referenceChannel: refChannel.map { agg.inputChannelOffset + $0 },
+                                    outputChannels: [agg.outputChannelOffset + outputChannel]),
+                safety: safety)
+        case .simulation:
+            fatalError("not a hardware source")
+        }
     }
 
     func stopEngine() {
         engine?.stop()
         engine = nil
         simulationBackend = nil
+        aggregate = nil
         isRunning = false
         noiseOn = false
         snapshot = nil
+        autoLevelState = .idle
     }
 
     // MARK: - Generator
@@ -183,6 +244,85 @@ final class AppModel: ObservableObject {
                 self?.delaySearchRunning = false
             }
         }
+    }
+
+    /// Measures the room noise (generator silent), then raises the level until SNR ≥ 20 dB
+    /// or the user maximum is reached.
+    func runAutoLevel() {
+        guard let engine else { return }
+        autoLevelState = .measuringNoise
+        noiseOn = false
+        engine.measureNoiseFloor(seconds: 5) { [weak self] floor in
+            Task { @MainActor in
+                guard let self, let engine = self.engine else { return }
+                self.noiseFloor = floor
+                self.autoLevelState = .raising
+                self.noiseOn = true
+                var settings = AutoLevelController.Settings()
+                settings.maximumLevelDBFS = self.maximumLevelDBFS
+                engine.runAutoLevel(settings: settings, noiseFloor: floor) { level, outcome in
+                    Task { @MainActor in
+                        self.levelDBFS = level
+                        self.autoLevelState = .done(outcome, level: level)
+                        if outcome == .clipped { self.noiseOn = true }
+                    }
+                }
+            }
+        }
+    }
+
+    func cancelAutoLevel() {
+        engine?.cancelAutoLevel()
+        engine?.cancelCapture()
+        autoLevelState = .idle
+    }
+
+    // MARK: - Calibration
+
+    func importMicrophoneCalibration(from url: URL) {
+        do {
+            let text = try String(contentsOf: url, encoding: .utf8)
+            let mic = try MicrophoneCalibration.parse(text, name: url.deletingPathExtension().lastPathComponent)
+            calibration.microphones.append(mic)
+            calibration.selectedMicrophoneID = mic.id
+            calibration.save()
+        } catch {
+            lastError = "\(url.lastPathComponent): \(error)"
+        }
+    }
+
+    func selectMicrophone(_ id: UUID?) {
+        calibration.selectedMicrophoneID = id
+        calibration.save()
+    }
+
+    func removeMicrophone(_ id: UUID) {
+        calibration.microphones.removeAll { $0.id == id }
+        if calibration.selectedMicrophoneID == id { calibration.selectedMicrophoneID = nil }
+        calibration.save()
+    }
+
+    func setSPLCalibration(dBFSAt94: Double?) {
+        calibration.spl = dBFSAt94.map { SPLCalibration(dBFSAt94dBSPL: $0) }
+        calibration.save()
+        engine?.setSPLCalibration(calibration.spl)
+        engine?.resetSoundLevel()
+    }
+
+    /// Uses the current microphone RMS (calibrator on the mic, test signal off) as the reference.
+    func calibrateWithCalibrator(level: Double) {
+        guard let rms = snapshot?.microphone.rmsDBFS, rms > -100 else { return }
+        emergencyStop()
+        let c = SPLCalibration.fromCalibrator(measuredDBFS: rms, calibratorSPL: level)
+        setSPLCalibration(dBFSAt94: c.dBFSAt94dBSPL)
+    }
+
+    func resetSoundLevel() { engine?.resetSoundLevel() }
+
+    /// Transfer function for display: microphone response removed when a calibration is selected.
+    var displayTransfer: TransferFunction? {
+        guard let tf = snapshot?.transfer else { return nil }
+        return calibration.selectedMicrophone?.apply(to: tf) ?? tf
     }
 
     func setReferenceMode(_ mode: ReferenceMode) {
