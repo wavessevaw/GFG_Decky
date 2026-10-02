@@ -13,7 +13,6 @@ struct AboutView: View {
             Text(loc.t("about.text")).font(.system(size: 12)).foregroundStyle(Theme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
             Toggle(loc.t("about.splash"), isOn: $showSplash)
-            Text(loc.t("about.fonts")).font(.system(size: 10)).foregroundStyle(Theme.textMuted)
         }
         .padding(18)
         .frame(width: 340)

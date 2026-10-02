@@ -49,14 +49,13 @@ struct CaptureStepView: View {
     private func pill(_ name: String, on: Bool) -> some View {
         HStack(spacing: 8) {
             Image(systemName: on ? "speaker.wave.2.fill" : "speaker.slash.fill")
-            Text(name.uppercased()).tracking(1)
-            Text(on ? loc.t("group.on") : loc.t("group.muted")).fontWeight(.bold)
+            Text(name)
+            Text(on ? loc.t("group.on") : loc.t("group.muted")).foregroundStyle(on ? Theme.textPrimary : Theme.textMuted)
         }
-        .font(Theme.label(13))
+        .font(.system(size: 13, weight: .medium))
         .foregroundStyle(on ? Theme.accent : Theme.textMuted)
         .padding(.horizontal, 16).padding(.vertical, 9)
-        .background(Capsule().fill(on ? Theme.accent.opacity(0.1) : Theme.panel))
-        .overlay(Capsule().stroke(on ? Theme.accent.opacity(0.6) : Theme.hairline, lineWidth: 1))
+        .background(Capsule().fill(on ? Theme.accent.opacity(0.14) : Theme.panel))
     }
 
     @ViewBuilder private var simulationHelpers: some View {

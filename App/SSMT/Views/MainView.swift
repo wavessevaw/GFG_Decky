@@ -31,7 +31,6 @@ struct MainView: View {
             }
         }
         .background(Theme.background)
-        .overlay(Scanlines(opacity: 0.02).ignoresSafeArea())
         .preferredColorScheme(.dark)
         .tint(Theme.accent)
         .frame(minWidth: 1100, minHeight: 720)

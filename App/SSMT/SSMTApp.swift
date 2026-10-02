@@ -61,10 +61,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     weak var model: AppModel?
     private var keyMonitor: Any?
 
-    func applicationWillFinishLaunching(_ notification: Notification) {
-        FontRegistry.registerBundledFonts()
-    }
-
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Black from the very first frame: no white flash before SwiftUI draws.
         for w in NSApp.windows { w.backgroundColor = .black }

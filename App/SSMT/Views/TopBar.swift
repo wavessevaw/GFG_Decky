@@ -27,7 +27,7 @@ struct TopBar: View {
             if model.appMode == .wizard {
                 ProgressStrip(step: SSMTCoreStep(index: model.wizard.step.rawValue))
             } else {
-                Text(loc.t("mode.expert").uppercased()).font(Theme.label(11)).tracking(1.4)
+                Text(loc.t("mode.expert")).font(Theme.label(11))
                     .foregroundStyle(Theme.textSecondary)
             }
 

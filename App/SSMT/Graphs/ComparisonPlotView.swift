@@ -36,19 +36,18 @@ struct ComparisonPlotView: View {
                     ctx.fill(Path(CGRect(x: x0, y: plot.minY, width: x1 - x0, height: plot.height)),
                              with: .color(Theme.accent.opacity(0.07)))
                 }
-                ctx.stroke(Path(plot), with: .color(Theme.hairline), lineWidth: 1)
                 for f in [20.0, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000] where range.contains(f) {
                     let x = plot.minX + axis.x(f, width: plot.width)
                     ctx.stroke(Path { $0.move(to: CGPoint(x: x, y: plot.minY)); $0.addLine(to: CGPoint(x: x, y: plot.maxY)) },
                                with: .color(.white.opacity(0.08)), lineWidth: 1)
-                    ctx.draw(Text(FrequencyAxis.label(f)).font(Theme.mono(9)).foregroundColor(Theme.textMuted),
+                    ctx.draw(Text(FrequencyAxis.label(f)).font(Theme.mono(10)).foregroundColor(Theme.textMuted),
                              at: CGPoint(x: x, y: plot.maxY + 9))
                 }
                 for db in stride(from: absolute ? -12.0 : -18.0, through: absolute ? 6 : 12, by: absolute ? 3 : 6) {
                     let yy = y(ref + db)
                     ctx.stroke(Path { $0.move(to: CGPoint(x: plot.minX, y: yy)); $0.addLine(to: CGPoint(x: plot.maxX, y: yy)) },
                                with: .color(.white.opacity(db == 0 ? 0.16 : 0.06)), lineWidth: 1)
-                    ctx.draw(Text(String(format: "%+.0f", db)).font(Theme.mono(9)).foregroundColor(Theme.textMuted),
+                    ctx.draw(Text(String(format: "%+.0f", db)).font(Theme.mono(10)).foregroundColor(Theme.textMuted),
                              at: CGPoint(x: plot.minX - 16, y: yy))
                 }
                 for (c, tf) in zip(curves, smoothed) {
@@ -67,13 +66,13 @@ struct ComparisonPlotView: View {
                 ForEach(curves) { c in
                     HStack(spacing: 5) {
                         Rectangle().fill(c.color).frame(width: 14, height: 2)
-                        Text(c.label).font(Theme.label(10)).foregroundStyle(Theme.textSecondary)
+                        Text(c.label).font(Theme.label(11)).foregroundStyle(Theme.textSecondary)
                     }
                 }
             }
             .padding(.leading, 36)
         }
-        .background(Color.black.opacity(0.35))
+        .background(RoundedRectangle(cornerRadius: Theme.radiusSmall, style: .continuous).fill(Color.white.opacity(0.03)))
     }
 
     private func medianDB(_ tf: TransferFunction?) -> Double {

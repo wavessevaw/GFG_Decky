@@ -21,7 +21,6 @@ final class SnapshotTests: XCTestCase {
 
     override func setUp() async throws {
         if Self.model == nil {
-            FontRegistry.registerBundledFonts()
             let m = AppModel()
             m.wizard = try SimulatedSession.completeWizard()
             Self.model = m

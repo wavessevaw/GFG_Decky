@@ -68,7 +68,7 @@ struct MeterPanel: View {
 
     private func stat(_ title: String, value: String) -> some View {
         VStack(alignment: .leading, spacing: 1) {
-            Text(title.uppercased()).font(Theme.label(9)).tracking(1).foregroundStyle(Theme.textMuted)
+            Text(title).font(Theme.label(11)).foregroundStyle(Theme.textMuted)
             Text(value).font(Theme.mono(14, weight: .semibold)).foregroundStyle(Theme.textPrimary)
         }
     }

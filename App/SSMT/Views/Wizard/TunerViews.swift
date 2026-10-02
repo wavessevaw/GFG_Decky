@@ -1,7 +1,7 @@
 import SSMTCore
 import SwiftUI
 
-/// Polarity lamp: green "correct" / blinking orange-red "switch".
+/// Polarity indicator: green "correct" / pulsing red "switch".
 struct PolarityLamp: View {
     @EnvironmentObject var loc: Localizer
     var wrong: Bool?
@@ -10,22 +10,23 @@ struct PolarityLamp: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            IndicatorLamp(color: color, size: large ? 36 : 28)
-                .opacity(wrong == true && blink ? 0.35 : 1)
-            VStack(alignment: .leading, spacing: 5) {
-                Text(loc.t("card.polarity").uppercased()).font(Theme.label(11)).tracking(1.2)
-                    .foregroundStyle(Color(hex: 0xECE6D6).opacity(0.7))
-                    .fixedSize()
-                VFDStrip(text: text, color: color, size: large ? 15 : 13)
-                    .frame(height: large ? 40 : 34)
+            Image(systemName: wrong == true ? "arrow.triangle.2.circlepath" : (wrong == false ? "checkmark.circle.fill" : "circle.dashed"))
+                .font(.system(size: large ? 26 : 22, weight: .regular))
+                .foregroundStyle(color)
+                .opacity(wrong == true && blink ? 0.4 : 1)
+                .frame(width: 30)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(loc.t("card.polarity")).font(Theme.label(12)).foregroundStyle(Theme.textSecondary)
+                Text(text).font(.system(size: large ? 18 : 15, weight: .medium)).foregroundStyle(color)
+                    .lineLimit(1).minimumScaleFactor(0.7)
             }
-            .fixedSize(horizontal: false, vertical: true)
-            NixieReadout(text: wrong == true ? "180°" : (wrong == false ? "0°" : "—"), size: large ? 28 : 22)
-                .frame(width: large ? 120 : 96)
+            Spacer(minLength: 8)
+            Text(wrong == true ? "180°" : (wrong == false ? "0°" : "—"))
+                .font(Theme.numeral(large ? 34 : 28)).foregroundStyle(Theme.textPrimary)
         }
-        .padding(.horizontal, 22)
-        .padding(.vertical, 16)
-        .background(Bakelite())
+        .padding(.horizontal, 20)
+        .padding(.vertical, 14)
+        .background(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).fill(Theme.panel))
         .onAppear {
             withAnimation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true)) { blink = true }
         }
@@ -125,7 +126,7 @@ struct VirtualProcessorPanel: View {
             Toggle(loc.t("vproc.subPolarity"), isOn: $model.simProcessor.subPolarityInverted)
         }
         .padding(14)
-        .background(RoundedRectangle(cornerRadius: 12).fill(Theme.panel))
+        .background(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).fill(Theme.panel))
     }
 
     private func knob(_ title: String, value: Binding<Double>, range: ClosedRange<Double>, step: Double,

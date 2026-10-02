@@ -51,12 +51,12 @@ jobs:
           grep -E "(error|warning):" build/xcodebuild.log | sort -u | head -200 || true
           if [ $status -ne 0 ]; then tail -150 build/xcodebuild.log; exit $status; fi
           lipo -info build/DerivedData/Build/Products/Release/SSMT.app/Contents/MacOS/SSMT
-      - name: Check bundle contents (fonts, localizations)
+      - name: Check bundle contents (assets, localizations)
         run: |
           R=build/DerivedData/Build/Products/Release/SSMT.app/Contents/Resources
           ls "$R"
-          test -f "$R/RussoOne-Regular.ttf"
-          test -f "$R/JetBrainsMono-Variable.ttf"
+          test -f "$R/Assets.car"
+          test -f "$R/AppIcon.icns"
           test -d "$R/ru.lproj" && test -d "$R/en.lproj"
       - name: Snapshot tests (screens + mini window)
         run: |

@@ -10,10 +10,10 @@ struct StepScaffold<Content: View, Actions: View>: View {
     @ViewBuilder var actions: Actions
 
     var body: some View {
-        VStack(spacing: 30) {
-            VStack(spacing: 8) {
-                HStack(spacing: 10) {
-                    Text(title).font(Theme.heading(32)).foregroundStyle(Theme.textPrimary)
+        VStack(spacing: 36) {
+            VStack(spacing: 6) {
+                HStack(spacing: 8) {
+                    Text(title).font(.system(size: 28, weight: .semibold)).foregroundStyle(Theme.textPrimary)
                         .multilineTextAlignment(.center)
                     if let info { InfoButton(text: info) }
                 }
@@ -64,7 +64,8 @@ struct ActionRow<Secondary: View>: View {
             secondary
             Spacer()
             WizardPrimaryButton(title: primaryTitle, systemImage: primaryIcon, enabled: primaryEnabled, action: primaryAction)
-                .frame(width: 360)
+                .frame(minWidth: 220)
+                .fixedSize()
         }
     }
 }
@@ -82,6 +83,7 @@ struct QuietButton: View {
                 Text(title)
             }
             .font(Theme.label(13)).foregroundStyle(Theme.textSecondary)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
@@ -98,10 +100,10 @@ struct Collapsible<Content: View>: View {
             Button { withAnimation(.easeInOut(duration: 0.2)) { expanded.toggle() } } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "chevron.right").rotationEffect(.degrees(expanded ? 90 : 0))
-                    Text(title.uppercased()).tracking(1.2)
+                    Text(title)
                     Spacer()
                 }
-                .font(Theme.label(11)).foregroundStyle(Theme.textMuted)
+                .font(Theme.label(12)).foregroundStyle(Theme.textSecondary)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -116,14 +118,15 @@ struct ValueChip: View {
     var value: String
 
     var body: some View {
-        VStack(spacing: 3) {
-            Text(label.uppercased()).font(Theme.label(9)).tracking(1.2).foregroundStyle(Theme.textMuted)
-            Text(value).font(Theme.mono(18, weight: .bold)).foregroundStyle(Theme.textPrimary)
+        VStack(spacing: 4) {
+            Text(value).font(Theme.numeral(22)).foregroundStyle(Theme.textPrimary)
                 .lineLimit(1).minimumScaleFactor(0.7)
+            Text(label).font(Theme.label(11)).foregroundStyle(Theme.textSecondary)
+                .lineLimit(1).minimumScaleFactor(0.8)
         }
-        .padding(.vertical, 10)
+        .padding(.vertical, 14)
         .frame(maxWidth: .infinity)
-        .background(RoundedRectangle(cornerRadius: 10).fill(Theme.panel))
+        .background(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).fill(Theme.panel))
     }
 }
 
@@ -136,20 +139,19 @@ struct StatusTile<Action: View>: View {
     @ViewBuilder var action: Action
 
     var body: some View {
-        VStack(spacing: 10) {
-            Image(systemName: icon).font(.system(size: 22))
-                .foregroundStyle(state.map { Theme.closeness($0) } ?? Theme.textMuted)
-            Text(title.uppercased()).font(Theme.label(11)).tracking(1.4).foregroundStyle(Theme.textMuted)
-            Text(value).font(Theme.mono(15, weight: .semibold)).foregroundStyle(Theme.textPrimary)
+        VStack(spacing: 8) {
+            Image(systemName: icon).font(.system(size: 20, weight: .light))
+                .foregroundStyle(state.map { Theme.closeness($0) } ?? Theme.textSecondary)
+                .frame(height: 24)
+            Text(value).font(.system(size: 17, weight: .medium)).monospacedDigit().foregroundStyle(Theme.textPrimary)
                 .lineLimit(1).minimumScaleFactor(0.6)
-                .frame(height: 20)
-            action
+            Text(title).font(Theme.label(12)).foregroundStyle(Theme.textSecondary)
+            action.padding(.top, 4)
         }
-        .padding(16)
+        .padding(.vertical, 20)
+        .padding(.horizontal, 12)
         .frame(maxWidth: .infinity)
-        .background(RoundedRectangle(cornerRadius: 14).fill(Theme.panel))
-        .overlay(RoundedRectangle(cornerRadius: 14)
-            .stroke((state.map { Theme.closeness($0) } ?? Theme.hairline).opacity(state == nil ? 1 : 0.5), lineWidth: 1))
+        .background(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).fill(Theme.panel))
     }
 }
 
@@ -165,12 +167,12 @@ struct ProgressStrip: View {
             HStack(spacing: 3) {
                 ForEach(0..<total, id: \.self) { i in
                     Capsule()
-                        .fill(i < step.index ? Theme.accent : (i == step.index ? Theme.textPrimary : Theme.hairlineStrong))
-                        .frame(width: 18, height: 3)
+                        .fill(i < step.index ? Theme.textSecondary : (i == step.index ? Theme.accent : Theme.hairlineStrong))
+                        .frame(width: 14, height: 3)
                 }
             }
-            Text("\(min(step.index, total - 1)) / \(total - 1) · " + loc.t("wizard.step.\(step.index)").uppercased())
-                .font(Theme.label(11)).tracking(1.2).foregroundStyle(Theme.textSecondary)
+            Text("\(min(step.index, total - 1)) / \(total - 1) · " + loc.t("wizard.step.\(step.index)"))
+                .font(Theme.label(12)).foregroundStyle(Theme.textSecondary)
                 .lineLimit(1)
         }
     }

@@ -105,12 +105,12 @@ struct PointMap: View {
 
     var body: some View {
         VStack(spacing: 8) {
-            Text(loc.t("eq.map").uppercased()).font(Theme.label(11)).tracking(1.6).foregroundStyle(Theme.textMuted)
+            Text(loc.t("eq.map")).font(Theme.label(11)).foregroundStyle(Theme.textMuted)
             Canvas { ctx, size in
                 // Stage with two mains and the sub.
                 let stage = CGRect(x: size.width * 0.15, y: 4, width: size.width * 0.7, height: 16)
                 ctx.fill(Path(stage), with: .color(Theme.panelRaised))
-                ctx.draw(Text(loc.t("eq.map.stage")).font(Theme.label(9)).foregroundColor(Theme.textMuted),
+                ctx.draw(Text(loc.t("eq.map.stage")).font(Theme.label(11)).foregroundColor(Theme.textMuted),
                          at: CGPoint(x: stage.midX, y: stage.midY))
                 for x in [stage.minX - 8, stage.maxX + 8] {
                     ctx.fill(Path(CGRect(x: x - 6, y: 2, width: 12, height: 20)), with: .color(Theme.textSecondary))
@@ -147,7 +147,7 @@ struct PointMap: View {
                 }
             }
             .frame(height: 200)
-            .background(RoundedRectangle(cornerRadius: 14).fill(Theme.panel))
+            .background(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).fill(Theme.panel))
         }
     }
 }
@@ -245,7 +245,7 @@ struct EQTuningView: View {
             }
         }
         .frame(maxWidth: .infinity, minHeight: 300)
-        .background(RoundedRectangle(cornerRadius: 14).fill(Theme.panel))
+        .background(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).fill(Theme.panel))
     }
 
     private func bandList(_ r: EQResult) -> some View {
@@ -256,7 +256,7 @@ struct EQTuningView: View {
                     HStack(spacing: 10) {
                         Text("\(i + 1)").font(Theme.mono(12, weight: .bold)).foregroundStyle(Theme.textMuted).frame(width: 16)
                         Text(loc.t(f.group == .sub ? "group.subs.tag" : "group.mains.tag"))
-                            .font(Theme.label(9)).tracking(1)
+                            .font(Theme.label(11))
                             .foregroundStyle(f.group == .sub ? Theme.signalYellow : Theme.textSecondary)
                             .frame(width: 30)
                         Text(String(format: "%.0f Hz", f.frequency)).font(Theme.mono(12)).frame(width: 70, alignment: .trailing)
@@ -267,14 +267,14 @@ struct EQTuningView: View {
                             .frame(width: 70, height: 12)
                     }
                     .padding(.horizontal, 10).padding(.vertical, 7)
-                    .background(RoundedRectangle(cornerRadius: 8).fill(model.eqSelectedBand == i ? Theme.accent.opacity(0.12) : Color.clear))
+                    .background(RoundedRectangle(cornerRadius: Theme.radiusSmall, style: .continuous).fill(model.eqSelectedBand == i ? Theme.accent.opacity(0.12) : Color.clear))
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(8)
-        .background(RoundedRectangle(cornerRadius: 14).fill(Theme.panel))
+        .background(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).fill(Theme.panel))
     }
 
     @ViewBuilder private func bandGauge(_ r: EQResult) -> some View {
@@ -341,29 +341,29 @@ struct EQTuningView: View {
             }
         }
         .padding(14)
-        .background(RoundedRectangle(cornerRadius: 12).fill(Theme.panel))
+        .background(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).fill(Theme.panel))
     }
 }
 
-/// Compact LED bar (no needle, no digits) for list rows.
+/// Compact list indicator: hairline track, target zone and a dot (no digits).
 struct MiniLED: View {
     var value: Double?
     var tolerance: Double
-    var segments = 11
 
     var body: some View {
-        Canvas { ctx, size in
+        GeometryReader { geo in
+            let w = geo.size.width, h = geo.size.height
             let v = min(max(value ?? 0, -1), 1)
-            let w = size.width / CGFloat(segments)
-            func close(_ p: Double) -> Double {
-                let a = abs(p); return a <= tolerance ? 1 : max(0, 1 - (a - tolerance) / (1 - tolerance))
-            }
-            for i in 0..<segments {
-                let p = -1 + 2 * (Double(i) + 0.5) / Double(segments)
-                let lit = value != nil && ((v >= 0 ? (p >= -0.1 && p <= v) : (p <= 0.1 && p >= v)) || (close(v) >= 1 && abs(p) < 0.1))
-                let rect = CGRect(x: CGFloat(i) * w, y: 0, width: w - 2, height: size.height)
-                ctx.fill(Path(roundedRect: rect, cornerRadius: 1.5),
-                         with: .color(lit ? Theme.closeness(close(p)) : Color(hex: 0x2A2C30)))
+            let a = abs(v)
+            let c = a <= tolerance ? 1 : max(0, 1 - (a - tolerance) / (1 - tolerance))
+            ZStack(alignment: .topLeading) {
+                Capsule().fill(Color.white.opacity(0.09)).frame(width: w, height: 2).offset(y: h / 2 - 1)
+                Capsule().fill(Theme.statusGood.opacity(0.3)).frame(width: max(2, w * tolerance), height: 2)
+                    .offset(x: w / 2 - w * tolerance / 2, y: h / 2 - 1)
+                if value != nil {
+                    Circle().fill(Theme.closeness(c)).frame(width: 7, height: 7)
+                        .offset(x: (CGFloat(v) + 1) / 2 * w - 3.5, y: h / 2 - 3.5)
+                }
             }
         }
     }

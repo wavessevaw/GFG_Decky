@@ -1,12 +1,12 @@
 # Brand files
 
-Put the SoundSolutions logo files supplied by the brand owner here. They are used as-is —
-never redrawn, recolored or distorted.
+The SoundSolutions logo supplied by the brand owner lives in `Assets.xcassets`:
 
-| File name | Content | Used in |
+| Image set | Content | Used in |
 |---|---|---|
-| `BrandLogoFull.pdf` (or `.png`) | Full logo: mark + SOUNDSOLUTIONS wordmark | Splash screen, report header |
-| `BrandMark.pdf` (or `.png`) | Mark only, no wordmark | Window corner, mini window, app icon |
+| `BrandLogoFull` | Full logo: mark + SOUNDSOLUTIONS wordmark | Splash screen, About, report header |
+| `BrandMark` | Mark only | Window corner, mini window |
+| `AppIcon` | Mark on a dark rounded square | Dock, Finder |
 
-Vector PDF is preferred. If only a raster file is available, use the highest resolution.
-Until the files exist the app shows a neutral "SSMT" text placeholder.
+The images were cut from the supplied raster (white on black → white with alpha); the artwork
+itself is never redrawn, recoloured or distorted. Replace them with vector PDFs when available.

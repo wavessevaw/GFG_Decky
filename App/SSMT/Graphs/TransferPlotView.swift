@@ -24,12 +24,12 @@ struct TransferPlotView: View {
             drawTrace(&ctx, plot: plot, tf: display, mask: mask)
         }
         .overlay(alignment: .topLeading) {
-            Text(title.uppercased())
-                .font(Theme.label(10)).tracking(1.2)
+            Text(title)
+                .font(Theme.label(11))
                 .foregroundStyle(Theme.textSecondary)
                 .padding(.leading, 46).padding(.top, 8)
         }
-        .background(Color.black.opacity(0.35))
+        .background(RoundedRectangle(cornerRadius: Theme.radiusSmall, style: .continuous).fill(Color.white.opacity(0.03)))
     }
 
     // MARK: - Ranges
@@ -77,7 +77,6 @@ struct TransferPlotView: View {
     // MARK: - Drawing
 
     private func drawGrid(_ ctx: inout GraphicsContext, plot: CGRect) {
-        ctx.stroke(Path(plot), with: .color(Theme.hairline), lineWidth: 1)
         for f in FrequencyAxis.minorTicks {
             let x = plot.minX + axis.x(f, width: plot.width)
             ctx.stroke(Path { $0.move(to: CGPoint(x: x, y: plot.minY)); $0.addLine(to: CGPoint(x: x, y: plot.maxY)) },
@@ -87,7 +86,7 @@ struct TransferPlotView: View {
             let x = plot.minX + axis.x(f, width: plot.width)
             ctx.stroke(Path { $0.move(to: CGPoint(x: x, y: plot.minY)); $0.addLine(to: CGPoint(x: x, y: plot.maxY)) },
                        with: .color(.white.opacity(0.10)), lineWidth: 1)
-            ctx.draw(Text(FrequencyAxis.label(f)).font(Theme.mono(9)).foregroundColor(Theme.textMuted),
+            ctx.draw(Text(FrequencyAxis.label(f)).font(Theme.mono(10)).foregroundColor(Theme.textMuted),
                      at: CGPoint(x: x, y: plot.maxY + 9))
         }
         for v in gridValues {
@@ -95,7 +94,7 @@ struct TransferPlotView: View {
             ctx.stroke(Path { $0.move(to: CGPoint(x: plot.minX, y: yy)); $0.addLine(to: CGPoint(x: plot.maxX, y: yy)) },
                        with: .color(.white.opacity(v == 0 && kind != .coherence ? 0.18 : 0.07)), lineWidth: 1)
             let label = kind == .coherence ? String(format: "%.2f", v) : String(format: "%+.0f", v)
-            ctx.draw(Text(label).font(Theme.mono(9)).foregroundColor(Theme.textMuted),
+            ctx.draw(Text(label).font(Theme.mono(10)).foregroundColor(Theme.textMuted),
                      at: CGPoint(x: plot.minX - 18, y: yy))
         }
         if kind == .coherence {
@@ -162,7 +161,6 @@ struct TransferPlotView: View {
         let color: Color = kind == .coherence ? Theme.signalYellow : Theme.accent
         ctx.stroke(weak, with: .color(Theme.textMuted.opacity(0.6)), lineWidth: lineWidth * 0.8)
         // Soft glow under the main trace.
-        ctx.stroke(good, with: .color(color.opacity(0.25)), lineWidth: lineWidth * 4)
         ctx.stroke(good, with: .color(color), lineWidth: lineWidth)
     }
 }

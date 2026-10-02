@@ -21,7 +21,7 @@ struct BrandMark: View {
             // Placeholder: plain product name, not an imitation of the logo.
             Text("SSMT")
                 .font(Theme.heading(height * 0.8))
-                .tracking(2)
+
                 .foregroundStyle(Color.white)
                 .frame(height: height)
         }

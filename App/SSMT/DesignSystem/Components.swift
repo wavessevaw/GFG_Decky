@@ -1,34 +1,28 @@
 import SwiftUI
 
-/// Graphite panel with hairline metal border, cut corners and a technical caption.
+/// Quiet card: soft surface, continuous corners, optional small title.
 struct Panel<Content: View>: View {
     var title: String?
     var marking: String?
     @ViewBuilder var content: Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             if title != nil || marking != nil {
                 HStack(spacing: 8) {
-                    Rectangle().fill(Theme.accent).frame(width: 3, height: 12)
                     if let title {
-                        Text(title.uppercased()).font(Theme.label(12)).tracking(1.2).foregroundStyle(Theme.textPrimary)
+                        Text(title).font(Theme.heading(13)).foregroundStyle(Theme.textPrimary)
                     }
                     Spacer()
                     if let marking {
-                        Text(marking).font(Theme.mono(9)).foregroundStyle(Theme.textMuted)
+                        Text(marking).font(Theme.mono(11)).foregroundStyle(Theme.textMuted)
                     }
                 }
             }
             content
         }
-        .padding(12)
-        .background(CutCornerShape().fill(Theme.panel))
-        .overlay(
-            CutCornerShape().stroke(
-                LinearGradient(colors: [Theme.hairlineStrong, Theme.hairline], startPoint: .top, endPoint: .bottom),
-                lineWidth: 1)
-        )
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).fill(Theme.panel))
     }
 }
 
@@ -42,40 +36,39 @@ struct SSMTButtonStyle: ButtonStyle {
         let fill: Color
         let fg: Color
         switch kind {
-        case .primary: fill = active ? Theme.accentHot : Theme.accent; fg = .black
-        case .secondary: fill = active ? Theme.panelRaised.opacity(1) : Theme.panelRaised; fg = Theme.textPrimary
+        case .primary: fill = Theme.accent; fg = .black
+        case .secondary: fill = active ? Theme.accent.opacity(0.22) : Color.white.opacity(0.08)
+            fg = active ? Theme.accent : Theme.textPrimary
         case .danger: fill = Theme.statusError; fg = .white
         }
         return configuration.label
-            .font(Theme.label(13))
-            .tracking(0.8)
+            .font(.system(size: 13, weight: kind == .secondary ? .regular : .medium))
             .foregroundStyle(fg)
             .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .background(CutCornerShape(cut: 7).fill(fill.opacity(configuration.isPressed ? 0.75 : 1)))
-            .overlay(CutCornerShape(cut: 7).stroke(active ? Theme.accent : Theme.hairlineStrong, lineWidth: 1))
-            .shadow(color: (kind == .primary || active) ? Theme.accent.opacity(0.45) : .clear, radius: active ? 8 : 4)
-            .contentShape(Rectangle())
+            .padding(.vertical, 7)
+            .background(Capsule(style: .continuous).fill(fill))
+            .opacity(configuration.isPressed ? 0.7 : 1)
+            .contentShape(Capsule())
+            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
     }
 }
 
 enum StatusLevel { case good, warning, error, idle }
 
-/// Status pill: icon + word + color (never color alone).
+/// Status label: small icon + word + colour (never colour alone).
 struct StatusBadge: View {
     var level: StatusLevel
     var text: String
 
     var body: some View {
-        HStack(spacing: 5) {
-            Image(systemName: icon).font(.system(size: 10, weight: .bold))
-            Text(text.uppercased()).font(Theme.label(10)).tracking(0.8)
+        HStack(spacing: 4) {
+            Image(systemName: icon).font(.system(size: 10, weight: .semibold))
+            Text(text).font(.system(size: 11, weight: .medium))
         }
         .foregroundStyle(color)
-        .padding(.horizontal, 7)
+        .padding(.horizontal, 8)
         .padding(.vertical, 3)
-        .background(Capsule().fill(color.opacity(0.12)))
-        .overlay(Capsule().stroke(color.opacity(0.5), lineWidth: 1))
+        .background(Capsule().fill(color.opacity(0.14)))
     }
 
     private var icon: String {
@@ -97,7 +90,7 @@ struct StatusBadge: View {
     }
 }
 
-/// Horizontal input meter (−60…0 dBFS) with peak marker and clip lamp.
+/// Slim input meter (−60…0 dBFS) with a peak tick and a clip label.
 struct MeterBar: View {
     var label: String
     var rmsDBFS: Double
@@ -106,31 +99,26 @@ struct MeterBar: View {
     var clipText: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text(label.uppercased()).font(Theme.label(10)).tracking(1).foregroundStyle(Theme.textSecondary)
+                Text(label).font(Theme.label(12)).foregroundStyle(Theme.textSecondary)
                 Spacer()
-                Text(String(format: "%6.1f dBFS", rmsDBFS)).font(Theme.mono(11)).foregroundStyle(Theme.textPrimary)
-                HStack(spacing: 3) {
-                    Image(systemName: clipped ? "exclamationmark.octagon.fill" : "circle")
-                        .font(.system(size: 9, weight: .bold))
-                    Text(clipText).font(Theme.label(9))
+                Text(String(format: "%.1f dBFS", rmsDBFS)).font(Theme.mono(12)).foregroundStyle(Theme.textPrimary)
+                if clipped {
+                    Text(clipText).font(.system(size: 11, weight: .semibold)).foregroundStyle(Theme.statusError)
                 }
-                .foregroundStyle(clipped ? Theme.statusError : Theme.textMuted)
             }
             GeometryReader { geo in
                 let w = geo.size.width
                 ZStack(alignment: .leading) {
-                    Rectangle().fill(Color.black)
-                    Rectangle()
-                        .fill(LinearGradient(colors: [Theme.accent.opacity(0.7), Theme.accent, Theme.signalYellow],
-                                             startPoint: .leading, endPoint: .trailing))
-                        .frame(width: w * fraction(rmsDBFS))
-                    Rectangle().fill(Theme.textPrimary).frame(width: 2).offset(x: w * fraction(peakDBFS) - 1)
+                    Capsule().fill(Color.white.opacity(0.08))
+                    Capsule().fill(clipped ? Theme.statusError : Theme.textPrimary.opacity(0.85))
+                        .frame(width: max(4, w * fraction(rmsDBFS)))
+                    Capsule().fill(Theme.textPrimary).frame(width: 2).offset(x: w * fraction(peakDBFS) - 1)
                 }
             }
-            .frame(height: 8)
-            .overlay(Rectangle().stroke(Theme.hairline, lineWidth: 1))
+            .frame(height: 4)
+            .animation(.easeOut(duration: 0.12), value: rmsDBFS)
         }
     }
 
@@ -139,12 +127,9 @@ struct MeterBar: View {
     }
 }
 
-/// Hairline divider with a small technical tick.
+/// Hairline divider.
 struct TechDivider: View {
     var body: some View {
-        HStack(spacing: 4) {
-            Rectangle().fill(Theme.accent).frame(width: 6, height: 1)
-            Rectangle().fill(Theme.hairline).frame(height: 1)
-        }
+        Rectangle().fill(Theme.hairline).frame(height: 1)
     }
 }

@@ -266,16 +266,13 @@ struct SetupSidebar: View {
     }
 
     private func hazard(_ text: String) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HazardStripes().frame(height: 5)
-            HStack(alignment: .top, spacing: 6) {
-                Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Theme.signalYellow)
-                Text(text).font(.system(size: 11)).foregroundStyle(Theme.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(8)
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Theme.signalYellow)
+            Text(text).font(.system(size: 11)).foregroundStyle(Theme.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .background(Theme.signalYellow.opacity(0.06))
-        .overlay(Rectangle().stroke(Theme.signalYellow.opacity(0.35), lineWidth: 1))
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: Theme.radiusSmall, style: .continuous).fill(Theme.signalYellow.opacity(0.10)))
     }
 }

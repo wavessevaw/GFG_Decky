@@ -87,7 +87,7 @@ struct SplashView: View {
                 BrandMark(variant: .full, height: 150)
                     .modifier(MatchedBrand(namespace: namespace))
                 Text("SoundSolution Multi Tool")
-                    .font(Theme.label(13)).tracking(4)
+                    .font(Theme.label(13))
                     .foregroundStyle(Color.white.opacity(0.55))
                 Spacer()
                 VStack(spacing: 8) {
@@ -99,7 +99,7 @@ struct SplashView: View {
                     }
                     .frame(width: 160, height: 1)
                     if slow {
-                        Text(loc.t("launch.loading")).font(Theme.label(10)).foregroundStyle(Color.white.opacity(0.5))
+                        Text(loc.t("launch.loading")).font(Theme.label(11)).foregroundStyle(Color.white.opacity(0.5))
                     }
                     Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0")")
                         .font(Theme.mono(10)).foregroundStyle(Color.white.opacity(0.35))

@@ -104,7 +104,7 @@ struct MiniDiagnosticsView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 BrandMark(variant: .compact, height: 16)
-                Text(statusLine).font(Theme.label(10)).tracking(1).foregroundStyle(Theme.textSecondary).lineLimit(1)
+                Text(statusLine).font(Theme.label(11)).foregroundStyle(Theme.textSecondary).lineLimit(1)
                 Spacer()
                 Menu {
                     ForEach([1.0, 0.85, 0.7, 0.55], id: \.self) { o in
@@ -122,11 +122,11 @@ struct MiniDiagnosticsView: View {
             ZStack(alignment: .topTrailing) {
                 MiniCurve(transfer: model.displayTransfer, target: model.wizard.configuration.target)
                     .frame(height: 92)
-                NixieReadout(text: deviation.map { String(format: "±%.1f", $0) } ?? "—", size: 16)
-                    .frame(width: 84).padding(4)
+                Text(deviation.map { String(format: "±%.1f dB", $0) } ?? "—")
+                    .font(Theme.mono(13)).foregroundStyle(Theme.textPrimary)
+                    .padding(8)
             }
-            .background(Color.black.opacity(0.45))
-            .overlay(Rectangle().stroke(Theme.hairline, lineWidth: 1))
+            .background(RoundedRectangle(cornerRadius: Theme.radiusSmall, style: .continuous).fill(Color.white.opacity(0.04)))
 
             // SPL
             HStack(spacing: 6) {
@@ -149,14 +149,14 @@ struct MiniDiagnosticsView: View {
             HStack(spacing: 10) {
                 IndicatorLamp(color: quality.map { Theme.closeness(($0 - 0.3) / 0.5) } ?? Theme.textMuted, size: 16)
                 Text(quality.map { String(format: "%@ %.0f %%", loc.t("gauge.quality"), $0 * 100) } ?? loc.t("quality.none"))
-                    .font(Theme.label(11)).foregroundStyle(Theme.textPrimary)
+                    .font(Theme.label(12)).foregroundStyle(Theme.textPrimary)
                 Spacer()
                 Text(delayText).font(Theme.mono(11)).foregroundStyle(Theme.textSecondary)
             }
 
             HStack {
                 Text(loc.t("target.\(model.wizard.configuration.target.preset.rawValue)"))
-                    .font(Theme.label(10)).foregroundStyle(Theme.textMuted)
+                    .font(Theme.label(11)).foregroundStyle(Theme.textMuted)
                 Spacer()
                 Button { model.emergencyStop() } label: {
                     Label(loc.t("action.stop"), systemImage: "stop.fill").font(Theme.heading(13))
@@ -164,9 +164,9 @@ struct MiniDiagnosticsView: View {
                 .buttonStyle(SSMTButtonStyle(kind: .danger))
             }
         }
-        .padding(12)
+        .padding(14)
         .frame(maxHeight: .infinity, alignment: .top)
-        .background(Bakelite())
+        .background(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).fill(Theme.panel))
         .preferredColorScheme(.dark)
     }
 
@@ -174,7 +174,7 @@ struct MiniDiagnosticsView: View {
         let mode = loc.t(model.appMode == .wizard ? "mode.wizard" : "mode.expert")
         let step = model.appMode == .wizard ? " · " + loc.t("wizard.step.\(model.wizard.step.rawValue)") : ""
         let noise = model.noiseOn ? " · ●" : ""
-        return (mode + step + noise).uppercased()
+        return (mode + step + noise)
     }
 
     private var quality: Double? {
@@ -202,8 +202,8 @@ struct MiniDiagnosticsView: View {
 
     private func splCell(_ name: String, _ v: Double?) -> some View {
         VStack(spacing: 2) {
-            Text(name).font(Theme.label(9)).foregroundStyle(Theme.textMuted)
-            NixieReadout(text: v.map { String(format: "%.0f", $0) } ?? "—", size: 15)
+            Text(v.map { String(format: "%.0f", $0) } ?? "—").font(Theme.numeral(20)).foregroundStyle(Theme.textPrimary)
+            Text(name).font(Theme.label(11)).foregroundStyle(Theme.textMuted)
         }
         .frame(maxWidth: .infinity)
     }
@@ -230,7 +230,7 @@ struct MiniCurve: View {
                 let p = CGPoint(x: axis.x(f, width: size.width), y: y(target.value(at: f)))
                 if first { t.move(to: p); first = false } else { t.addLine(to: p) }
             }
-            ctx.stroke(t, with: .color(Theme.dataBlue.opacity(0.7)), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+            ctx.stroke(t, with: .color(.white.opacity(0.3)), style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
             var m = Path()
             first = true
             for i in idx {

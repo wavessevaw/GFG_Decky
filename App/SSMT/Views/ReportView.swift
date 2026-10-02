@@ -30,10 +30,10 @@ struct ReportView: View {
                 Text(report.date.formatted(.dateTime.day().month(.wide).year().hour().minute().locale(loc.locale))).font(Theme.mono(12)).foregroundStyle(Theme.textSecondary)
             }
             Spacer()
-            Text("SSMT").font(Theme.heading(14)).tracking(3).foregroundStyle(Theme.accent)
+            Text("SSMT").font(Theme.label(13)).foregroundStyle(Theme.textMuted)
         }
-        .padding(.bottom, 6)
-        .overlay(alignment: .bottom) { Rectangle().fill(Theme.accent).frame(height: 2) }
+        .padding(.bottom, 14)
+        .overlay(alignment: .bottom) { Rectangle().fill(Theme.hairline).frame(height: 1) }
     }
 
     private func alignmentSection(_ a: SetupReport.Alignment) -> some View {
@@ -50,7 +50,7 @@ struct ReportView: View {
     }
 
     private func verificationSection(_ v: SetupReport.Verification) -> some View {
-        Panel(title: loc.t("report.verification"), marking: loc.t("verdict.\(v.verdict.rawValue)").uppercased()) {
+        Panel(title: loc.t("report.verification"), marking: loc.t("verdict.\(v.verdict.rawValue)")) {
             HStack(spacing: 12) {
                 cell(loc.t("verify.dip"), fmt(v.dipAfterDB, "%.1f dB"), loc.t("curve.before") + ": " + fmt(v.dipBeforeDB, "%.1f dB"))
                 cell(loc.t("verify.sum"), fmt(v.summationAfterDB, "%+.1f dB"), loc.t("curve.before") + ": " + fmt(v.summationBeforeDB, "%+.1f dB"))
@@ -132,13 +132,13 @@ struct ReportView: View {
 
     private func cell(_ title: String, _ value: String, _ detail: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(title.uppercased()).font(Theme.label(11)).tracking(1).foregroundStyle(Theme.textSecondary)
-            Text(value).font(Theme.mono(24, weight: .bold)).foregroundStyle(Theme.textPrimary)
+            Text(title).font(Theme.label(11)).foregroundStyle(Theme.textSecondary)
+            Text(value).font(Theme.numeral(26)).foregroundStyle(Theme.textPrimary)
             if !detail.isEmpty { Text(detail).font(.system(size: 11)).foregroundStyle(Theme.textMuted) }
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(CutCornerShape().fill(Theme.panelRaised))
+        .background(RoundedRectangle(cornerRadius: Theme.radiusSmall, style: .continuous).fill(Theme.panelRaised))
     }
 
     private func row(_ k: String, _ v: String) -> some View {

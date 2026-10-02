@@ -1,12 +1,8 @@
 import SwiftUI
 
-/// Retrofuturistic measuring instrument used for every check in the UI.
-///
-/// Retro layer: bakelite case with screws, printed scale with ticks and numbers, a physical needle
-/// with spring inertia (slight overshoot), gas-discharge (nixie-style) digits, an indicator lamp.
-/// Futuristic layer: an LED segment arc lit from the target to the needle in the closeness colour,
-/// subtle HUD corners on the glass, a phosphor afterglow that trails the needle,
-/// and a VFD-style status strip.
+/// The instrument used for every check in the UI: a thin arc scale with a target zone, a fill
+/// from the target to the current value and a round pointer, with a large light number inside.
+/// Colour carries meaning only: red far from the target → orange → yellow → green on target.
 ///
 /// - `.centered`: value −1…1, target 0 ("more / less"); red at both ends, green in the middle.
 /// - `.oneSided`: value 0…1, target at the right (quality); red on the left, green on the right.
@@ -24,7 +20,7 @@ struct TunerGauge: View {
     var leftLabel = ""
     var rightLabel = ""
     var large = false
-    /// Five scale labels at positions −1, −½, 0, +½, +1 (nil → generic labels).
+    /// Five scale labels at positions −1, −½, 0, +½, +1; only the ends and the middle are shown.
     var scaleLabels: [String]? = nil
     var unit: String = ""
 
@@ -35,7 +31,7 @@ struct TunerGauge: View {
         return mode == .centered ? min(max(value, -1), 1) : min(max(value, 0), 1)
     }
 
-    /// Needle position on the scale, −1…1.
+    /// Pointer position on the scale, −1…1.
     private var position: Double { mode == .centered ? v : v * 2 - 1 }
 
     private func closeness(atPosition p: Double) -> Double {
@@ -53,308 +49,190 @@ struct TunerGauge: View {
     var inTune: Bool { value != nil && closeness >= 1 }
     private var color: Color { value == nil ? Theme.textMuted : Theme.closeness(closeness) }
 
+    /// Target zone on the scale, in positions.
+    private var targetZone: ClosedRange<Double> {
+        mode == .centered ? -tolerance...tolerance : (tolerance * 2 - 1)...1
+    }
+    /// Where the fill starts: the target for centered gauges, the left end for one-sided ones.
+    private var fillOrigin: Double { mode == .centered ? 0 : -1 }
+
     private var labels: [String] {
-        if let scaleLabels, scaleLabels.count == 5 { return scaleLabels }
-        return mode == .centered ? ["−", "", "0", "", "+"] : ["0", "", "50", "", "100"]
+        if let scaleLabels, scaleLabels.count == 5 { return [scaleLabels[0], scaleLabels[2], scaleLabels[4]] }
+        return mode == .centered ? ["−", "0", "+"] : ["", "", ""]
     }
 
     // MARK: Body
 
     var body: some View {
-        VStack(spacing: 8) {
-            Text(title.uppercased())
-                .font(Theme.label(11)).tracking(1.6).foregroundStyle(Theme.textMuted)
+        VStack(spacing: 6) {
+            Text(title)
+                .font(.system(size: large ? 15 : 13))
+                .foregroundStyle(Theme.textSecondary)
+                .lineLimit(1)
             instrument
-                .opacity(reliable ? 1 : 0.6)
-            Text(instruction)
-                .font(Theme.heading(large ? 20 : 16))
-                .foregroundStyle(value == nil ? Theme.textMuted : color)
-                .lineLimit(1).minimumScaleFactor(0.7)
-                .frame(height: large ? 26 : 22)
+                .opacity(reliable ? 1 : 0.5)
+            HStack(spacing: 6) {
+                if inTune { Image(systemName: "checkmark.circle.fill") }
+                Text(instruction).lineLimit(1).minimumScaleFactor(0.7)
+            }
+            .font(.system(size: large ? 18 : 15, weight: .medium))
+            .foregroundStyle(value == nil ? Theme.textMuted : color)
+            .frame(height: large ? 24 : 20)
         }
         .frame(maxWidth: .infinity)
+        .animation(.easeInOut(duration: 0.25), value: inTune)
     }
 
     private var instrument: some View {
-        let height: CGFloat = large ? 300 : 236
-        return GeometryReader { geo in
-            let g = MeterGeometry(size: geo.size)
-            ZStack(alignment: .topLeading) {
-                Bakelite()
-                // Face window.
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(RadialGradient(colors: [Color(hex: 0x1E2023), Color(hex: 0x0C0D0E)],
-                                         center: UnitPoint(x: 0.5, y: 0.9), startRadius: 0, endRadius: g.face.width))
-                    .frame(width: g.face.width, height: g.face.height)
-                    .offset(x: g.face.minX, y: g.face.minY)
-                ZStack(alignment: .topLeading) {
-                    faceCanvas(g)
-                    // Phosphor afterglow: a blurred needle that follows slowly.
-                    NeedleShape(position: position, geometry: g, tipOnly: false)
-                        .stroke(color.opacity(0.45), style: StrokeStyle(lineWidth: 4, lineCap: .round))
-                        .blur(radius: 3)
-                        .animation(.easeOut(duration: 0.9), value: position)
-                    // Physical needle: spring with slight overshoot.
-                    NeedleShape(position: position, geometry: g, tipOnly: false)
-                        .stroke(Color(hex: 0xECE6D6), style: StrokeStyle(lineWidth: 2.3, lineCap: .round))
-                        .shadow(color: .black.opacity(0.5), radius: 2, x: 2, y: 3)
-                        .animation(.interpolatingSpring(stiffness: 70, damping: 8), value: position)
-                    NeedleShape(position: position, geometry: g, tipOnly: true)
-                        .stroke(Theme.accent, style: StrokeStyle(lineWidth: 3, lineCap: .round))
-                        .animation(.interpolatingSpring(stiffness: 70, damping: 8), value: position)
-                    Scanlines(opacity: 0.035)
-                    LinearGradient(stops: [.init(color: .white.opacity(0.13), location: 0),
-                                           .init(color: .white.opacity(0.02), location: 0.42),
-                                           .init(color: .clear, location: 0.43)],
-                                   startPoint: .topLeading, endPoint: .bottomTrailing)
-                        .allowsHitTesting(false)
+        GeometryReader { geo in
+            let g = ArcGeometry(size: geo.size, large: large)
+            ZStack {
+                ArcScale(geometry: g, targetZone: targetZone, labels: labels, leftLabel: leftLabel, rightLabel: rightLabel)
+                if value != nil {
+                    ArcFill(geometry: g, from: fillOrigin, to: position)
+                        .stroke(color, style: StrokeStyle(lineWidth: g.lineWidth, lineCap: .round))
+                    ArcPointer(geometry: g, position: position)
+                        .fill(color)
+                        .overlay(ArcPointer(geometry: g, position: position)
+                            .stroke(Theme.background, lineWidth: g.lineWidth * 0.6))
+                        .shadow(color: color.opacity(0.35), radius: 6)
                 }
-                .opacity(value == nil ? 0.55 : 1)
-                .frame(width: geo.size.width, height: geo.size.height)
-                .clipShape(FaceClip(rect: g.face))
-                deck(g)
-            }
-        }
-        .frame(height: height)
-        .animation(.easeInOut(duration: 0.3), value: closeness)
-    }
-
-    // MARK: Face
-
-    private func faceCanvas(_ g: MeterGeometry) -> some View {
-        Canvas { ctx, _ in
-            let f = g.face
-            // LED segment arc (lit from the target to the needle).
-            let segments = 33
-            for i in 0..<segments {
-                let p = -1 + 2 * (Double(i) + 0.5) / Double(segments)
-                let lit: Bool
-                if value == nil {
-                    lit = false
-                } else if mode == .centered {
-                    lit = (position >= 0 ? (p >= -0.03 && p <= position) : (p <= 0.03 && p >= position))
-                        || (inTune && abs(p) <= tolerance + 0.04)
-                } else {
-                    lit = p <= position
+                VStack(spacing: 2) {
+                    Text(readout)
+                        .font(Theme.numeral(large ? 54 : 42))
+                        .foregroundStyle(value == nil ? Theme.textMuted : Theme.textPrimary)
+                        .lineLimit(1).minimumScaleFactor(0.5)
+                    if !unit.isEmpty {
+                        Text(unit).font(.system(size: large ? 14 : 12)).foregroundStyle(Theme.textMuted)
+                    }
                 }
-                var seg = Path()
-                seg.move(to: g.point(p, radius: g.radius - 12))
-                seg.addLine(to: g.point(p, radius: g.radius - 2))
-                if lit {
-                    let c = Theme.closeness(closeness(atPosition: p))
-                    var glow = ctx
-                    glow.addFilter(.blur(radius: 3))
-                    glow.stroke(seg, with: .color(c.opacity(0.8)), lineWidth: 8)
-                    ctx.stroke(seg, with: .color(c), lineWidth: 6)
-                } else {
-                    ctx.stroke(seg, with: .color(Color(hex: 0x2A2C30)), lineWidth: 6)
-                }
+                .frame(width: g.radius * 1.3)
+                .position(x: g.center.x, y: g.center.y - g.radius * 0.52)
             }
-
-            // Printed colour sector (retro print) and ticks.
-            let n = 60
-            for i in 0..<n {
-                let p0 = -1 + 2 * Double(i) / Double(n), p1 = -1 + 2 * Double(i + 1) / Double(n)
-                var arc = Path()
-                arc.addArc(center: g.pivot, radius: g.radius - 20, startAngle: g.angle(p0), endAngle: g.angle(p1), clockwise: false)
-                ctx.stroke(arc, with: .color(Theme.closeness(closeness(atPosition: (p0 + p1) / 2)).opacity(0.25)), lineWidth: 2)
-            }
-            let ink = Color(hex: 0xECE6D6)
-            for i in -10...10 {
-                let p = Double(i) / 10
-                let major = i % 10 == 0, mid = i % 5 == 0
-                var t = Path()
-                t.move(to: g.point(p, radius: g.radius - (major ? 46 : mid ? 40 : 34)))
-                t.addLine(to: g.point(p, radius: g.radius - 24))
-                ctx.stroke(t, with: .color(ink.opacity(major ? 1 : 0.55)), lineWidth: major ? 2 : 1)
-            }
-            // Only the ends and the target are labelled.
-            for (k, label) in labels.enumerated() where !label.isEmpty && k % 2 == 0 {
-                let p = -1 + 0.5 * Double(k)
-                ctx.draw(Text(label).font(.system(size: large ? 17 : 15, weight: .bold).width(.condensed)).foregroundColor(ink),
-                         at: g.point(p, radius: g.radius - 66))
-            }
-
-            // Subtle HUD corners in the closeness colour, unit at the lower left.
-            let b: CGFloat = 12
-            let r = f.insetBy(dx: 8, dy: 8)
-            var brackets = Path()
-            let corners: [(CGFloat, CGFloat, CGFloat, CGFloat)] = [(r.minX, r.minY, 1, 1), (r.maxX, r.minY, -1, 1),
-                                                                   (r.minX, r.maxY, 1, -1), (r.maxX, r.maxY, -1, -1)]
-            for (x, y, dx, dy) in corners {
-                brackets.move(to: CGPoint(x: x, y: y + dy * b))
-                brackets.addLine(to: CGPoint(x: x, y: y))
-                brackets.addLine(to: CGPoint(x: x + dx * b, y: y))
-            }
-            ctx.stroke(brackets, with: .color(color.opacity(0.45)), lineWidth: 1.2)
-            if !unit.isEmpty {
-                ctx.draw(Text(unit).font(.system(size: 14, weight: .bold, design: .serif)).foregroundColor(ink.opacity(0.7)),
-                         at: CGPoint(x: r.minX + 14, y: r.maxY - 14), anchor: .leading)
-            }
+            .animation(.spring(response: 0.5, dampingFraction: 0.8), value: position)
+            .animation(.easeInOut(duration: 0.3), value: closeness)
         }
-    }
-
-    // MARK: Bottom deck: nixie digits, VFD strip, lamp
-
-    private func deck(_ g: MeterGeometry) -> some View {
-        HStack(spacing: 14) {
-            NixieReadout(text: readout, size: large ? 34 : 28)
-                .frame(maxWidth: .infinity)
-            IndicatorLamp(color: color, size: large ? 30 : 24)
-        }
-        .padding(.horizontal, 18)
-        .frame(width: g.size.width, height: g.deckHeight)
-        .offset(y: g.face.maxY + 8)
+        .frame(height: large ? 230 : 176)
     }
 }
 
-/// Shared meter geometry: pivot below the window so only the upper part of the needle shows.
-struct MeterGeometry {
+/// Arc layout: a 120° arc around the top of a circle whose centre lies below the readout.
+struct ArcGeometry {
     let size: CGSize
-    var deckHeight: CGFloat { min(64, size.height * 0.2) }
-    var face: CGRect {
-        CGRect(x: 20, y: 18, width: size.width - 40, height: size.height - deckHeight - 34)
+    var large = false
+    /// Half-span of the arc in degrees.
+    let span: Double = 60
+    var lineWidth: CGFloat { large ? 7 : 5 }
+
+    var radius: CGFloat {
+        let s = CGFloat(sin(span * .pi / 180)), c = CGFloat(cos(span * .pi / 180))
+        return max(40, min((size.width - 48) / (2 * s), (size.height - 34) / (1 - c)))
     }
-    var pivot: CGPoint { CGPoint(x: size.width / 2, y: face.maxY + face.height * 0.22) }
-    var radius: CGFloat { pivot.y - face.minY - 40 }
-    /// Half-span of the scale in degrees, limited so the arc ends stay inside the window.
-    var span: Double {
-        let maxHalf = Double((face.width / 2 - 30) / radius)
-        return min(40, asin(min(max(maxHalf, 0.1), 0.95)) * 180 / .pi)
-    }
+    var center: CGPoint { CGPoint(x: size.width / 2, y: 10 + radius) }
     func angle(_ p: Double) -> Angle { .degrees(-90 + p * span) }
     func point(_ p: Double, radius r: CGFloat) -> CGPoint {
         let a = angle(p).radians
-        return CGPoint(x: pivot.x + r * CGFloat(cos(a)), y: pivot.y + r * CGFloat(sin(a)))
+        return CGPoint(x: center.x + r * CGFloat(cos(a)), y: center.y + r * CGFloat(sin(a)))
     }
 }
 
-/// Needle as an animatable shape so SwiftUI interpolates its angle (spring → physical overshoot).
-struct NeedleShape: Shape {
+/// Static part of the instrument: track, target zone, fine ticks and three labels.
+struct ArcScale: View {
+    var geometry: ArcGeometry
+    var targetZone: ClosedRange<Double>
+    var labels: [String]
+    var leftLabel = ""
+    var rightLabel = ""
+
+    var body: some View {
+        Canvas { ctx, _ in
+            let g = geometry
+            var track = Path()
+            track.addArc(center: g.center, radius: g.radius, startAngle: g.angle(-1), endAngle: g.angle(1), clockwise: false)
+            ctx.stroke(track, with: .color(.white.opacity(0.09)), style: StrokeStyle(lineWidth: g.lineWidth, lineCap: .round))
+            var zone = Path()
+            zone.addArc(center: g.center, radius: g.radius, startAngle: g.angle(max(-1, targetZone.lowerBound)),
+                        endAngle: g.angle(min(1, targetZone.upperBound)), clockwise: false)
+            ctx.stroke(zone, with: .color(Theme.statusGood.opacity(0.28)), style: StrokeStyle(lineWidth: g.lineWidth, lineCap: .round))
+            // Fine inner ticks; the middle and end ones are longer.
+            for i in -10...10 {
+                let p = Double(i) / 10
+                let major = i == 0 || abs(i) == 10
+                var t = Path()
+                t.move(to: g.point(p, radius: g.radius - g.lineWidth - (major ? 12 : 7)))
+                t.addLine(to: g.point(p, radius: g.radius - g.lineWidth - 3))
+                ctx.stroke(t, with: .color(.white.opacity(major ? 0.45 : 0.16)), lineWidth: 1)
+            }
+            let font = Font.system(size: g.large ? 12 : 11).monospacedDigit()
+            for (k, label) in labels.enumerated() where !label.isEmpty {
+                let r = g.radius - g.lineWidth - (k == 1 ? 24 : 22)
+                ctx.draw(Text(label).font(font).foregroundColor(Theme.textMuted), at: g.point(Double(k - 1), radius: r))
+            }
+            let side = Font.system(size: g.large ? 12 : 11)
+            for (p, text) in [(-1.0, leftLabel), (1.0, rightLabel)] where !text.isEmpty {
+                let end = g.point(p, radius: g.radius)
+                ctx.draw(Text(text).font(side).foregroundColor(Theme.textMuted), at: CGPoint(x: end.x, y: end.y + 18))
+            }
+        }
+    }
+}
+
+/// Arc from the fill origin to the pointer (animatable).
+struct ArcFill: Shape {
+    var geometry: ArcGeometry
+    var from: Double
+    var to: Double
+
+    var animatableData: Double {
+        get { to }
+        set { to = newValue }
+    }
+
+    func path(in _: CGRect) -> Path {
+        var p = Path()
+        let a = min(from, to), b = max(from, to)
+        guard b - a > 0.001 else { return p }
+        p.addArc(center: geometry.center, radius: geometry.radius, startAngle: geometry.angle(a),
+                 endAngle: geometry.angle(b), clockwise: false)
+        return p
+    }
+}
+
+/// Round pointer sitting on the arc (animatable).
+struct ArcPointer: Shape {
+    var geometry: ArcGeometry
     var position: Double
-    var geometry: MeterGeometry
-    var tipOnly: Bool
 
     var animatableData: Double {
         get { position }
         set { position = newValue }
     }
 
-    func path(in rect: CGRect) -> Path {
-        var p = Path()
-        let g = geometry
-        p.move(to: g.point(position, radius: tipOnly ? g.radius - 56 : 0))
-        p.addLine(to: g.point(position, radius: g.radius - 6))
-        return p
+    func path(in _: CGRect) -> Path {
+        let c = geometry.point(position, radius: geometry.radius)
+        let r = geometry.lineWidth * 1.6
+        return Path(ellipseIn: CGRect(x: c.x - r, y: c.y - r, width: 2 * r, height: 2 * r))
     }
 }
 
-struct FaceClip: Shape {
-    var rect: CGRect
-    func path(in _: CGRect) -> Path { Path(roundedRect: rect, cornerRadius: 6) }
-}
-
-/// Bakelite case with four slotted screws and subtle grain.
-struct Bakelite: View {
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 14)
-                .fill(LinearGradient(colors: [Color(hex: 0x2A2622), Color(hex: 0x16130F), Color(hex: 0x0B0A08)],
-                                     startPoint: .top, endPoint: .bottom))
-                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.black, lineWidth: 2))
-            Canvas { ctx, size in
-                let pts = [CGPoint(x: 11, y: 11), CGPoint(x: size.width - 11, y: 11),
-                           CGPoint(x: 11, y: size.height - 11), CGPoint(x: size.width - 11, y: size.height - 11)]
-                for (k, c) in pts.enumerated() {
-                    let r: CGFloat = 5.5
-                    ctx.fill(Path(ellipseIn: CGRect(x: c.x - r, y: c.y - r, width: 2 * r, height: 2 * r)), with: .color(Color(hex: 0x3B352E)))
-                    ctx.stroke(Path(ellipseIn: CGRect(x: c.x - r, y: c.y - r, width: 2 * r, height: 2 * r)), with: .color(.black), lineWidth: 1)
-                    let a = [20.0, 75, 130, 160][k] * .pi / 180
-                    let dx = CGFloat(4 * cos(a)), dy = CGFloat(4 * sin(a))
-                    var slot = Path()
-                    slot.move(to: CGPoint(x: c.x - dx, y: c.y - dy))
-                    slot.addLine(to: CGPoint(x: c.x + dx, y: c.y + dy))
-                    ctx.stroke(slot, with: .color(Color(hex: 0x0D0B09)), lineWidth: 1.8)
-                }
-            }
-        }
-    }
-}
-
-/// Gas-discharge style digits: dim "8" cathodes behind glowing orange numerals.
-struct NixieReadout: View {
-    var text: String
-    var size: CGFloat
-
-    var body: some View {
-        let ghost = String(text.map { $0.isNumber ? "8" : $0 })
-        ZStack {
-            RoundedRectangle(cornerRadius: 4).fill(Color(hex: 0x070605))
-                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color(hex: 0x2C2620), lineWidth: 1))
-            Text(ghost).foregroundStyle(Color(hex: 0x3A1D0A))
-            Text(text).foregroundStyle(Color(hex: 0xFF8A3D))
-                .shadow(color: Color(hex: 0xFF6B1A).opacity(0.9), radius: 6)
-                .shadow(color: Color(hex: 0xFF4419).opacity(0.5), radius: 12)
-        }
-        .font(.system(size: size, weight: .regular, design: .monospaced))
-        .lineLimit(1).minimumScaleFactor(0.5)
-        .frame(height: size * 1.55)
-    }
-}
-
-/// Vacuum-fluorescent status strip in the closeness colour.
-struct VFDStrip: View {
-    var text: String
-    var color: Color
-    var size: CGFloat
-
-    /// Upper case like a real VFD, but units keep their correct spelling (dB, Hz, ms).
-    static func display(_ text: String) -> String {
-        var t = text.uppercased()
-        for (wrong, right) in [("DB", "dB"), ("HZ", "Hz"), ("KHZ", "kHz"), ("MS", "ms")] {
-            t = t.replacingOccurrences(of: "(?<=[0-9 ])\(wrong)\\b", with: right, options: .regularExpression)
-        }
-        return t
-    }
-
-    var body: some View {
-        ZStack(alignment: .leading) {
-            RoundedRectangle(cornerRadius: 4).fill(Color(hex: 0x050807))
-                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color(hex: 0x1D2A26), lineWidth: 1))
-            Text(Self.display(text))
-                .font(.system(size: size, weight: .medium, design: .monospaced))
-                .tracking(1.2)
-                .foregroundStyle(color)
-                .shadow(color: color.opacity(0.8), radius: 4)
-                .lineLimit(2).minimumScaleFactor(0.7)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-        }
-        .frame(minHeight: size * 2.4, maxHeight: .infinity)
-    }
-}
-
+/// Small status dot.
 struct IndicatorLamp: View {
     var color: Color
     var size: CGFloat
 
     var body: some View {
-        ZStack {
-            Circle().fill(color).shadow(color: color.opacity(0.9), radius: size * 0.35)
-            Circle().stroke(Color.black, lineWidth: 3)
-            Circle().fill(.white.opacity(0.35)).frame(width: size * 0.28).offset(x: -size * 0.17, y: -size * 0.17)
-        }
-        .frame(width: size, height: size)
+        Circle().fill(color).frame(width: size * 0.5, height: size * 0.5)
+            .frame(width: size, height: size)
     }
 }
 
-/// Compact list indicator: LED bar with a small needle and a nixie value.
+/// Compact list indicator: a thin track with a target zone and a pointer, plus the value.
 struct MiniMeter: View {
     /// Normalized error −1…1 (0 = target).
     var value: Double?
     var tolerance: Double
     var readout: String
-    var segments = 25
+    var width: CGFloat = 120
 
     private func closeness(_ p: Double) -> Double {
         let a = abs(p)
@@ -363,41 +241,26 @@ struct MiniMeter: View {
 
     var body: some View {
         let v = min(max(value ?? 0, -1), 1)
-        let inTune = value != nil && closeness(v) >= 1
-        HStack(spacing: 8) {
-            Canvas { ctx, size in
-                let w = size.width / CGFloat(segments)
-                for i in 0..<segments {
-                    let p = -1 + 2 * (Double(i) + 0.5) / Double(segments)
-                    let lit = value != nil && ((v >= 0 ? (p >= -0.05 && p <= v) : (p <= 0.05 && p >= v)) || (inTune && abs(p) <= tolerance + 0.06))
-                    let rect = CGRect(x: CGFloat(i) * w, y: 6, width: w - 2, height: size.height - 8)
-                    if lit {
-                        let c = Theme.closeness(closeness(p))
-                        var glow = ctx
-                        glow.addFilter(.blur(radius: 2))
-                        glow.fill(Path(rect), with: .color(c.opacity(0.7)))
-                        ctx.fill(Path(rect), with: .color(c))
-                    } else {
-                        ctx.fill(Path(rect), with: .color(Color(hex: 0x2A2C30)))
+        let color = value == nil ? Theme.textMuted : Theme.closeness(closeness(v))
+        HStack(spacing: 10) {
+            GeometryReader { geo in
+                let w = geo.size.width, mid = w / 2, y = geo.size.height / 2
+                let x = (CGFloat(v) + 1) / 2 * w
+                ZStack(alignment: .topLeading) {
+                    Capsule().fill(Color.white.opacity(0.09)).frame(width: w, height: 3).offset(y: y - 1.5)
+                    Capsule().fill(Theme.statusGood.opacity(0.3))
+                        .frame(width: max(3, w * tolerance), height: 3).offset(x: mid - w * tolerance / 2, y: y - 1.5)
+                    if value != nil {
+                        Capsule().fill(color).frame(width: abs(x - mid), height: 3).offset(x: min(x, mid), y: y - 1.5)
+                        Circle().fill(color).frame(width: 9, height: 9).offset(x: x - 4.5, y: y - 4.5)
                     }
                 }
-                let cx = size.width / 2
-                var centre = Path()
-                centre.move(to: CGPoint(x: cx, y: 2)); centre.addLine(to: CGPoint(x: cx, y: size.height))
-                ctx.stroke(centre, with: .color(Color(hex: 0xECE6D6).opacity(0.5)), lineWidth: 1)
-                if value != nil {
-                    let nx = (CGFloat(v) + 1) / 2 * size.width
-                    var tri = Path()
-                    tri.move(to: CGPoint(x: nx - 4, y: 0)); tri.addLine(to: CGPoint(x: nx + 4, y: 0)); tri.addLine(to: CGPoint(x: nx, y: 6))
-                    tri.closeSubpath()
-                    ctx.fill(tri, with: .color(Color(hex: 0xECE6D6)))
-                }
             }
-            .frame(width: 130, height: 22)
+            .frame(width: width, height: 12)
+            .animation(.spring(response: 0.45, dampingFraction: 0.85), value: v)
             Text(readout)
-                .font(.system(size: 12, design: .monospaced))
-                .foregroundStyle(Color(hex: 0xFF8A3D))
-                .shadow(color: Color(hex: 0xFF6B1A).opacity(0.8), radius: 3)
+                .font(Theme.mono(13))
+                .foregroundStyle(value == nil ? Theme.textMuted : Theme.textPrimary)
                 .frame(width: 64, alignment: .trailing)
         }
     }

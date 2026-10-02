@@ -34,7 +34,7 @@ struct InstructionHeader: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(marking).font(Theme.mono(10)).foregroundStyle(Theme.accent).tracking(1.5)
+            Text(marking).font(Theme.mono(10)).foregroundStyle(Theme.accent)
             Text(title).font(Theme.heading(30)).foregroundStyle(Theme.textPrimary)
             Text(text).font(.system(size: 16)).foregroundStyle(Theme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -43,24 +43,21 @@ struct InstructionHeader: View {
     }
 }
 
-/// Hazard-striped warning block.
+/// Soft tinted warning note.
 struct HazardNotice: View {
     var text: String
     var color: Color = Theme.signalYellow
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HazardStripes(color: color).frame(height: 6)
-            HStack(alignment: .top, spacing: 8) {
-                Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(color)
-                Text(text).font(.system(size: 13)).foregroundStyle(Theme.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: 0)
-            }
-            .padding(10)
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(color)
+            Text(text).font(.system(size: 13)).foregroundStyle(Theme.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
         }
-        .background(color.opacity(0.06))
-        .overlay(Rectangle().stroke(color.opacity(0.4), lineWidth: 1))
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(RoundedRectangle(cornerRadius: Theme.radiusSmall, style: .continuous).fill(color.opacity(0.10)))
     }
 }
 
@@ -74,9 +71,9 @@ struct WizardPrimaryButton: View {
     var body: some View {
         Button(action: action) {
             Label(title, systemImage: systemImage)
-                .font(Theme.heading(20))
+                .font(Theme.heading(17))
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 6)
+                .padding(.vertical, 4)
         }
         .buttonStyle(SSMTButtonStyle(kind: .primary))
         .disabled(!enabled)

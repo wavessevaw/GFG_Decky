@@ -2,23 +2,6 @@
   "sourceLanguage": "en",
   "version": "1.0",
   "strings": {
-    "about.fonts": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fonts: JetBrains Mono, Russo One (SIL Open Font License)."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Шрифты: JetBrains Mono, Russo One (SIL Open Font License)."
-          }
-        }
-      }
-    },
     "about.splash": {
       "extractionState": "manual",
       "localizations": {

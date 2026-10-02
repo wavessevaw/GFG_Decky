@@ -279,7 +279,6 @@ STRINGS = {
     "about.text": ("A toolkit for sound engineers. Function 1: automatic sound system setup.",
                    "Набор инструментов звукорежиссёра. Функция 1: автоматическая настройка акустической системы."),
     "about.splash": ("Show splash screen at launch", "Показывать заставку при запуске"),
-    "about.fonts": ("Fonts: JetBrains Mono, Russo One (SIL Open Font License).", "Шрифты: JetBrains Mono, Russo One (SIL Open Font License)."),
     "mini.toggle": ("Mini window", "Мини-окно"),
     "mini.opacity": ("Opacity", "Прозрачность"),
     "mini.clickThrough": ("Click-through (turn off in the SSMT menu)", "Клики насквозь (выключить в меню SSMT)"),
