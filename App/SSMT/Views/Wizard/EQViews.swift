@@ -160,12 +160,16 @@ struct EQResultGauges: View {
                                value: 1 - after.rmsDeviationDB / 6, mode: .oneSided, tolerance: 1 - 1.5 / 6,
                                readout: String(format: "±%.1f dB", after.rmsDeviationDB),
                                instruction: String(format: loc.t("gauge.before"), s.before.rmsDeviationDB),
-                               large: model.stageMode)
+                               large: model.stageMode,
+                               scaleLabels: ["6", "4.5", "3", "1.5", "0"], unit: "dB",
+                               telemetry: ("63 Hz–12.5k", "TARGET ≤1.5"))
                     TunerGauge(title: loc.t("gauge.score"),
                                value: Double(after.score) / 100, mode: .oneSided, tolerance: 0.8,
                                readout: "\(after.score)",
                                instruction: String(format: loc.t("gauge.beforeScore"), s.before.score),
-                               large: model.stageMode)
+                               large: model.stageMode,
+                               scaleLabels: ["0", "25", "50", "75", "100"],
+                               telemetry: ("SCORE", "TARGET ≥80"))
                 }
                 Text(loc.t("gauge.score.note")).font(.system(size: 11)).foregroundStyle(Theme.textMuted)
             }
@@ -237,16 +241,24 @@ struct EQTuningView: View {
                 Button {
                     model.eqSelectedBand = i
                 } label: {
-                    HStack(spacing: 8) {
-                        Circle().fill(c.map { Theme.closeness($0) } ?? Theme.textMuted).frame(width: 10, height: 10)
-                        Text("\(i + 1)").font(Theme.mono(12, weight: .bold)).frame(width: 18)
-                        Text(loc.t(f.group == .sub ? "group.subs" : "group.mains")).font(Theme.label(10))
-                            .foregroundStyle(Theme.textSecondary).frame(width: 74, alignment: .leading)
-                        Text(String(format: "%6.0f Hz", f.frequency)).font(Theme.mono(12))
-                        Text(String(format: "%+5.1f dB", f.gainDB)).font(Theme.mono(12, weight: .semibold))
-                        Text(String(format: "Q %4.2f", f.q)).font(Theme.mono(12))
-                        if f.groupAmbiguous { Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Theme.signalYellow) }
-                        Spacer()
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 8) {
+                            Text("\(i + 1)").font(Theme.mono(12, weight: .bold)).frame(width: 18)
+                            Text(loc.t(f.group == .sub ? "group.subs" : "group.mains")).font(Theme.label(10))
+                                .foregroundStyle(Theme.textSecondary).frame(width: 74, alignment: .leading)
+                            Text(String(format: "%6.0f Hz", f.frequency)).font(Theme.mono(12))
+                            Text(String(format: "%+5.1f dB", f.gainDB)).font(Theme.mono(12, weight: .semibold))
+                            Text(String(format: "Q %4.2f", f.q)).font(Theme.mono(12))
+                            if f.groupAmbiguous { Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Theme.signalYellow) }
+                            Spacer()
+                        }
+                        HStack {
+                            Spacer().frame(width: 26)
+                            MiniMeter(value: reading.map { $0.remainingGainDB / 6 }, tolerance: 0.5 / 6,
+                                      readout: reading.map { String(format: "%+.1f dB", $0.remainingGainDB) } ?? "—")
+                            Text(c.map { $0 >= 1 ? loc.t("tuner.inTune") : "" } ?? "")
+                                .font(Theme.label(10)).foregroundStyle(Theme.closeness(c ?? 0))
+                        }
                     }
                     .padding(6)
                     .background(model.eqSelectedBand == i ? Theme.accent.opacity(0.12) : Color.clear)
@@ -255,7 +267,7 @@ struct EQTuningView: View {
                 .buttonStyle(.plain)
             }
         }
-        .frame(width: 420)
+        .frame(width: 440)
     }
 
     private func closeness(_ b: EQTuner.BandReading) -> Double {
@@ -276,7 +288,10 @@ struct EQTuningView: View {
                 instruction: bandInstruction(b),
                 reliable: (model.eqTunerReading?.confidence ?? 0) >= 0.6,
                 leftLabel: loc.t("tuner.cut"), rightLabel: loc.t("tuner.boost"),
-                large: model.stageMode)
+                large: model.stageMode,
+                scaleLabels: ["−6", "−3", "0", "+3", "+6"], unit: "dB",
+                telemetry: (String(format: "PEQ %ld · %@", i + 1, loc.t(f.group == .sub ? "group.subs" : "group.mains").uppercased()),
+                            String(format: "Fc %.0f · Q %.2f", f.frequency, f.q)))
         }
     }
 
@@ -293,7 +308,9 @@ struct EQTuningView: View {
                           tolerance: 1 - 0.75 / 4,
                           readout: e.map { String(format: "±%.1f dB", $0) } ?? "—",
                           instruction: e.map { $0 <= 0.75 ? loc.t("tuner.inTune") : loc.t("eq.overall.hint") } ?? loc.t("tuner.waiting"),
-                          large: model.stageMode)
+                          large: model.stageMode,
+                          scaleLabels: ["4", "3", "2", "1", "0"], unit: "dB",
+                          telemetry: ("EQ vs PLAN", "TARGET ≤0.75"))
     }
 
     private func curves(_ r: EQResult) -> [ComparisonPlotView.Curve] {

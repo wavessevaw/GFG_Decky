@@ -271,6 +271,7 @@ STRINGS = {
     "vproc.mainsDelay": ("Mains delay", "Задержка топов"),
     "vproc.subLevel": ("Sub level", "Уровень саба"),
     "vproc.subPolarity": ("Sub polarity inverted", "Полярность саба инвертирована"),
+    "unit.ms": ("ms", "мс"),
     "gauge.quality": ("Signal quality", "Качество сигнала"),
     "gauge.quality.good": ("Good — ready to measure", "Хорошо — можно мерить"),
     "gauge.quality.weak": ("Weak — quieter room or louder signal", "Слабо — тише в зале или громче сигнал"),

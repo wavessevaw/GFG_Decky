@@ -10,22 +10,20 @@ struct PolarityLamp: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            Circle()
-                .fill(color)
-                .frame(width: large ? 34 : 24, height: large ? 34 : 24)
-                .shadow(color: color.opacity(0.8), radius: 10)
+            IndicatorLamp(color: color, size: large ? 36 : 28)
                 .opacity(wrong == true && blink ? 0.35 : 1)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(loc.t("card.polarity").uppercased()).font(Theme.label(11)).tracking(1.2).foregroundStyle(Theme.textSecondary)
-                Text(text).font(Theme.heading(large ? 26 : 20)).foregroundStyle(color)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(loc.t("card.polarity").uppercased()).font(Theme.label(11)).tracking(1.2)
+                    .foregroundStyle(Color(hex: 0xECE6D6).opacity(0.7))
+                VFDStrip(text: text, color: color, size: large ? 15 : 13)
+                    .frame(height: large ? 40 : 34)
             }
-            Spacer()
-            Image(systemName: wrong == false ? "checkmark.circle.fill" : (wrong == true ? "arrow.up.arrow.down.circle.fill" : "circle.dashed"))
-                .font(.system(size: large ? 30 : 22)).foregroundStyle(color)
+            NixieReadout(text: wrong == true ? "180°" : (wrong == false ? "0°" : "—"), size: large ? 28 : 22)
+                .frame(width: large ? 120 : 96)
         }
-        .padding(14)
-        .background(CutCornerShape(cut: 12).fill(Theme.panel))
-        .overlay(CutCornerShape(cut: 12).stroke(color.opacity(0.7), lineWidth: 1))
+        .padding(.horizontal, 22)
+        .padding(.vertical, 16)
+        .background(Bakelite())
         .onAppear {
             withAnimation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true)) { blink = true }
         }
@@ -92,7 +90,11 @@ struct TunerPanel: View {
                         instruction: delayInstruction(r, mainsStage: mainsStage),
                         reliable: reliable,
                         leftLabel: loc.t("tuner.less"), rightLabel: loc.t("tuner.more"),
-                        large: large)
+                        large: large,
+                        scaleLabels: scale(fullScale: 250 / fc, format: "%+.1f"),
+                        unit: loc.t("unit.ms"),
+                        telemetry: (r.map { String(format: "%@ Δφ %+.0f°", mainsStage ? "CH·MAIN" : "CH·SUB", $0.delayPhaseError) } ?? "Δφ —",
+                                    String(format: "XO %.0f Hz", fc)))
                 }
                 if !mainsStage {
                     TunerGauge(
@@ -103,7 +105,10 @@ struct TunerPanel: View {
                         instruction: levelInstruction(r),
                         reliable: reliable,
                         leftLabel: loc.t("tuner.quieter"), rightLabel: loc.t("tuner.louder"),
-                        large: large)
+                        large: large,
+                        scaleLabels: scale(fullScale: 6, format: "%+.0f"),
+                        unit: "dB",
+                        telemetry: ("CH·SUB", "TOL ±0.5 dB"))
                 }
             }
             if !showDelay {
@@ -112,6 +117,10 @@ struct TunerPanel: View {
             Text(String(format: loc.t("tuner.scale"), 90 / (fc * 360) * 1000))
                 .font(Theme.mono(10)).foregroundStyle(Theme.textMuted)
         }
+    }
+
+    private func scale(fullScale: Double, format: String) -> [String] {
+        [-1, -0.5, 0, 0.5, 1].map { $0 == 0 ? "0" : String(format: format, $0 * fullScale) }
     }
 
     private func delayInstruction(_ r: AlignmentTuner.Reading?, mainsStage: Bool) -> String {

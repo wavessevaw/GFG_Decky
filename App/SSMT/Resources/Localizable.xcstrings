@@ -4371,6 +4371,23 @@
         }
       }
     },
+    "unit.ms": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ms"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "мс"
+          }
+        }
+      }
+    },
     "verdict.checkSettings": {
       "extractionState": "manual",
       "localizations": {

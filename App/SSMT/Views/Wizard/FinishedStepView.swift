@@ -17,13 +17,17 @@ struct AlignmentCheckView: View {
                                tolerance: 1 - 3.0 / 9,
                                readout: dip.map { String(format: "%.1f dB", $0) } ?? "—",
                                instruction: r.before.map { String(format: loc.t("gauge.before"), $0.dipDepthDB) } ?? "",
-                               large: model.stageMode)
+                               large: model.stageMode,
+                               scaleLabels: ["9", "6.8", "4.5", "2.3", "0"], unit: "dB",
+                               telemetry: (String(format: "XO %.0f Hz", model.wizard.alignment?.crossover ?? 0), "TARGET <3"))
                     TunerGauge(title: loc.t("verify.predictionError"),
                                value: r.predictionErrorDB.isFinite ? 1 - r.predictionErrorDB / 4 : 0, mode: .oneSided,
                                tolerance: 1 - 2.0 / 4,
                                readout: r.predictionErrorDB.isFinite ? String(format: "±%.1f dB", r.predictionErrorDB) : "—",
                                instruction: loc.t(r.predictionErrorDB < 2 ? "gauge.matches" : "gauge.differs"),
-                               large: model.stageMode)
+                               large: model.stageMode,
+                               scaleLabels: ["4", "3", "2", "1", "0"], unit: "dB",
+                               telemetry: ("RMS Δ", "TARGET <2"))
                 }
                 if r.advice != .none {
                     HazardNotice(text: loc.t("advice.\(r.advice.rawValue)"),

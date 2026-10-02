@@ -18,7 +18,11 @@ struct SignalQualityGauge: View {
             tolerance: (0.8 - 0.3) / 0.55,
             readout: clipped ? loc.t("meters.clip") : (q.map { String(format: "%.0f %%", $0 * 100) } ?? "—"),
             instruction: instruction(q, clipped: clipped),
-            large: model.stageMode)
+            large: model.stageMode,
+            scaleLabels: ["30", "44", "58", "71", "85"],
+            unit: "%",
+            telemetry: (String(format: "BAND %.0f–%.0fk", band.lowerBound, band.upperBound / 1000),
+                        "AVG \(model.snapshot?.transfer?.averages ?? 0)"))
     }
 
     private var quality: Double? {
@@ -52,7 +56,10 @@ struct SNRGauge: View {
             readout: snr.map { String(format: "%.0f dB", $0) } ?? "—",
             instruction: snr.map { loc.t($0 >= 20 ? "gauge.snr.good" : "gauge.snr.low") }
                 ?? loc.t(model.noiseFloor == nil ? "gauge.snr.needNoise" : "tuner.waiting"),
-            large: model.stageMode)
+            large: model.stageMode,
+            scaleLabels: ["0", "8", "15", "23", "30"],
+            unit: "dB",
+            telemetry: ("SNR 50–12k", "TARGET ≥20"))
     }
 
     private var liveSNR: Double? {
