@@ -36,7 +36,7 @@ final class WizardTests: XCTestCase {
         }
     }
 
-    func demoSystem() -> VirtualSystem {
+    static func demoSystem() -> VirtualSystem {
         let fs = 48000.0
         let room = VirtualRoom(reflections: [VirtualReflection(delaySamples: 168, gain: 0.3)],
                                modes: [Biquad.design(.peaking, frequency: 63, q: 6, gainDB: 6, sampleRate: fs)])
@@ -49,7 +49,7 @@ final class WizardTests: XCTestCase {
     }
 
     func runWizard(fastMode: Bool) throws -> SetupWizard {
-        let rig = Rig(system: demoSystem())
+        let rig = Rig(system: Self.demoSystem())
         var config = WizardConfiguration()
         config.crossover = 90
         config.fastMode = fastMode
@@ -115,7 +115,7 @@ final class WizardTests: XCTestCase {
 
     /// Steps 6–8: zone points → EQ → enter filters (virtual processor) → verification points.
     func testEQStepsInSimulation() throws {
-        var w = try runWizardKeepingRig()
+        var w = try Self.runWizardKeepingRig()
         let rig = w.rig
         w.wizard.beginEQ()
         XCTAssertEqual(w.wizard.step, .eqPoints)
@@ -154,8 +154,8 @@ final class WizardTests: XCTestCase {
         XCTAssertFalse(w.wizard.canIterateEQ, "max 2 consecutive EQ iterations")
     }
 
-    func runWizardKeepingRig() throws -> (wizard: SetupWizard, rig: Rig) {
-        let rig = Rig(system: demoSystem())
+    static func runWizardKeepingRig() throws -> (wizard: SetupWizard, rig: Rig) {
+        let rig = Rig(system: Self.demoSystem())
         var config = WizardConfiguration()
         config.crossover = 90
         config.captureSeconds = 8
@@ -188,7 +188,7 @@ final class WizardTests: XCTestCase {
     }
 
     func testStreamRestartInvalidatesWizard() throws {
-        let rig = Rig(system: demoSystem())
+        let rig = Rig(system: Self.demoSystem())
         var wizard = SetupWizard()
         let d = try XCTUnwrap(rig.findDelay())
         wizard.lockDelay(d, epoch: rig.backend.discontinuities.value)
@@ -201,7 +201,7 @@ final class WizardTests: XCTestCase {
     }
 
     func testClippedCaptureIsNotAccepted() throws {
-        let rig = Rig(system: demoSystem())
+        let rig = Rig(system: Self.demoSystem())
         var wizard = SetupWizard()
         let d = try XCTUnwrap(rig.findDelay())
         wizard.lockDelay(d, epoch: rig.backend.discontinuities.value)
