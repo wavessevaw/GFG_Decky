@@ -54,12 +54,36 @@ targets:
         COMBINE_HIDPI_IMAGES: YES
         LOCALIZATION_PREFERS_STRING_CATALOGS: YES
         SWIFT_EMIT_LOC_STRINGS: NO
+  SSMTSnapshotTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: App/Tests/Snapshots
+        excludes:
+          - "References/**"
+    dependencies:
+      - target: SSMT
+      - package: SSMTCore
+        product: SSMTCore
+    settings:
+      base:
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/SSMT.app/Contents/MacOS/SSMT"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.soundsolutions.ssmt.snapshots
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_STYLE: Manual
 schemes:
   SSMT:
     build:
       targets:
         SSMT: all
+        SSMTSnapshotTests: [test]
     run:
       config: Debug
+    test:
+      config: Debug
+      targets:
+        - SSMTSnapshotTests
     archive:
       config: Release

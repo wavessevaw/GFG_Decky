@@ -55,6 +55,23 @@ jobs:
           test -f "$R/RussoOne-Regular.ttf"
           test -f "$R/JetBrainsMono-Variable.ttf"
           test -d "$R/ru.lproj" && test -d "$R/en.lproj"
+      - name: Snapshot tests (screens + mini window)
+        run: |
+          set +e
+          xcodebuild test -project SSMT.xcodeproj -scheme SSMT -configuration Debug \
+            -destination 'platform=macOS' -derivedDataPath build/TestData \
+            CODE_SIGN_IDENTITY="-" > build/snapshot-tests.log 2>&1
+          status=$?
+          set -e
+          grep -E "Test Case|error:|recorded|failed" build/snapshot-tests.log | tail -60 || true
+          ls -la build/snapshots || true
+          if [ $status -ne 0 ]; then tail -120 build/snapshot-tests.log; exit $status; fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: SSMT-snapshots
+          path: build/snapshots
+          retention-days: 14
       - name: Package app
         run: |
           cd build/DerivedData/Build/Products/Release
