@@ -104,7 +104,7 @@ struct SetupSidebar: View {
             if model.microphonePermission == .denied {
                 warning(loc.t("permission.denied"))
             }
-            if let e = model.lastError { warning(e) }
+            if let e = model.lastError { warning(e.hasPrefix("error.") ? loc.t(e) : e) }
         }
     }
 

@@ -6,6 +6,7 @@ system setup — subwoofer ↔ mains alignment and EQ suggestions from dual-chan
 - **Install:** [`docs/INSTALL.md`](docs/INSTALL.md) · **User guide:** [RU](docs/USER_GUIDE.ru.md) · [EN](docs/USER_GUIDE.en.md)
 - Plan: [`docs/PLAN.md`](docs/PLAN.md) · Assumptions: [`docs/ASSUMPTIONS.md`](docs/ASSUMPTIONS.md)
 - Status: [`docs/STATUS.md`](docs/STATUS.md) · Acceptance: [`docs/ACCEPTANCE.md`](docs/ACCEPTANCE.md)
+- Release notes: [`docs/RELEASE_NOTES.md`](docs/RELEASE_NOTES.md) · Changelog: [`docs/CHANGELOG.md`](docs/CHANGELOG.md)
 
 ![Instruments](App/Tests/Snapshots/References/instruments.png)
 

@@ -26,23 +26,6 @@ struct WizardView: View {
     }
 }
 
-/// Large instruction block used on every step.
-struct InstructionHeader: View {
-    var marking: String
-    var title: String
-    var text: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(marking).font(Theme.mono(10)).foregroundStyle(Theme.accent)
-            Text(title).font(Theme.heading(30)).foregroundStyle(Theme.textPrimary)
-            Text(text).font(.system(size: 16)).foregroundStyle(Theme.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
 /// Soft tinted warning note.
 struct HazardNotice: View {
     var text: String

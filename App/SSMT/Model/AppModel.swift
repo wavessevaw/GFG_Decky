@@ -108,6 +108,8 @@ final class AppModel: ObservableObject {
     }
     private var tuner: AlignmentTuner?
     private var lastTunerUpdate = Date.distantPast
+    /// A tuner reading is being computed off the main thread; new snapshots are skipped meanwhile.
+    private var tunerBusy = false
 
     // EQ tuner
     private(set) var eqTunerReading: EQTuner.Reading? {
@@ -230,15 +232,49 @@ final class AppModel: ObservableObject {
     }
 
     private func receive(_ snap: LiveSnapshot) {
+        guard isRunning else { return }
+        // The interface stopped delivering audio (unplugged, driver stopped): stop cleanly
+        // instead of waiting forever in a capture.
+        if snap.secondsSinceAudio > 1.5 {
+            handleAudioLoss()
+            return
+        }
         snapshot = snap
-        guard let tf = snap.transfer, snap.timestamp.timeIntervalSince(lastTunerUpdate) >= 0.25 else { return }
+        guard let tf = snap.transfer, !tunerBusy, snap.timestamp.timeIntervalSince(lastTunerUpdate) >= 0.25 else { return }
+        // Tuner readings run the full alignment / EQ comparison: computed off the main thread so the
+        // interface stays fluid on older Macs; a new reading starts only when the previous one is done.
         if tunerActive, let tuner {
             lastTunerUpdate = snap.timestamp
-            tunerReading = tuner.read(live: tf)
+            tunerBusy = true
+            Task.detached(priority: .userInitiated) { [weak self] in
+                let reading = tuner.read(live: tf)
+                await MainActor.run {
+                    guard let self else { return }
+                    self.tunerBusy = false
+                    if self.tunerActive, self.tuner?.stage == tuner.stage { self.tunerReading = reading }
+                }
+            }
         } else if let eqTuner {
             lastTunerUpdate = snap.timestamp
-            eqTunerReading = eqTuner.read(live: tf)
+            tunerBusy = true
+            Task.detached(priority: .userInitiated) { [weak self] in
+                let reading = eqTuner.read(live: tf)
+                await MainActor.run {
+                    guard let self else { return }
+                    self.tunerBusy = false
+                    if self.eqTuner != nil { self.eqTunerReading = reading }
+                }
+            }
         }
+    }
+
+    private func handleAudioLoss() {
+        wizardCancelCapture()
+        stopEQTuner()
+        stopTuner()
+        stopEngine()
+        // A localization key; the error banner translates keys starting with "error.".
+        lastError = "error.audioLost"
     }
 
     private func makeHardwareBackend() throws -> AudioIOBackend {
@@ -263,6 +299,15 @@ final class AppModel: ObservableObject {
     }
 
     func stopEngine() {
+        // Nothing that waits for audio may stay "running" once the audio is gone.
+        stopTuner()
+        stopEQTuner()
+        tunerBusy = false
+        if wizardCaptureRunning { engine?.cancelCapture() }
+        wizardCaptureRunning = false
+        wizardDelaySearch = false
+        delaySearchRunning = false
+        eqReferenceCapturing = false
         engine?.stop()
         engine = nil
         simulationBackend = nil

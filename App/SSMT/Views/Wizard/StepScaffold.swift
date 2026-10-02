@@ -133,28 +133,3 @@ struct ValueChip: View {
         .background(GlassBackground())
     }
 }
-
-/// Status tile for the preparation checklist: icon, title, one value, one action.
-struct StatusTile<Action: View>: View {
-    var icon: String
-    var title: String
-    var value: String
-    var state: Double?   // closeness 0…1, nil = not started
-    @ViewBuilder var action: Action
-
-    var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: icon).font(.system(size: 20, weight: .light))
-                .foregroundStyle(state.map { Theme.closeness($0) } ?? Theme.textSecondary)
-                .frame(height: 24)
-            Text(value).font(.system(size: 17, weight: .medium)).monospacedDigit().foregroundStyle(Theme.textPrimary)
-                .lineLimit(1).minimumScaleFactor(0.6)
-            Text(title).font(Theme.label(12)).foregroundStyle(Theme.textSecondary)
-            action.padding(.top, 4)
-        }
-        .padding(.vertical, 20)
-        .padding(.horizontal, 12)
-        .frame(maxWidth: .infinity)
-        .background(GlassBackground())
-    }
-}

@@ -28,10 +28,9 @@ public final class WelchAccumulator {
     private var pendingX: [Double] = []
     private var pendingY: [Double] = []
     private var pendingStart = 0
-    private var reX: [Double]
-    private var imX: [Double]
-    private var reY: [Double]
-    private var imY: [Double]
+    /// One complex FFT carries both real channels: z = x·w + j·y·w.
+    private var re: [Double]
+    private var im: [Double]
 
     public init(fftSize: Int, overlap: Double, window: WindowFunction, sampleRate: Double,
                 averaging: SpectralAveraging = .cumulative, backend: FFTBackend = FFT.defaultBackend) {
@@ -48,10 +47,8 @@ public final class WelchAccumulator {
         gyy = [Double](repeating: 0, count: bins)
         gxyRe = [Double](repeating: 0, count: bins)
         gxyIm = [Double](repeating: 0, count: bins)
-        reX = [Double](repeating: 0, count: fftSize)
-        imX = [Double](repeating: 0, count: fftSize)
-        reY = [Double](repeating: 0, count: fftSize)
-        imY = [Double](repeating: 0, count: fftSize)
+        re = [Double](repeating: 0, count: fftSize)
+        im = [Double](repeating: 0, count: fftSize)
     }
 
     public var binCount: Int { fftSize / 2 + 1 }
@@ -88,15 +85,14 @@ public final class WelchAccumulator {
     }
 
     private func processFrame(at start: Int) {
+        // Both channels are real, so one complex FFT gives both spectra:
+        // Z = FFT(x + j·y), X[k] = (Z[k] + Z*[N−k]) / 2, Y[k] = (Z[k] − Z*[N−k]) / 2j.
         for i in 0..<fftSize {
             let w = window[i]
-            reX[i] = pendingX[start + i] * w
-            imX[i] = 0
-            reY[i] = pendingY[start + i] * w
-            imY[i] = 0
+            re[i] = pendingX[start + i] * w
+            im[i] = pendingY[start + i] * w
         }
-        engine.forward(re: &reX, im: &imX)
-        engine.forward(re: &reY, im: &imY)
+        engine.forward(re: &re, im: &im)
 
         let alpha: Double
         switch averaging {
@@ -110,7 +106,9 @@ public final class WelchAccumulator {
         }
         let s = densityScale
         for k in 0..<binCount {
-            let xr = reX[k], xi = imX[k], yr = reY[k], yi = imY[k]
+            let nk = k == 0 ? 0 : fftSize - k
+            let xr = 0.5 * (re[k] + re[nk]), xi = 0.5 * (im[k] - im[nk])
+            let yr = 0.5 * (im[k] + im[nk]), yi = -0.5 * (re[k] - re[nk])
             let pxx = (xr * xr + xi * xi) * s
             let pyy = (yr * yr + yi * yi) * s
             // conj(X)·Y

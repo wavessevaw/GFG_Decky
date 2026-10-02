@@ -135,7 +135,12 @@ public final class HALAudioBackend: AudioIOBackend, @unchecked Sendable {
     private let device: AudioDeviceInfo
     private let context: HALRenderContext
     private var unit: AudioUnit?
-    private var overloadListener: AudioObjectPropertyListenerBlock?
+    /// Device events that break the constant output→input offset (overload, sample-rate change by
+    /// another app, device gone). Each counts as a discontinuity, so the locked delay is re-measured.
+    private var listeners: [(AudioObjectPropertySelector, AudioObjectPropertyListenerBlock)] = []
+    private static let watchedProperties: [AudioObjectPropertySelector] = [
+        kAudioDeviceProcessorOverload, kAudioDevicePropertyNominalSampleRate, kAudioDevicePropertyDeviceIsAlive,
+    ]
 
     public init(routing: HALRouting, bank: GeneratorBankSpec = GeneratorBankSpec(),
                 safety: GeneratorSafety = GeneratorSafety()) throws {
@@ -236,7 +241,7 @@ public final class HALAudioBackend: AudioIOBackend, @unchecked Sendable {
         }
         unit = au
         isRunning = true
-        installOverloadListener()
+        installListeners()
     }
 
     public func stop() {
@@ -248,7 +253,7 @@ public final class HALAudioBackend: AudioIOBackend, @unchecked Sendable {
         AudioComponentInstanceDispose(au)
         unit = nil
         isRunning = false
-        removeOverloadListener()
+        removeListeners()
     }
 
     /// Output + input latency reported by the device (samples), for the expert view.
@@ -279,24 +284,25 @@ public final class HALAudioBackend: AudioIOBackend, @unchecked Sendable {
             mBitsPerChannel: 32, mReserved: 0)
     }
 
-    private func installOverloadListener() {
-        var addr = AudioObjectPropertyAddress(mSelector: kAudioDeviceProcessorOverload,
-                                              mScope: kAudioObjectPropertyScopeGlobal,
-                                              mElement: kAudioObjectPropertyElementMain)
+    private func installListeners() {
         let counter = discontinuities
-        let block: AudioObjectPropertyListenerBlock = { _, _ in counter.increment() }
-        if AudioObjectAddPropertyListenerBlock(device.id, &addr, DispatchQueue.global(qos: .utility), block) == noErr {
-            overloadListener = block
+        for selector in Self.watchedProperties {
+            var addr = AudioObjectPropertyAddress(mSelector: selector, mScope: kAudioObjectPropertyScopeGlobal,
+                                                  mElement: kAudioObjectPropertyElementMain)
+            let block: AudioObjectPropertyListenerBlock = { _, _ in counter.increment() }
+            if AudioObjectAddPropertyListenerBlock(device.id, &addr, DispatchQueue.global(qos: .utility), block) == noErr {
+                listeners.append((selector, block))
+            }
         }
     }
 
-    private func removeOverloadListener() {
-        guard let block = overloadListener else { return }
-        var addr = AudioObjectPropertyAddress(mSelector: kAudioDeviceProcessorOverload,
-                                              mScope: kAudioObjectPropertyScopeGlobal,
-                                              mElement: kAudioObjectPropertyElementMain)
-        AudioObjectRemovePropertyListenerBlock(device.id, &addr, DispatchQueue.global(qos: .utility), block)
-        overloadListener = nil
+    private func removeListeners() {
+        for (selector, block) in listeners {
+            var addr = AudioObjectPropertyAddress(mSelector: selector, mScope: kAudioObjectPropertyScopeGlobal,
+                                                  mElement: kAudioObjectPropertyElementMain)
+            AudioObjectRemovePropertyListenerBlock(device.id, &addr, DispatchQueue.global(qos: .utility), block)
+        }
+        listeners = []
     }
 }
 #endif

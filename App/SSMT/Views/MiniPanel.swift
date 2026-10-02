@@ -52,19 +52,24 @@ final class MiniPanelController: NSObject, NSWindowDelegate {
             p.isOpaque = false
             p.hasShadow = true
             p.delegate = self
-            p.contentView = NSHostingView(rootView: MiniDiagnosticsView()
-                .ssmtEnvironment(model, localizer))
             if let screen = NSScreen.main?.visibleFrame {
                 p.setFrameOrigin(NSPoint(x: screen.maxX - 400, y: screen.maxY - 350))
             }
             panel = p
+        }
+        // The content exists only while the panel is shown, so a hidden panel costs nothing.
+        if panel?.contentView == nil {
+            panel?.contentView = NSHostingView(rootView: AnyView(MiniDiagnosticsView().ssmtEnvironment(model, localizer)))
         }
         panel?.alphaValue = opacity
         panel?.ignoresMouseEvents = clickThrough
         panel?.orderFrontRegardless()
     }
 
-    func hide() { panel?.orderOut(nil) }
+    func hide() {
+        panel?.orderOut(nil)
+        panel?.contentView = nil
+    }
 
     /// Brings the main window back.
     func expandMainWindow() {

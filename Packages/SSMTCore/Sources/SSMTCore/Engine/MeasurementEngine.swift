@@ -14,6 +14,9 @@ public struct LiveSnapshot: Sendable {
     public var capture: CaptureProgress?
     public var soundLevel: SoundLevelReading
     public var autoLevelRunning: Bool
+    /// Seconds since audio last arrived from the device. Grows when the interface was unplugged or
+    /// its driver stopped delivering buffers; the app stops the measurement instead of waiting forever.
+    public var secondsSinceAudio: Double = 0
 }
 
 public struct CaptureProgress: Equatable, Sendable {
@@ -78,6 +81,7 @@ public final class MeasurementEngine: @unchecked Sendable {
     private var rawCollection: (frames: Int, reference: [Float], measurement: [Float],
                                 completion: ([Float], [Float]) -> Void)?
     private var lastSnapshotTime = Date.distantPast
+    private var lastAudioTime = Date()
     private var snapshotHandler: (@Sendable (LiveSnapshot) -> Void)?
     private var splMeter: SoundLevelMeter
     private var autoLevel: (controller: AutoLevelController, start: Date, clippedAtStart: Int,
@@ -100,7 +104,10 @@ public final class MeasurementEngine: @unchecked Sendable {
 
     public func start() throws {
         try backend.start()
-        queue.async { self.startTimer() }
+        queue.async {
+            self.lastAudioTime = Date()
+            self.startTimer()
+        }
     }
 
     public func stop() {
@@ -243,6 +250,7 @@ public final class MeasurementEngine: @unchecked Sendable {
         while true {
             let n = min(backend.inputRing.readable, backend.outputRing.readable, chunk)
             if n <= 0 { break }
+            lastAudioTime = Date()
             let input = backend.inputRing.read(maxFrames: n)
             let output = backend.outputRing.read(maxFrames: n)
             let mic = input[0]
@@ -327,7 +335,8 @@ public final class MeasurementEngine: @unchecked Sendable {
             referenceDelaySeconds: Double(referenceDelay) / backend.sampleRate,
             overflowCount: backend.inputRing.overflowCount + backend.outputRing.overflowCount,
             discontinuities: backend.discontinuities.value, capture: progress,
-            soundLevel: splMeter.reading(), autoLevelRunning: autoLevel != nil)
+            soundLevel: splMeter.reading(), autoLevelRunning: autoLevel != nil,
+            secondsSinceAudio: now.timeIntervalSince(lastAudioTime))
         handler(snap)
     }
 }

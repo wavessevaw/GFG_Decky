@@ -1,66 +1,42 @@
-# SSMT 0.9.2 — полосы EQ на стандартных частотах · EQ bands on standard frequencies
-
-## Что нового · What's new
-
-- **Русский.** Полосы EQ ставятся на стандартные частоты ряда ISO 1/3 октавы (63, 80, 100, 125, 160,
-  200, 250 … 1.6k, 2k, 2.5k … 10k, 12.5k, 16k Гц) и идут по возрастанию частоты — в тюнере, экспорте и
-  отчёте. Частоты не округляются «в лоб»: после переноса на сетку усиления и добротности всех полос
-  подбираются заново, точность почти не теряется. В меню цели EQ — выбор: 1/3 октавы (по умолчанию),
-  точные 1/6 октавы или любые частоты. Полосы с поправкой меньше 0.5 дБ не предлагаются. Частоты
-  подписаны как на процессорах: 31.5 Hz, 1.25 kHz, 12.5 kHz.
-- **English.** EQ bands use the standard ISO 1/3-octave centre frequencies and are listed in ascending
-  order in the tuner, export and report. After moving to the grid, the gains and Qs of all bands are
-  re-fitted together, so accuracy is kept. The EQ target menu offers 1/3 octave (default), fine 1/6
-  octave or any frequency. Bands below 0.5 dB are not suggested. Processor-style labels.
-
-Обновление: установите поверх предыдущей версии · Install over the previous version.
-
----
-
-# SSMT 0.9.1 — быстрее на старых Mac · faster on older Macs
-
-## Что нового · What's new
-
-- **Русский.** Оптимизация для Mac на Intel и со встроенной графикой (например, MacBook Pro 2017):
-  при обновлении живых данных перерисовываются только приборы, уровни и графики, а не всё окно;
-  сглаживание графиков работает быстрее; мигание полярности без постоянной анимации.
-  Новый режим **«Облегчённая графика»** — включается автоматически на Intel и на процессорах
-  с < 6 ядрами (меню «⋯»): без больших теней и свечения, короткая анимация стрелок.
-- **English.** Optimised for Intel Macs with integrated graphics (e.g. MacBook Pro 2017): live updates
-  redraw only gauges, meters and graphs instead of the whole window; faster graph smoothing; no
-  never-ending polarity animation. New **Reduced graphics** mode, automatic on Intel and on < 6 cores
-  (the "⋯" menu): no large shadows or glows, short needle animation.
-
-Обновление: установите поверх 0.9.0 · Install over 0.9.0.
-
----
-
-# SSMT 0.9.0 — первая публичная версия · first public version
+# SSMT 1.0.0 — SoundSolution Multi Tool
 
 ## Русский
 
 **Автоматическая настройка звуковой системы** — функция №1 SoundSolution Multi Tool.
 
-- Мастер из 5 этапов: подготовка (чек-лист, автоуровень, задержка) → замеры (система, сабы, топы) →
-  выравнивание саб ↔ топы (задержка, полярность, уровень) по стрелочным приборам → EQ по зоне
-  прослушивания с подстройкой по полосам → итог, отчёт PDF/PNG, экспорт фильтров, сессия.
-- Двухканальный анализ (опорный сигнал — генерируемый шум), когерентность, SPL с калибровкой.
-- Коррекция микрофона: ваши файлы калибровки и 22 встроенных типовых профиля (Shure SM81,
-  Soyuz 011/013 FET, Soyuz 022 Bomblet, AKG C414 XLII и др., точность ±2–3 дБ).
-- Режимы «Мастер» / «Эксперт», «Сцена» (крупные цифры), мини-окно, STOP / Esc, русский и английский.
-- Симуляция: весь мастер можно пройти без оборудования.
+- **Мастер из 5 этапов:** подготовка (чек-лист: звуковая карта, микрофон, автоуровень, задержка тракта) →
+  замеры (вся система, только сабы, только сателлиты) → склейка сабов и сателлитов по фазе (задержка,
+  полярность, уровень) с живыми стрелками-тюнерами → EQ по зоне прослушивания с вводом полос по стрелке →
+  итог, отчёт PDF/PNG, экспорт фильтров TXT/CSV, сессия.
+- **Надёжная склейка:** совпадение фаз по всей полосе перекрытия, защита от «проскока» на период по времени
+  прихода звука, предупреждение о неоднозначных решениях, проверочный замер «прогноз ↔ факт».
+- **EQ:** полосы на стандартных частотах ISO 1/3 октавы (или 1/6, или любые), по возрастанию; только мягкие
+  подъёмы, провалы и интерференция не «лечатся».
+- **Микрофоны:** ваши файлы калибровки и 22 встроенных типовых профиля (Shure SM81, Soyuz 011/013 FET,
+  Soyuz 022 Bomblet, AKG C414 XLII и др., точность ±2–3 дБ).
+- **Звуковые карты:** любые через Core Audio (USB, Thunderbolt, Dante/AVB), вход и выход на разных устройствах.
+- **Интерфейс:** «Мастер» / «Эксперт», «Сцена» (крупные цифры), мини-окно, STOP / Esc, русский и английский;
+  «Облегчённая графика» для старых Mac (включается автоматически на Intel).
+- **Симуляция:** весь мастер можно пройти без оборудования.
 
-**Ограничения версии 0.9:** проверена в симуляции и автотестах; проверка на реальных системах идёт.
+**Что нового по сравнению с 0.9.x:** анализ звука вдвое быстрее; показания тюнеров не нагружают интерфейс;
+программа корректно останавливается, если звуковая карта пропала (раньше замер мог «зависнуть»);
+сообщения об ошибках видны на любом экране; уборка неиспользуемого кода.
+
 Приложение не подписано Apple Developer ID — см. установку ниже.
 
 ## English
 
-**Automatic sound system setup** — function #1 of SoundSolution Multi Tool: a 5-stage wizard
-(prepare → measure → sub/mains alignment by needle gauges → zone-averaged EQ entered band by band →
-report, filter export, session), dual-channel analysis, SPL, microphone correction (your files plus
-22 typical built-in profiles, ±2–3 dB), Wizard/Expert/Stage modes, mini window, Russian and English,
-and a full simulation. Version 0.9 is verified in simulation and automated tests; field testing is
-ongoing. Not signed with an Apple Developer ID — see installation below.
+**Automatic sound system setup** — function #1 of SoundSolution Multi Tool: a 5-stage wizard (prepare →
+captures → sub/satellite phase alignment with live needle tuners → zone-averaged EQ entered band by band →
+report, filter export, session); robust alignment (phase match over the overlap band, cycle-slip
+rejection by arrival time, ambiguity warning, verification capture); EQ bands on ISO 1/3-octave
+frequencies in ascending order; microphone correction (your files + 22 typical profiles, ±2–3 dB); any
+Core Audio interface; Wizard/Expert/Stage modes, mini window, Russian and English, reduced graphics for
+older Macs; full simulation.
+
+New since 0.9.x: twice-as-fast analysis, tuner readings off the main thread, a clean stop when the audio
+interface disappears, error messages visible on every screen, dead-code cleanup.
 
 ---
 
