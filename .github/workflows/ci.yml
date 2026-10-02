@@ -129,4 +129,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "${GITHUB_REF_NAME}" "build/SSMT-${VERSION}.pkg" \
-            --title "SSMT ${GITHUB_REF_NAME}" --notes-file docs/INSTALL.md
+            --title "SSMT ${GITHUB_REF_NAME}" --notes-file docs/RELEASE_NOTES.md

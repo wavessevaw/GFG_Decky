@@ -49,7 +49,7 @@ At most two correction rounds in a row.
 Choose your microphone in the list (Prepare step or "Audio and calibration"); its response is removed from the measurement.
 
 - **Your calibration files** — "Import calibration file…" ("frequency dB [phase]", "Sens Factor" headers accepted). Most accurate.
-- **Built-in typical profiles** (~20 models: measurement mics, Shure SM81, Soyuz 011/013 FET, Soyuz 022 Bomblet, AKG C414 XLII/XLS, Neumann KM 184 / U 87 Ai, RØDE, Oktava MK-012, SM57/SM58 and more) — the model's response from published charts, ±2–3 dB, mostly at high frequencies.
+- **Built-in typical profiles** (22 models: measurement mics, Shure SM81, Soyuz 011/013 FET, Soyuz 022 Bomblet, AKG C414 XLII/XLS, Neumann KM 184 / U 87 Ai, RØDE, Oktava MK-012, SM57/SM58 and more) — the model's response from published charts, ±2–3 dB, mostly at high frequencies.
 - Cardioid studio microphones read the top end lower in a room than on axis; an omni measurement mic gives a more honest EQ. Any of them is fine for sub/mains alignment.
 
 ## Shortcuts
