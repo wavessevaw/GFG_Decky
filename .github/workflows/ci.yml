@@ -5,6 +5,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   core-linux:
     name: SSMTCore tests (Linux, portable FFT)
@@ -66,6 +69,24 @@ jobs:
           grep -E "Test Case|error:|recorded|failed" build/snapshot-tests.log | tail -60 || true
           ls -la build/snapshots || true
           if [ $status -ne 0 ]; then tail -120 build/snapshot-tests.log; exit $status; fi
+      - name: Record missing snapshot references
+        if: github.event_name == 'push'
+        run: |
+          REF=App/Tests/Snapshots/References
+          mkdir -p "$REF"
+          added=0
+          for f in build/snapshots/*.png; do
+            [ -f "$f" ] || continue
+            n=$(basename "$f")
+            if [ ! -f "$REF/$n" ]; then cp "$f" "$REF/$n"; added=1; fi
+          done
+          if [ "$added" = 1 ]; then
+            git config user.name "ssmt-ci"
+            git config user.email "ssmt-ci@users.noreply.github.com"
+            git add "$REF"
+            git commit -m "CI: record snapshot references [skip ci]"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
