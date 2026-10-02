@@ -43,7 +43,10 @@ struct AppSidebar: View {
             sectionSwitch
                 .padding(.horizontal, 10)
                 .padding(.bottom, 16)
-            if model.section == .inputList {
+            if model.section == .show {
+                showItems
+                Spacer(minLength: 16)
+            } else if model.section == .inputList {
                 inputListItems
                 Spacer(minLength: 16)
             } else if model.appMode == .wizard {
@@ -65,6 +68,7 @@ struct AppSidebar: View {
         VStack(spacing: 4) {
             sectionRow(.setup, icon: "dial.medium", title: loc.t("section.setup"))
             sectionRow(.inputList, icon: "list.bullet.rectangle", title: loc.t("section.inputList"))
+            sectionRow(.show, icon: "play.rectangle.on.rectangle", title: loc.t("section.show"))
         }
         .padding(4)
         .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.black.opacity(0.18)))
@@ -84,6 +88,21 @@ struct AppSidebar: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    /// Document actions of the show player.
+    private var showItems: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            UtilityRow(icon: "doc", title: loc.t("show.new")) { model.show.newDocument() }
+            UtilityRow(icon: "folder", title: loc.t("show.open")) { model.show.open() }
+            UtilityRow(icon: "square.and.arrow.down", title: loc.t("show.save")) { model.show.save() }
+            UtilityRow(icon: "square.and.arrow.down.on.square", title: loc.t("il.saveAs")) { model.show.save(as: true) }
+            Rectangle().fill(Theme.hairline).frame(height: 1).padding(.vertical, 8).padding(.horizontal, 8)
+            UtilityRow(icon: "waveform.badge.plus", title: loc.t("show.addAudio")) { model.show.chooseAudioFiles() }
+            UtilityRow(icon: "questionmark.folder", title: loc.t("show.relink")) { model.show.relinkMissing() }
+            UtilityRow(icon: "hifispeaker.2", title: loc.t("show.settings")) { model.show.showSettings = true }
+        }
+        .padding(.horizontal, 10)
     }
 
     /// Document actions of the input list tab.

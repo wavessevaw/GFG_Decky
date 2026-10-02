@@ -155,6 +155,46 @@ final class SnapshotTests: XCTestCase {
                      name: "input-list", loc: Self.ru)
     }
 
+    func testShowPlayer() throws {
+        var doc = ShowDocument(name: "Spring gala")
+        let l = doc.lists[0].id
+        var preshow = Cue.audio(file: "/show/Preshow loop.wav", number: "1")
+        preshow.audio?.plays = 0
+        preshow.notes = "House open"
+        var fade = Cue(kind: .fade, number: "2", name: "Fade preshow")
+        fade.target = preshow.id
+        fade.continueMode = .autoContinue
+        fade.postWait = 2
+        var intro = Cue.audio(file: "/show/Intro.wav", number: "3")
+        intro.preWait = 1.5
+        intro.continueMode = .autoFollow
+        var group = Cue(kind: .group, number: "4", name: "Scene 1")
+        group.groupMode = .simultaneous
+        var rain = Cue.audio(file: "/show/Rain.wav", number: "4.1")
+        rain.color = "blue"
+        var thunder = Cue.audio(file: "/show/Thunder.wav", number: "4.2")
+        thunder.preWait = 3
+        thunder.hotkey = "t"
+        group.children = [rain, thunder]
+        var wait = Cue(kind: .wait, number: "5")
+        wait.duration = 10
+        var stop = Cue(kind: .stop, number: "6", name: "Stop scene")
+        stop.target = group.id
+        stop.stopFade = 3
+        doc.insert([preshow, fade, intro, group, wait, stop, Cue(kind: .memo, name: "Interval")], after: nil, list: l)
+        let show = Self.model.show
+        show.doc = doc
+        show.selection = [intro.id]
+        show.preview(snapshot: ShowSnapshot(listID: l, playhead: group.id, running: [
+            RunningCue(id: preshow.id, phase: .stopping, elapsed: 1.2, duration: 3, paused: false, iteration: 4),
+            RunningCue(id: intro.id, phase: .running, elapsed: 12.4, duration: 41.5, paused: false, iteration: nil),
+        ], problems: [:]), clips: [
+            "/show/Preshow loop.wav": (95, 2), "/show/Intro.wav": (41.5, 2), "/show/Rain.wav": (180, 2), "/show/Thunder.wav": (6.2, 1),
+        ], meters: [0.5, 0.45, 0.1, 0.1, 0, 0, 0, 0])
+        try snapshot(ShowWorkspace().padding(16).background(Backdrop()), size: CGSize(width: 1500, height: 900),
+                     name: "show-player", loc: Self.ru)
+    }
+
     func testInputListPrintSheets() throws {
         let doc = Self.sampleInputList
         try snapshot(ChannelSheet(doc: doc, rows: doc.channelPages(rowsPerPage: InputListPrint.rowsPerPage)[0], page: "1 / 3"),

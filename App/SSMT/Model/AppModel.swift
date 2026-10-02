@@ -40,6 +40,8 @@ enum AppSection: String, CaseIterable, Identifiable {
     case setup
     /// Function #2: input list and stage plan.
     case inputList
+    /// Function #3: show player.
+    case show
     var id: String { rawValue }
 }
 
@@ -137,6 +139,8 @@ final class AppModel: ObservableObject {
     @Published var section: AppSection = .setup
     /// Function #2 document (input list + stage plan).
     let inputList = InputListStore()
+    /// Function #3 document and player (audio output starts when the section is first opened).
+    let show = ShowStore(startAudio: false)
     /// Reduced graphics effects (automatic on Intel / low-core Macs; see `GraphicsQuality`).
     @Published var reducedEffects = GraphicsQuality.initialReduced {
         didSet { UserDefaults.standard.set(reducedEffects, forKey: GraphicsQuality.defaultsKey) }

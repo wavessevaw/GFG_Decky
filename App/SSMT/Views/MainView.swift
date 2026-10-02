@@ -15,9 +15,11 @@ struct MainView: View {
                     AppSidebar(brandNamespace: brandNamespace, showBrand: showBrand)
                 }
                 VStack(spacing: 8) {
-                    TopBar()
+                    if model.section != .show { TopBar() }
                     if let e = model.lastError { ErrorBanner(text: e.hasPrefix("error.") ? loc.t(e) : e) { model.lastError = nil } }
-                    if model.section == .inputList {
+                    if model.section == .show {
+                        ShowWorkspace()
+                    } else if model.section == .inputList {
                         InputListWorkspace()
                     } else if model.appMode == .wizard {
                         WizardView()

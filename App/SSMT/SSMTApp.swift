@@ -20,14 +20,29 @@ struct SSMTApp: App {
         .commands {
             CommandGroup(replacing: .newItem) {
                 // ⌘O / ⌘S act on the open tab: the setup session or the input list document.
-                Button(localizer.t(model.section == .inputList ? "il.open" : "session.open")) {
-                    model.section == .inputList ? model.inputList.open() : model.openSession()
+                Button(localizer.t(model.section == .show ? "show.open" : (model.section == .inputList ? "il.open" : "session.open"))) {
+                    switch model.section {
+                    case .show: model.show.open()
+                    case .inputList: model.inputList.open()
+                    case .setup: model.openSession()
+                    }
                 }
                 .keyboardShortcut("o", modifiers: [.command])
-                Button(localizer.t(model.section == .inputList ? "il.save" : "session.save")) {
-                    model.section == .inputList ? model.inputList.save() : model.saveSession()
+                Button(localizer.t(model.section == .show ? "show.save" : (model.section == .inputList ? "il.save" : "session.save"))) {
+                    switch model.section {
+                    case .show: model.show.save()
+                    case .inputList: model.inputList.save()
+                    case .setup: model.saveSession()
+                    }
                 }
                 .keyboardShortcut("s", modifiers: [.command])
+                if model.section == .show {
+                    Button(localizer.t("il.saveAs")) { model.show.save(as: true) }
+                        .keyboardShortcut("s", modifiers: [.command, .shift])
+                    Button(localizer.t("show.new")) { model.show.newDocument() }
+                    Button(localizer.t("show.addAudio")) { model.show.chooseAudioFiles() }
+                        .keyboardShortcut("i", modifiers: [.command])
+                }
                 if model.section == .inputList {
                     Button(localizer.t("il.saveAs")) { model.inputList.save(as: true) }
                         .keyboardShortcut("s", modifiers: [.command, .shift])
