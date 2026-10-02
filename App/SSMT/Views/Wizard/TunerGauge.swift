@@ -5,7 +5,7 @@ import SwiftUI
 /// Retro layer: bakelite case with screws, printed scale with ticks and numbers, a physical needle
 /// with spring inertia (slight overshoot), gas-discharge (nixie-style) digits, an indicator lamp.
 /// Futuristic layer: an LED segment arc lit from the target to the needle in the closeness colour,
-/// HUD corner brackets and telemetry on the glass, a phosphor afterglow that trails the needle,
+/// subtle HUD corners on the glass, a phosphor afterglow that trails the needle,
 /// and a VFD-style status strip.
 ///
 /// - `.centered`: value −1…1, target 0 ("more / less"); red at both ends, green in the middle.
@@ -27,8 +27,6 @@ struct TunerGauge: View {
     /// Five scale labels at positions −1, −½, 0, +½, +1 (nil → generic labels).
     var scaleLabels: [String]? = nil
     var unit: String = ""
-    /// Small HUD telemetry on the glass (left, right).
-    var telemetry: (String, String) = ("", "")
 
     // MARK: Derived state
 
@@ -63,17 +61,22 @@ struct TunerGauge: View {
     // MARK: Body
 
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 8) {
+            Text(title.uppercased())
+                .font(Theme.label(11)).tracking(1.6).foregroundStyle(Theme.textMuted)
             instrument
                 .opacity(reliable ? 1 : 0.6)
-            Text(title.uppercased())
-                .font(Theme.label(11)).tracking(1.4).foregroundStyle(Theme.textSecondary)
+            Text(instruction)
+                .font(Theme.heading(large ? 20 : 16))
+                .foregroundStyle(value == nil ? Theme.textMuted : color)
+                .lineLimit(1).minimumScaleFactor(0.7)
+                .frame(height: large ? 26 : 22)
         }
         .frame(maxWidth: .infinity)
     }
 
     private var instrument: some View {
-        let height: CGFloat = large ? 330 : 268
+        let height: CGFloat = large ? 300 : 236
         return GeometryReader { geo in
             let g = MeterGeometry(size: geo.size)
             ZStack(alignment: .topLeading) {
@@ -121,12 +124,6 @@ struct TunerGauge: View {
     private func faceCanvas(_ g: MeterGeometry) -> some View {
         Canvas { ctx, _ in
             let f = g.face
-            // Blueprint grid.
-            var grid = Path()
-            stride(from: f.minX, to: f.maxX, by: 20).forEach { x in grid.move(to: CGPoint(x: x, y: f.minY)); grid.addLine(to: CGPoint(x: x, y: f.maxY)) }
-            stride(from: f.minY, to: f.maxY, by: 20).forEach { y in grid.move(to: CGPoint(x: f.minX, y: y)); grid.addLine(to: CGPoint(x: f.maxX, y: y)) }
-            ctx.stroke(grid, with: .color(.white.opacity(0.025)), lineWidth: 1)
-
             // LED segment arc (lit from the target to the needle).
             let segments = 33
             for i in 0..<segments {
@@ -160,25 +157,26 @@ struct TunerGauge: View {
                 let p0 = -1 + 2 * Double(i) / Double(n), p1 = -1 + 2 * Double(i + 1) / Double(n)
                 var arc = Path()
                 arc.addArc(center: g.pivot, radius: g.radius - 20, startAngle: g.angle(p0), endAngle: g.angle(p1), clockwise: false)
-                ctx.stroke(arc, with: .color(Theme.closeness(closeness(atPosition: (p0 + p1) / 2)).opacity(0.45)), lineWidth: 2.5)
+                ctx.stroke(arc, with: .color(Theme.closeness(closeness(atPosition: (p0 + p1) / 2)).opacity(0.25)), lineWidth: 2)
             }
             let ink = Color(hex: 0xECE6D6)
-            for i in -20...20 {
-                let p = Double(i) / 20
+            for i in -10...10 {
+                let p = Double(i) / 10
                 let major = i % 10 == 0, mid = i % 5 == 0
                 var t = Path()
-                t.move(to: g.point(p, radius: g.radius - (major ? 50 : mid ? 44 : 38)))
+                t.move(to: g.point(p, radius: g.radius - (major ? 46 : mid ? 40 : 34)))
                 t.addLine(to: g.point(p, radius: g.radius - 24))
-                ctx.stroke(t, with: .color(ink), lineWidth: major ? 2.2 : mid ? 1.5 : 0.9)
+                ctx.stroke(t, with: .color(ink.opacity(major ? 1 : 0.55)), lineWidth: major ? 2 : 1)
             }
-            for (k, label) in labels.enumerated() where !label.isEmpty {
+            // Only the ends and the target are labelled.
+            for (k, label) in labels.enumerated() where !label.isEmpty && k % 2 == 0 {
                 let p = -1 + 0.5 * Double(k)
                 ctx.draw(Text(label).font(.system(size: large ? 17 : 15, weight: .bold).width(.condensed)).foregroundColor(ink),
                          at: g.point(p, radius: g.radius - 66))
             }
 
-            // HUD brackets in the closeness colour + telemetry and markings.
-            let b: CGFloat = 14
+            // Subtle HUD corners in the closeness colour, unit at the lower left.
+            let b: CGFloat = 12
             let r = f.insetBy(dx: 8, dy: 8)
             var brackets = Path()
             let corners: [(CGFloat, CGFloat, CGFloat, CGFloat)] = [(r.minX, r.minY, 1, 1), (r.maxX, r.minY, -1, 1),
@@ -188,26 +186,10 @@ struct TunerGauge: View {
                 brackets.addLine(to: CGPoint(x: x, y: y))
                 brackets.addLine(to: CGPoint(x: x + dx * b, y: y))
             }
-            ctx.stroke(brackets, with: .color(color.opacity(0.75)), lineWidth: 1.5)
-            let tele = Font.system(size: 9, weight: .regular, design: .monospaced)
-            ctx.draw(Text(telemetry.0).font(tele).foregroundColor(Theme.accent.opacity(0.75)),
-                     at: CGPoint(x: r.minX + 20, y: r.minY + 8), anchor: .leading)
-            ctx.draw(Text(telemetry.1).font(tele).foregroundColor(Theme.accent.opacity(0.75)),
-                     at: CGPoint(x: r.maxX - 20, y: r.minY + 8), anchor: .trailing)
-            ctx.draw(Text("КЛ.1,5 ⊓ ⊥").font(tele).foregroundColor(ink.opacity(0.55)),
-                     at: CGPoint(x: r.minX + 20, y: r.maxY - 6), anchor: .leading)
-            ctx.draw(Text("SSMT № 0471").font(tele).foregroundColor(ink.opacity(0.55)),
-                     at: CGPoint(x: r.maxX - 20, y: r.maxY - 6), anchor: .trailing)
+            ctx.stroke(brackets, with: .color(color.opacity(0.45)), lineWidth: 1.2)
             if !unit.isEmpty {
-                ctx.draw(Text(unit).font(.system(size: 16, weight: .bold, design: .serif)).foregroundColor(ink),
-                         at: CGPoint(x: r.minX + 18, y: r.maxY - 26), anchor: .leading)
-            }
-            if mode == .centered {
-                let side = Font.system(size: 9, weight: .semibold).width(.condensed)
-                ctx.draw(Text("◀ " + leftLabel.uppercased()).font(side).foregroundColor(ink.opacity(0.6)),
-                         at: CGPoint(x: r.minX + 18, y: r.maxY - 44), anchor: .leading)
-                ctx.draw(Text(rightLabel.uppercased() + " ▶").font(side).foregroundColor(ink.opacity(0.6)),
-                         at: CGPoint(x: r.maxX - 18, y: r.maxY - 44), anchor: .trailing)
+                ctx.draw(Text(unit).font(.system(size: 14, weight: .bold, design: .serif)).foregroundColor(ink.opacity(0.7)),
+                         at: CGPoint(x: r.minX + 14, y: r.maxY - 14), anchor: .leading)
             }
         }
     }
@@ -215,14 +197,12 @@ struct TunerGauge: View {
     // MARK: Bottom deck: nixie digits, VFD strip, lamp
 
     private func deck(_ g: MeterGeometry) -> some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 14) {
             NixieReadout(text: readout, size: large ? 34 : 28)
                 .frame(maxWidth: .infinity)
-            VFDStrip(text: instruction, color: color, size: large ? 13 : 11)
-                .frame(maxWidth: .infinity)
-            IndicatorLamp(color: color, size: large ? 32 : 26)
+            IndicatorLamp(color: color, size: large ? 30 : 24)
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 18)
         .frame(width: g.size.width, height: g.deckHeight)
         .offset(y: g.face.maxY + 8)
     }

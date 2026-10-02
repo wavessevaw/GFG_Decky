@@ -38,13 +38,12 @@ final class SnapshotTests: XCTestCase {
         let view = HStack(spacing: 16) {
             TunerGauge(title: "Задержка сабвуфера", value: 0.45, tolerance: 10.0 / 90, readout: "+1.25 ms",
                        instruction: "Добавьте задержку сабвуферу", leftLabel: "меньше", rightLabel: "больше",
-                       scaleLabels: ["−2.8", "−1.4", "0", "+1.4", "+2.8"], unit: "мс", telemetry: ("CH·SUB Δφ +41°", "XO 90 Hz"))
+                       scaleLabels: ["−2.8", "−1.4", "0", "+1.4", "+2.8"], unit: "мс")
             TunerGauge(title: "Задержка сабвуфера", value: 0.03, tolerance: 10.0 / 90, readout: "+0.08 ms",
                        instruction: "В СТРОЮ", leftLabel: "меньше", rightLabel: "больше",
-                       scaleLabels: ["−2.8", "−1.4", "0", "+1.4", "+2.8"], unit: "мс", telemetry: ("CH·SUB Δφ +3°", "XO 90 Hz"))
+                       scaleLabels: ["−2.8", "−1.4", "0", "+1.4", "+2.8"], unit: "мс")
             TunerGauge(title: "Качество сигнала", value: 0.62, mode: .oneSided, tolerance: 0.91, readout: "64 %",
-                       instruction: "Слабо — тише в зале", scaleLabels: ["30", "44", "58", "71", "85"], unit: "%",
-                       telemetry: ("BAND 40–16k", "AVG 24"))
+                       instruction: "Слабо — тише или громче", scaleLabels: ["30", "44", "58", "71", "85"], unit: "%")
         }
         .padding(16)
         try snapshot(view, size: CGSize(width: 1380, height: 330), name: "instruments", loc: Self.ru)
@@ -86,7 +85,7 @@ final class SnapshotTests: XCTestCase {
     }
 
     func testPreparation() throws {
-        try snapshot(PreparationStepView().padding(16), size: CGSize(width: 900, height: 1250), name: "step0-preparation", loc: Self.ru)
+        try snapshot(PreparationStepView(showSettings: .constant(false)).padding(16), size: CGSize(width: 900, height: 1250), name: "step0-preparation", loc: Self.ru)
     }
 
     func testTunerScreen() throws {

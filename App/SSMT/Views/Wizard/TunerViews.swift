@@ -48,7 +48,7 @@ struct PolarityLamp: View {
     }
 }
 
-/// Live tuning screen block: polarity lamp, delay needle, level needle.
+/// Live tuning block: polarity lamp and the delay / level instruments. No explanatory text.
 struct TunerPanel: View {
     @EnvironmentObject var model: AppModel
     @EnvironmentObject var loc: Localizer
@@ -60,64 +60,36 @@ struct TunerPanel: View {
         let mainsStage = model.tunerStage == .adjustMainsDelay
         let showDelay = mainsStage || !model.tunerNeedsMainsStage
         let fc = model.wizard.alignment?.crossover ?? 100
-        let tolPhase = 10.0
 
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text(loc.t(mainsStage ? "tuner.stage.mains" : "tuner.stage.sub"))
-                    .font(Theme.heading(20)).foregroundStyle(Theme.textPrimary)
-                Spacer()
-                if r != nil && !reliable {
-                    StatusBadge(level: .warning, text: loc.t("tuner.unreliable"))
-                } else if r == nil {
-                    HStack(spacing: 6) {
-                        ProgressView().controlSize(.small)
-                        Text(loc.t("tuner.waiting")).font(.system(size: 12)).foregroundStyle(Theme.textSecondary)
-                    }
-                }
-            }
-            Text(loc.t("tuner.hint")).font(.system(size: 13)).foregroundStyle(Theme.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-
+        VStack(spacing: 18) {
             if !mainsStage {
                 PolarityLamp(wrong: r.map(\.polarityWrong), large: large)
+                    .frame(maxWidth: 560)
             }
-            HStack(alignment: .top, spacing: 12) {
+            HStack(alignment: .top, spacing: 18) {
                 if showDelay {
                     TunerGauge(
                         title: loc.t(mainsStage ? "card.delay.mains" : "card.delay.sub"),
                         value: r.map { $0.delayPhaseError / 90 },
-                        tolerance: tolPhase / 90,
-                        readout: r.map { String(format: "%+.2f ms", $0.delayError * 1000) } ?? "—",
+                        tolerance: 10.0 / 90,
+                        readout: r.map { String(format: "%+.2f", $0.delayError * 1000) } ?? "—",
                         instruction: delayInstruction(r, mainsStage: mainsStage),
-                        reliable: reliable,
-                        leftLabel: loc.t("tuner.less"), rightLabel: loc.t("tuner.more"),
-                        large: large,
+                        reliable: reliable, large: large,
                         scaleLabels: scale(fullScale: 250 / fc, format: "%+.1f"),
-                        unit: loc.t("unit.ms"),
-                        telemetry: (r.map { String(format: "%@ Δφ %+.0f°", mainsStage ? "CH·MAIN" : "CH·SUB", $0.delayPhaseError) } ?? "Δφ —",
-                                    String(format: "XO %.0f Hz", fc)))
+                        unit: loc.t("unit.ms"))
                 }
                 if !mainsStage {
                     TunerGauge(
                         title: loc.t("card.level"),
                         value: r.map { $0.levelError / 6 },
                         tolerance: 0.5 / 6,
-                        readout: r.map { String(format: "%+.1f dB", $0.levelError) } ?? "—",
+                        readout: r.map { String(format: "%+.1f", $0.levelError) } ?? "—",
                         instruction: levelInstruction(r),
-                        reliable: reliable,
-                        leftLabel: loc.t("tuner.quieter"), rightLabel: loc.t("tuner.louder"),
-                        large: large,
+                        reliable: reliable, large: large,
                         scaleLabels: scale(fullScale: 6, format: "%+.0f"),
-                        unit: "dB",
-                        telemetry: ("CH·SUB", "TOL ±0.5 dB"))
+                        unit: "dB")
                 }
             }
-            if !showDelay {
-                Text(loc.t("tuner.mainsLater")).font(.system(size: 12)).foregroundStyle(Theme.textMuted)
-            }
-            Text(String(format: loc.t("tuner.scale"), 90 / (fc * 360) * 1000))
-                .font(Theme.mono(10)).foregroundStyle(Theme.textMuted)
         }
     }
 
@@ -126,14 +98,15 @@ struct TunerPanel: View {
     }
 
     private func delayInstruction(_ r: AlignmentTuner.Reading?, mainsStage: Bool) -> String {
-        guard let r else { return "" }
+        guard let r else { return loc.t("tuner.waiting") }
+        if !r.isReliable { return loc.t("tuner.unreliable") }
         if r.delayInTune { return loc.t("tuner.inTune") }
         let more = r.delayError > 0
         return loc.t(mainsStage ? (more ? "tuner.mains.more" : "tuner.mains.less") : (more ? "tuner.sub.more" : "tuner.sub.less"))
     }
 
     private func levelInstruction(_ r: AlignmentTuner.Reading?) -> String {
-        guard let r else { return "" }
+        guard let r else { return loc.t("tuner.waiting") }
         if r.levelInTune { return loc.t("tuner.inTune") }
         return loc.t(r.levelError > 0 ? "tuner.level.up" : "tuner.level.down")
     }
@@ -145,14 +118,14 @@ struct VirtualProcessorPanel: View {
     @EnvironmentObject var loc: Localizer
 
     var body: some View {
-        Panel(title: loc.t("vproc.title"), marking: "SIM DSP") {
-            Text(loc.t("vproc.hint")).font(.system(size: 11)).foregroundStyle(Theme.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
+        VStack(alignment: .leading, spacing: 8) {
             knob(loc.t("vproc.subDelay"), value: $model.simProcessor.subDelayMs, range: 0...20, step: 0.01, format: "%.2f ms")
             knob(loc.t("vproc.mainsDelay"), value: $model.simProcessor.mainsDelayMs, range: 0...20, step: 0.01, format: "%.2f ms")
             knob(loc.t("vproc.subLevel"), value: $model.simProcessor.subGainDB, range: -12...6, step: 0.5, format: "%+.1f dB")
             Toggle(loc.t("vproc.subPolarity"), isOn: $model.simProcessor.subPolarityInverted)
         }
+        .padding(14)
+        .background(RoundedRectangle(cornerRadius: 12).fill(Theme.panel))
     }
 
     private func knob(_ title: String, value: Binding<Double>, range: ClosedRange<Double>, step: Double,

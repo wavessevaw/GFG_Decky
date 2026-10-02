@@ -563,6 +563,23 @@
         }
       }
     },
+    "capture.1.short": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All loudspeakers on"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Включите все громкоговорители"
+          }
+        }
+      }
+    },
     "capture.1.text": {
       "extractionState": "manual",
       "localizations": {
@@ -593,6 +610,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Вся система"
+          }
+        }
+      }
+    },
+    "capture.2.short": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mains muted, subs on"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Топы — мьют, сабы — включены"
           }
         }
       }
@@ -631,6 +665,23 @@
         }
       }
     },
+    "capture.3.short": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subs muted, mains on"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сабы — мьют, топы — включены"
+          }
+        }
+      }
+    },
     "capture.3.text": {
       "extractionState": "manual",
       "localizations": {
@@ -665,6 +716,23 @@
         }
       }
     },
+    "capture.5.short": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings entered, everything on"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Настройки введены, всё включено"
+          }
+        }
+      }
+    },
     "capture.5.text": {
       "extractionState": "manual",
       "localizations": {
@@ -694,7 +762,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Проверочный замер"
+            "value": "Проверка"
           }
         }
       }
@@ -1120,6 +1188,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Найти задержку"
+          }
+        }
+      }
+    },
+    "delay.find.short": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Find"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Найти"
           }
         }
       }
@@ -1685,6 +1770,91 @@
         }
       }
     },
+    "eq.pointCount.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Points"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Точек"
+          }
+        }
+      }
+    },
+    "eq.points.done": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All points measured"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Все точки измерены"
+          }
+        }
+      }
+    },
+    "eq.points.info": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Measure the points shown on the map, spread over the listening area. A point with low quality or clipping is rejected — just repeat it."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Обойдите точки по схеме, равномерно по зоне прослушивания. Точка с низким качеством или клиппингом не принимается — просто повторите её."
+          }
+        }
+      }
+    },
+    "eq.points.point": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Point %ld of %ld"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Точка %ld из %ld"
+          }
+        }
+      }
+    },
+    "eq.points.subtitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Microphone at ear height"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Микрофон — на высоте ушей"
+          }
+        }
+      }
+    },
     "eq.points.text": {
       "extractionState": "manual",
       "localizations": {
@@ -1787,6 +1957,23 @@
         }
       }
     },
+    "eq.tune.reference.short": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listens 6 s first — enter nothing yet"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сначала 6 с слушает — пока ничего не вводите"
+          }
+        }
+      }
+    },
     "eq.tune.start": {
       "extractionState": "manual",
       "localizations": {
@@ -1800,6 +1987,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Запустить тюнер EQ"
+          }
+        }
+      }
+    },
+    "eq.tune.subtitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Band by band, by the needle"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Полоса за полосой, по стрелке"
           }
         }
       }
@@ -1827,13 +2031,47 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enter the EQ by the needles"
+            "value": "Enter the EQ"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Введите EQ по стрелкам"
+            "value": "Введите EQ"
+          }
+        }
+      }
+    },
+    "eq.verify.done": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "EQ result"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Результат EQ"
+          }
+        }
+      }
+    },
+    "eq.verify.point": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check: point %ld of %ld"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Проверка: точка %ld из %ld"
           }
         }
       }
@@ -1906,6 +2144,40 @@
         }
       }
     },
+    "export.text.short": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filters TXT"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Фильтры TXT"
+          }
+        }
+      }
+    },
+    "finished.subtitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings and result"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Настройки и результат"
+          }
+        }
+      }
+    },
     "finished.text": {
       "extractionState": "manual",
       "localizations": {
@@ -1929,13 +2201,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Setup complete"
+            "value": "Done"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Настройка завершена"
+            "value": "Готово"
           }
         }
       }
@@ -2048,13 +2320,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bad — check the group is on and the room is quiet"
+            "value": "Bad — check group and silence"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Плохо — проверьте, что группа включена и в зале тихо"
+            "value": "Плохо — проверьте группу и тишину"
           }
         }
       }
@@ -2065,13 +2337,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Clipping — turn the mic preamp down"
+            "value": "Clipping — lower the mic gain"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Клиппинг — уменьшите усиление микрофона"
+            "value": "Клиппинг — убавьте микрофон"
           }
         }
       }
@@ -2082,7 +2354,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Good — ready to measure"
+            "value": "Good — ready"
           }
         },
         "ru": {
@@ -2099,13 +2371,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Weak — quieter room or louder signal"
+            "value": "Weak — quieter or louder"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Слабо — тише в зале или громче сигнал"
+            "value": "Слабо — тише или громче"
           }
         }
       }
@@ -2167,13 +2439,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enough above the room noise"
+            "value": "Enough"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Достаточно выше шума зала"
+            "value": "Достаточно"
           }
         }
       }
@@ -2184,13 +2456,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Too close to the room noise — raise the level"
+            "value": "Too low — raise the level"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Слишком близко к шуму зала — поднимите уровень"
+            "value": "Мало — поднимите уровень"
           }
         }
       }
@@ -2201,13 +2473,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Run auto level first"
+            "value": "Run auto level"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Сначала запустите автоуровень"
+            "value": "Нужен автоуровень"
           }
         }
       }
@@ -2331,6 +2603,23 @@
         }
       }
     },
+    "group.mains.tag": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TOP"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ТОП"
+          }
+        }
+      }
+    },
     "group.muted": {
       "extractionState": "manual",
       "localizations": {
@@ -2395,6 +2684,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Сабы"
+          }
+        }
+      }
+    },
+    "group.subs.tag": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SUB"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "САБ"
           }
         }
       }
@@ -2705,6 +3011,23 @@
         }
       }
     },
+    "mode.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mode"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Режим"
+          }
+        }
+      }
+    },
     "mode.wizard": {
       "extractionState": "manual",
       "localizations": {
@@ -2786,6 +3109,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Розовый шум (случайный)"
+          }
+        }
+      }
+    },
+    "noise.short": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noise"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Шум"
           }
         }
       }
@@ -2926,6 +3266,23 @@
         }
       }
     },
+    "prep.change": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Изменить"
+          }
+        }
+      }
+    },
     "prep.checklist": {
       "extractionState": "manual",
       "localizations": {
@@ -2973,6 +3330,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Задержка системы"
+          }
+        }
+      }
+    },
+    "prep.delay.bad": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not reliable"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ненадёжно"
           }
         }
       }
@@ -3062,6 +3436,23 @@
         }
       }
     },
+    "prep.info": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Put the measurement microphone at the main listening position, at ear height, pointing at the system. Start the audio, run auto level (5 s of silence, then a slow rise) and find the delay with all loudspeakers on."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Поставьте измерительный микрофон в основную точку прослушивания на высоте ушей, направив на систему. Запустите аудио, затем автоуровень (5 с тишины, потом плавный подъём) и найдите задержку при включённых громкоговорителях."
+          }
+        }
+      }
+    },
     "prep.knownCrossover": {
       "extractionState": "manual",
       "localizations": {
@@ -3109,6 +3500,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "5 с тишины, затем шум плавно поднимется до безопасного рабочего уровня."
+          }
+        }
+      }
+    },
+    "prep.level.noise": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Silence…"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Тишина…"
+          }
+        }
+      }
+    },
+    "prep.level.raising": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rising…"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Подъём…"
           }
         }
       }
@@ -3215,6 +3640,91 @@
         }
       }
     },
+    "prep.subtitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Microphone at the listening position"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Микрофон — в точку прослушивания"
+          }
+        }
+      }
+    },
+    "prep.sum.fast": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "fast mode"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "быстрый режим"
+          }
+        }
+      }
+    },
+    "prep.sum.nosub": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No subwoofers"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Без сабвуферов"
+          }
+        }
+      }
+    },
+    "prep.sum.sub": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subwoofers"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сабвуферы"
+          }
+        }
+      }
+    },
+    "prep.sum.xoAuto": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "XO auto"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Раздел авто"
+          }
+        }
+      }
+    },
     "prep.system": {
       "extractionState": "manual",
       "localizations": {
@@ -3255,13 +3765,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Prepare the measurement"
+            "value": "Preparation"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Подготовка к замеру"
+            "value": "Подготовка"
           }
         }
       }
@@ -3572,6 +4082,23 @@
         }
       }
     },
+    "report.pdf.short": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Report PDF"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Отчёт PDF"
+          }
+        }
+      }
+    },
     "report.png": {
       "extractionState": "manual",
       "localizations": {
@@ -3585,6 +4112,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Экспорт отчёта (PNG)…"
+          }
+        }
+      }
+    },
+    "report.png.short": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PNG"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PNG"
           }
         }
       }
@@ -3657,6 +4201,23 @@
         }
       }
     },
+    "results.ambiguous.short": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ambiguous solution — better repeat from another mic position"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Решение неоднозначно — лучше повторить с другой точки"
+          }
+        }
+      }
+    },
     "results.applied": {
       "extractionState": "manual",
       "localizations": {
@@ -3721,6 +4282,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ожидаемый результат"
+          }
+        }
+      }
+    },
+    "results.subtitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn the knobs until everything is green"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Крутите ручки, пока всё не станет зелёным"
           }
         }
       }
@@ -3810,6 +4388,40 @@
         }
       }
     },
+    "session.save.short": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Session"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сессия"
+          }
+        }
+      }
+    },
+    "settings.done": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Готово"
+          }
+        }
+      }
+    },
     "settings.language": {
       "extractionState": "manual",
       "localizations": {
@@ -3823,6 +4435,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "Язык"
+          }
+        }
+      }
+    },
+    "settings.open": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audio and calibration…"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Звук и калибровка…"
+          }
+        }
+      }
+    },
+    "settings.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audio and calibration"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Звук и калибровка"
           }
         }
       }

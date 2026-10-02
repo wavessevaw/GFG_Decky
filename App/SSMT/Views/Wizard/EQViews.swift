@@ -1,7 +1,7 @@
 import SSMTCore
 import SwiftUI
 
-/// Step 6 (zone points) and step 8 (verification points): one point at a time, tuner-style quality needle.
+/// Step 6 (zone points) and step 8 (verification points): one point at a time, quality needle.
 struct EQPointsView: View {
     @EnvironmentObject var model: AppModel
     @EnvironmentObject var loc: Localizer
@@ -13,87 +13,86 @@ struct EQPointsView: View {
     private var complete: Bool { done >= total }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            InstructionHeader(marking: verifying ? "STEP 8 · EQ CHECK" : "STEP 6 · ZONE",
-                              title: loc.t(verifying ? "eq.verify.title" : "eq.points.title"),
-                              text: complete ? "" : loc.t("eq.points.text", done + 1, total))
-            if !verifying && done == 0 { targetPicker }
-            HStack(alignment: .top, spacing: 12) {
-                PointMap(total: total, done: done, qualities: qualities)
-                SignalQualityGauge(band: 40...16000)
+        StepScaffold(title: title, subtitle: complete ? "" : loc.t("eq.points.subtitle"), info: loc.t("eq.points.info")) {
+            VStack(spacing: 22) {
+                if verifying && complete {
+                    EQResultGauges()
+                } else {
+                    HStack(alignment: .top, spacing: 18) {
+                        PointMap(total: total, done: done, qualities: qualities).frame(width: 300)
+                        SignalQualityGauge(band: 40...16000)
+                    }
+                    if model.wizardCaptureRunning, let p = model.snapshot?.capture {
+                        ProgressView(value: p.fraction).tint(Theme.closeness(p.fraction)).frame(maxWidth: 480)
+                    }
+                    if let acc = model.lastAcceptance, case .rejected(let reasons) = acc {
+                        Text(loc.t("eq.point.rejected") + " " + reasons.map { loc.t("reason.\($0.rawValue)") }.joined(separator: " "))
+                            .font(.system(size: 13)).foregroundStyle(Theme.statusError)
+                    }
+                    HStack(spacing: 18) {
+                        if !verifying { targetMenu }
+                        if model.isSimulation && !complete {
+                            QuietButton(title: loc.t("sim.movePoint", done + 1), icon: "wand.and.stars") { model.simulateMoveToNextPoint() }
+                        }
+                    }
+                }
             }
+        } actions: {
             if verifying && complete {
-                EQResultGauges()
-            } else if !complete {
-                if model.isSimulation {
-                    Button(loc.t("sim.movePoint", done + 1)) { model.simulateMoveToNextPoint() }.buttonStyle(SSMTButtonStyle())
-                }
-                captureRow
-            }
-            if let acc = model.lastAcceptance, case .rejected(let reasons) = acc {
-                HazardNotice(text: loc.t("eq.point.rejected") + " " + reasons.map { loc.t("reason.\($0.rawValue)") }.joined(separator: " "),
-                             color: Theme.statusError)
-            }
-            HStack(spacing: 12) {
-                Button(loc.t("wizard.back")) { model.wizardBack() }.buttonStyle(SSMTButtonStyle())
-                if !verifying {
-                    WizardPrimaryButton(title: loc.t("eq.compute"), systemImage: "slider.horizontal.3",
-                                        enabled: model.wizard.canComputeEQ && !model.wizardCaptureRunning) {
-                        model.wizardComputeEQ()
-                    }
-                } else if complete {
+                ActionRow(primaryTitle: loc.t("eq.finish"), primaryIcon: "flag.checkered", primaryAction: { model.wizardFinish() }) {
+                    QuietButton(title: loc.t("wizard.back"), icon: "chevron.left") { model.wizardBack() }
                     if model.wizard.canIterateEQ {
-                        Button(loc.t("eq.iterate")) { model.wizardIterateEQ() }.buttonStyle(SSMTButtonStyle())
+                        QuietButton(title: loc.t("eq.iterate"), icon: "arrow.triangle.2.circlepath") { model.wizardIterateEQ() }
                     }
-                    WizardPrimaryButton(title: loc.t("eq.finish"), systemImage: "flag.checkered") { model.wizardFinish() }
                 }
-            }
-            if verifying && complete && !model.wizard.canIterateEQ {
-                Text(loc.t("eq.iterationLimit")).font(.system(size: 12)).foregroundStyle(Theme.textMuted)
+            } else if complete {
+                ActionRow(primaryTitle: loc.t("eq.compute"), primaryIcon: "slider.horizontal.3",
+                          primaryAction: { model.wizardComputeEQ() }) {
+                    QuietButton(title: loc.t("wizard.back"), icon: "chevron.left") { model.wizardBack() }
+                }
+            } else {
+                ActionRow(primaryTitle: model.wizardCaptureRunning ? loc.t("action.cancel") : loc.t("eq.capturePoint", done + 1),
+                          primaryIcon: model.wizardCaptureRunning ? "xmark" : "record.circle",
+                          primaryEnabled: model.isRunning,
+                          primaryAction: { model.wizardCaptureRunning ? model.wizardCancelCapture() : model.wizardCapture() }) {
+                    QuietButton(title: loc.t("wizard.back"), icon: "chevron.left") { model.wizardBack() }
+                    if !verifying && model.wizard.canComputeEQ {
+                        QuietButton(title: loc.t("eq.compute"), icon: "slider.horizontal.3") { model.wizardComputeEQ() }
+                    }
+                }
+                .keyboardShortcut(.return, modifiers: [])
             }
         }
+    }
+
+    private var title: String {
+        if verifying && complete { return loc.t("eq.verify.done") }
+        if complete { return loc.t("eq.points.done") }
+        return loc.t(verifying ? "eq.verify.point" : "eq.points.point", done + 1, total)
     }
 
     private var qualities: [CaptureQuality] {
         (verifying ? model.wizard.eqVerificationPoints : model.wizard.eqPoints).map(\.assessment.quality)
     }
 
-    private var captureRow: some View {
-        let p = model.snapshot?.capture
-        return HStack(spacing: 12) {
-            if model.wizardCaptureRunning {
-                ProgressView(value: p?.fraction ?? 0).tint(Theme.closeness(p?.fraction ?? 0)).frame(maxWidth: .infinity)
-                Text(p.map { String(format: "%.0f / %.0f s", $0.elapsed, $0.duration) } ?? "").font(Theme.mono(14))
-                Button(loc.t("action.cancel")) { model.wizardCancelCapture() }.buttonStyle(SSMTButtonStyle())
-            } else {
-                WizardPrimaryButton(title: loc.t("eq.capturePoint", done + 1), systemImage: "record.circle",
-                                    enabled: model.isRunning) { model.wizardCapture() }
-                    .keyboardShortcut(.return, modifiers: [])
+    private var targetMenu: some View {
+        Menu {
+            ForEach(TargetCurve.Preset.allCases.filter { $0 != .custom }, id: \.self) { p in
+                Button(loc.t("target.\(p.rawValue)")) { model.wizard.configuration.target = .preset(p) }
             }
+            Divider()
+            Button(loc.t("target.editor") + "…") { editingTarget = true }
+            Divider()
+            Picker(loc.t("eq.pointCount.title"), selection: $model.wizard.configuration.eqPointCount) {
+                ForEach(3...9, id: \.self) { Text("\($0)").tag($0) }
+            }
+        } label: {
+            Text(loc.t("eq.target") + ": " + loc.t("target.\(model.wizard.configuration.target.preset.rawValue)"))
+                .font(Theme.label(13))
         }
-    }
-
-    private var targetPicker: some View {
-        Panel(title: loc.t("eq.target"), marking: "TGT") {
-            HStack {
-                Picker("", selection: Binding(get: { model.wizard.configuration.target.preset },
-                                              set: { p in
-                                                  if p == .custom { editingTarget = true } else { model.wizard.configuration.target = .preset(p) }
-                                              })) {
-                    ForEach(TargetCurve.Preset.allCases, id: \.self) {
-                        Text(loc.t("target.\($0.rawValue)")).tag($0)
-                    }
-                }
-                .labelsHidden().pickerStyle(.segmented)
-                Button { editingTarget = true } label: { Image(systemName: "slider.horizontal.3") }
-                    .buttonStyle(SSMTButtonStyle())
-                    .help(loc.t("target.editor"))
-            }
-            .sheet(isPresented: $editingTarget) { TargetEditorView() }
-            Stepper(value: $model.wizard.configuration.eqPointCount, in: 3...9) {
-                Text(loc.t("eq.pointCount", model.wizard.configuration.eqPointCount)).font(Theme.label(12))
-            }
-        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .sheet(isPresented: $editingTarget) { TargetEditorView() }
     }
 }
 
@@ -105,7 +104,8 @@ struct PointMap: View {
     var qualities: [CaptureQuality]
 
     var body: some View {
-        Panel(title: loc.t("eq.map"), marking: "\(done)/\(total)") {
+        VStack(spacing: 8) {
+            Text(loc.t("eq.map").uppercased()).font(Theme.label(11)).tracking(1.6).foregroundStyle(Theme.textMuted)
             Canvas { ctx, size in
                 // Stage with two mains and the sub.
                 let stage = CGRect(x: size.width * 0.15, y: 4, width: size.width * 0.7, height: 16)
@@ -146,7 +146,8 @@ struct PointMap: View {
                              at: p)
                 }
             }
-            .frame(height: 170)
+            .frame(height: 200)
+            .background(RoundedRectangle(cornerRadius: 14).fill(Theme.panel))
         }
     }
 }
@@ -167,122 +168,113 @@ struct EQResultGauges: View {
                     let after = s.after ?? s.before
                     TunerGauge(title: loc.t("gauge.deviation"),
                                value: 1 - after.rmsDeviationDB / 6, mode: .oneSided, tolerance: 1 - 1.5 / 6,
-                               readout: String(format: "±%.1f dB", after.rmsDeviationDB),
+                               readout: String(format: "±%.1f", after.rmsDeviationDB),
                                instruction: String(format: loc.t("gauge.before"), s.before.rmsDeviationDB),
                                large: model.stageMode,
-                               scaleLabels: ["6", "4.5", "3", "1.5", "0"], unit: "dB",
-                               telemetry: ("63 Hz–12.5k", "TARGET ≤1.5"))
+                               scaleLabels: ["6", "", "3", "", "0"], unit: "dB")
                     TunerGauge(title: loc.t("gauge.score"),
                                value: Double(after.score) / 100, mode: .oneSided, tolerance: 0.8,
                                readout: "\(after.score)",
                                instruction: String(format: loc.t("gauge.beforeScore"), s.before.score),
                                large: model.stageMode,
-                               scaleLabels: ["0", "25", "50", "75", "100"],
-                               telemetry: ("SCORE", "TARGET ≥80"))
+                               scaleLabels: ["0", "", "50", "", "100"])
                 }
-                Text(loc.t("gauge.score.note")).font(.system(size: 11)).foregroundStyle(Theme.textMuted)
+                HStack { Spacer(); InfoButton(text: loc.t("gauge.score.note")) }
             }
         }
     }
 }
 
-/// Step 7: enter the EQ band by band, guided by needles.
+/// Step 7: enter the EQ band by band. Left: compact band list with LED bars. Right: the selected
+/// band's instrument. Everything else (curves, simulation, notes) is collapsed.
 struct EQTuningView: View {
     @EnvironmentObject var model: AppModel
     @EnvironmentObject var loc: Localizer
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            InstructionHeader(marking: "STEP 7 · EQ TUNE", title: loc.t("eq.tune.title"), text: loc.t("eq.tune.text"))
+        StepScaffold(title: loc.t("eq.tune.title"), subtitle: loc.t("eq.tune.subtitle"), info: loc.t("eq.tune.text")) {
             if let r = model.wizard.eqResult {
-                if r.filters.isEmpty {
-                    HazardNotice(text: loc.t("eq.nothingToDo"), color: Theme.statusGood)
-                }
-                notCorrectable(r)
-                HStack(alignment: .top, spacing: 12) {
-                    bandList(r)
+                VStack(spacing: 22) {
+                    if r.filters.isEmpty {
+                        Text(loc.t("eq.nothingToDo")).font(.system(size: 15)).foregroundStyle(Theme.statusGood)
+                    } else {
+                        HStack(alignment: .top, spacing: 20) {
+                            bandList(r).frame(width: 380)
+                            VStack(spacing: 14) {
+                                if model.eqTunerReady {
+                                    bandGauge(r)
+                                    overallLine
+                                } else {
+                                    startTuner
+                                }
+                            }
+                        }
+                    }
                     VStack(spacing: 12) {
-                        if model.eqTunerReady {
-                            bandGauge(r)
-                            overallGauge
-                        } else {
-                            startPanel
+                        if model.isSimulation {
+                            Collapsible(title: loc.t("vproc.title")) { simulationPanel(r) }
+                        }
+                        Collapsible(title: loc.t("eq.curves")) {
+                            ComparisonPlotView(curves: curves(r), band: r.workingRange, range: 20...20000, absolute: true)
+                                .frame(height: 200)
                         }
                     }
                 }
-                Panel(title: loc.t("eq.curves"), marking: "PLAN / LIVE") {
-                    ComparisonPlotView(curves: curves(r), band: r.workingRange, range: 20...20000, absolute: true)
-                        .frame(height: 200)
-                }
-                if model.isSimulation { simulationPanel(r) }
-                HStack(spacing: 12) {
-                    Button(loc.t("wizard.back")) { model.stopEQTuner(); model.wizardBack() }.buttonStyle(SSMTButtonStyle())
-                    Button(loc.t("export.copy")) { model.copyExportToClipboard() }.buttonStyle(SSMTButtonStyle())
-                    WizardPrimaryButton(title: loc.t((model.eqTunerReading?.allInTune ?? false) ? "eq.tune.allSet" : "eq.tune.entered"),
-                                        systemImage: "checkmark.seal.fill") {
-                        model.wizardBeginEQVerification()
-                    }
-                }
+            }
+        } actions: {
+            ActionRow(primaryTitle: loc.t((model.eqTunerReading?.allInTune ?? false) ? "eq.tune.allSet" : "eq.tune.entered"),
+                      primaryIcon: "checkmark", primaryAction: { model.wizardBeginEQVerification() }) {
+                QuietButton(title: loc.t("wizard.back"), icon: "chevron.left") { model.stopEQTuner(); model.wizardBack() }
+                QuietButton(title: loc.t("export.copy"), icon: "doc.on.doc") { model.copyExportToClipboard() }
             }
         }
         .onDisappear { model.stopEQTuner() }
     }
 
-    private var startPanel: some View {
-        Panel(title: loc.t("tuner.title"), marking: "REF") {
-            Text(loc.t("eq.tune.reference")).font(.system(size: 13)).foregroundStyle(Theme.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
+    private var startTuner: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "tuningfork").font(.system(size: 34)).foregroundStyle(Theme.textMuted)
             if model.eqReferenceCapturing {
-                HStack { ProgressView().controlSize(.small); Text(loc.t("tuner.waiting")).font(.system(size: 12)) }
+                ProgressView().controlSize(.small)
+                Text(loc.t("tuner.waiting")).font(.system(size: 13)).foregroundStyle(Theme.textSecondary)
             } else {
-                WizardPrimaryButton(title: loc.t("eq.tune.start"), systemImage: "tuningfork", enabled: model.isRunning) {
-                    model.startEQTuner()
-                }
+                Button(loc.t("eq.tune.start")) { model.startEQTuner() }
+                    .buttonStyle(SSMTButtonStyle(kind: .primary))
+                    .disabled(!model.isRunning)
+                Text(loc.t("eq.tune.reference.short")).font(.system(size: 12)).foregroundStyle(Theme.textMuted)
             }
         }
+        .frame(maxWidth: .infinity, minHeight: 300)
+        .background(RoundedRectangle(cornerRadius: 14).fill(Theme.panel))
     }
 
     private func bandList(_ r: EQResult) -> some View {
-        Panel(title: loc.t("eq.bands"), marking: "\(r.filters.count) PEQ") {
+        VStack(spacing: 4) {
             ForEach(Array(r.filters.enumerated()), id: \.offset) { i, f in
                 let reading = model.eqTunerReading?.bands.first { $0.bandIndex == i }
-                let c = reading.map { closeness($0) }
-                Button {
-                    model.eqSelectedBand = i
-                } label: {
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack(spacing: 8) {
-                            Text("\(i + 1)").font(Theme.mono(12, weight: .bold)).frame(width: 18)
-                            Text(loc.t(f.group == .sub ? "group.subs.short" : "group.mains.short")).font(Theme.label(11))
-                                .foregroundStyle(Theme.textSecondary).frame(width: 44, alignment: .leading)
-                            Text(String(format: "%6.0f Hz", f.frequency)).font(Theme.mono(12))
-                            Text(String(format: "%+5.1f dB", f.gainDB)).font(Theme.mono(12, weight: .semibold))
-                            Text(String(format: "Q %4.2f", f.q)).font(Theme.mono(12))
-                            if f.groupAmbiguous { Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Theme.signalYellow) }
-                            Spacer()
-                        }
-                        HStack {
-                            Spacer().frame(width: 26)
-                            MiniMeter(value: reading.map { $0.remainingGainDB / 6 }, tolerance: 0.5 / 6,
-                                      readout: reading.map { String(format: "%+.1f dB", $0.remainingGainDB) } ?? "—")
-                            Text(c.map { $0 >= 1 ? loc.t("tuner.inTune") : "" } ?? "")
-                                .font(Theme.label(10)).foregroundStyle(Theme.closeness(c ?? 0))
-                        }
+                Button { model.eqSelectedBand = i } label: {
+                    HStack(spacing: 10) {
+                        Text("\(i + 1)").font(Theme.mono(12, weight: .bold)).foregroundStyle(Theme.textMuted).frame(width: 16)
+                        Text(loc.t(f.group == .sub ? "group.subs.tag" : "group.mains.tag"))
+                            .font(Theme.label(9)).tracking(1)
+                            .foregroundStyle(f.group == .sub ? Theme.signalYellow : Theme.textSecondary)
+                            .frame(width: 30)
+                        Text(String(format: "%.0f Hz", f.frequency)).font(Theme.mono(12)).frame(width: 70, alignment: .trailing)
+                        Text(String(format: "%+.1f", f.gainDB)).font(Theme.mono(12, weight: .semibold)).frame(width: 40, alignment: .trailing)
+                        Text(String(format: "Q %.1f", f.q)).font(Theme.mono(11)).foregroundStyle(Theme.textMuted).frame(width: 44, alignment: .trailing)
+                        Spacer(minLength: 4)
+                        MiniLED(value: reading.map { $0.remainingGainDB / 6 }, tolerance: 0.5 / 6)
+                            .frame(width: 70, height: 12)
                     }
-                    .padding(6)
-                    .background(model.eqSelectedBand == i ? Theme.accent.opacity(0.12) : Color.clear)
-                    .overlay(Rectangle().stroke(model.eqSelectedBand == i ? Theme.accent.opacity(0.6) : Color.clear, lineWidth: 1))
+                    .padding(.horizontal, 10).padding(.vertical, 7)
+                    .background(RoundedRectangle(cornerRadius: 8).fill(model.eqSelectedBand == i ? Theme.accent.opacity(0.12) : Color.clear))
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
         }
-        .frame(width: 440)
-    }
-
-    private func closeness(_ b: EQTuner.BandReading) -> Double {
-        let g = abs(b.remainingGainDB), sh = b.shapeErrorDB
-        if b.inTune { return 1 }
-        return max(0, 1 - max((g - 0.5) / 5.5, (sh - 1) / 4))
+        .padding(8)
+        .background(RoundedRectangle(cornerRadius: 14).fill(Theme.panel))
     }
 
     @ViewBuilder private func bandGauge(_ r: EQResult) -> some View {
@@ -293,14 +285,11 @@ struct EQTuningView: View {
                 title: loc.t("eq.band.title", i + 1, f.frequency),
                 value: b.map { $0.remainingGainDB / 6 },
                 tolerance: 0.5 / 6,
-                readout: b.map { String(format: "%+.1f dB", $0.remainingGainDB) } ?? "—",
+                readout: b.map { String(format: "%+.1f", $0.remainingGainDB) } ?? "—",
                 instruction: bandInstruction(b),
                 reliable: (model.eqTunerReading?.confidence ?? 0) >= 0.6,
-                leftLabel: loc.t("tuner.cut"), rightLabel: loc.t("tuner.boost"),
                 large: model.stageMode,
-                scaleLabels: ["−6", "−3", "0", "+3", "+6"], unit: "dB",
-                telemetry: (String(format: "PEQ %ld · %@", i + 1, loc.t(f.group == .sub ? "group.subs" : "group.mains").uppercased()),
-                            String(format: "Fc %.0f · Q %.2f", f.frequency, f.q)))
+                scaleLabels: ["−6", "", "0", "", "+6"], unit: "dB")
         }
     }
 
@@ -311,15 +300,16 @@ struct EQTuningView: View {
         return String(format: loc.t(b.remainingGainDB < 0 ? "eq.band.cutMore" : "eq.band.boostMore"), abs(b.remainingGainDB))
     }
 
-    private var overallGauge: some View {
+    /// One line instead of a second instrument: lamp + "EQ vs plan ±0.4 dB".
+    private var overallLine: some View {
         let e = model.eqTunerReading?.overallErrorDB
-        return TunerGauge(title: loc.t("eq.overall"), value: e.map { 1 - $0 / 4 }, mode: .oneSided,
-                          tolerance: 1 - 0.75 / 4,
-                          readout: e.map { String(format: "±%.1f dB", $0) } ?? "—",
-                          instruction: e.map { $0 <= 0.75 ? loc.t("tuner.inTune") : loc.t("eq.overall.hint") } ?? loc.t("tuner.waiting"),
-                          large: model.stageMode,
-                          scaleLabels: ["4", "3", "2", "1", "0"], unit: "dB",
-                          telemetry: ("EQ vs PLAN", "TARGET ≤0.75"))
+        let c = e.map { $0 <= 0.75 ? 1 : max(0, 1 - ($0 - 0.75) / 3) } ?? 0
+        return HStack(spacing: 10) {
+            IndicatorLamp(color: e == nil ? Theme.textMuted : Theme.closeness(c), size: 14)
+            Text(loc.t("eq.overall")).font(Theme.label(12)).foregroundStyle(Theme.textSecondary)
+            Text(e.map { String(format: "±%.1f dB", $0) } ?? "—").font(Theme.mono(13, weight: .semibold))
+                .foregroundStyle(e == nil ? Theme.textMuted : Theme.closeness(c))
+        }
     }
 
     private func curves(_ r: EQResult) -> [ComparisonPlotView.Curve] {
@@ -334,19 +324,8 @@ struct EQTuningView: View {
         return c
     }
 
-    private func notCorrectable(_ r: EQResult) -> some View {
-        let dips = r.uncorrectable.filter { $0 == .narrowDip }.count
-        let spread = r.uncorrectable.filter { $0 == .highSpread }.count
-        return Group {
-            if dips + spread > 0 {
-                HazardNotice(text: loc.t("eq.notCorrectable"))
-            }
-        }
-    }
-
     private func simulationPanel(_ r: EQResult) -> some View {
-        Panel(title: loc.t("vproc.title"), marking: "SIM DSP") {
-            Text(loc.t("vproc.eq.hint")).font(.system(size: 11)).foregroundStyle(Theme.textSecondary)
+        VStack(alignment: .leading, spacing: 6) {
             ForEach(Array(r.filters.enumerated()), id: \.offset) { i, f in
                 let entered = model.simulatedBandEntered(f)
                 HStack {
@@ -359,6 +338,32 @@ struct EQTuningView: View {
                         Text(String(format: "%+.1f dB", e.gainDB)).font(Theme.mono(12)).frame(width: 64)
                     }
                 }
+            }
+        }
+        .padding(14)
+        .background(RoundedRectangle(cornerRadius: 12).fill(Theme.panel))
+    }
+}
+
+/// Compact LED bar (no needle, no digits) for list rows.
+struct MiniLED: View {
+    var value: Double?
+    var tolerance: Double
+    var segments = 11
+
+    var body: some View {
+        Canvas { ctx, size in
+            let v = min(max(value ?? 0, -1), 1)
+            let w = size.width / CGFloat(segments)
+            func close(_ p: Double) -> Double {
+                let a = abs(p); return a <= tolerance ? 1 : max(0, 1 - (a - tolerance) / (1 - tolerance))
+            }
+            for i in 0..<segments {
+                let p = -1 + 2 * (Double(i) + 0.5) / Double(segments)
+                let lit = value != nil && ((v >= 0 ? (p >= -0.1 && p <= v) : (p <= 0.1 && p >= v)) || (close(v) >= 1 && abs(p) < 0.1))
+                let rect = CGRect(x: CGFloat(i) * w, y: 0, width: w - 2, height: size.height)
+                ctx.fill(Path(roundedRect: rect, cornerRadius: 1.5),
+                         with: .color(lit ? Theme.closeness(close(p)) : Color(hex: 0x2A2C30)))
             }
         }
     }

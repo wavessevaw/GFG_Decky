@@ -1,71 +1,28 @@
 import SSMTCore
 import SwiftUI
 
-/// Automatic setup wizard: one instruction, one action per screen. No phase/coherence here.
+/// Automatic setup wizard: one instruction, one action per screen.
 struct WizardView: View {
     @EnvironmentObject var model: AppModel
     @EnvironmentObject var loc: Localizer
+    @Binding var showSettings: Bool
 
     var body: some View {
-        VStack(spacing: 14) {
-            StepIndicator(step: model.wizard.step)
-            ScrollView {
-                Group {
-                    switch model.wizard.step {
-                    case .preparation: PreparationStepView()
-                    case .baseline, .subOnly, .mainsOnly: CaptureStepView()
-                    case .verification:
-                        if model.wizard.report == nil { CaptureStepView() } else { AlignmentCheckView() }
-                    case .results: ResultsStepView()
-                    case .eqPoints, .eqVerification: EQPointsView()
-                    case .eqTuning: EQTuningView()
-                    case .finished: FinishedStepView()
-                    }
-                }
-                .frame(maxWidth: 860)
-                .frame(maxWidth: .infinity)
-            }
-        }
-        .padding(16)
-    }
-}
-
-/// Numbered step strip with the active step glowing.
-struct StepIndicator: View {
-    @EnvironmentObject var loc: Localizer
-    var step: WizardStep
-
-    private let steps: [WizardStep] = [.preparation, .baseline, .subOnly, .mainsOnly, .results, .verification,
-                                       .eqPoints, .eqTuning, .eqVerification]
-
-    var body: some View {
-        HStack(spacing: 6) {
-            ForEach(steps, id: \.self) { s in
-                let active = s == step || (step == .finished && s == .eqVerification)
-                let done = s < step
-                HStack(spacing: 8) {
-                    Text("\(s.rawValue)")
-                        .font(Theme.mono(13, weight: .bold))
-                        .foregroundStyle(active ? Color.black : (done ? Theme.accent : Theme.textMuted))
-                        .frame(width: 24, height: 24)
-                        .background(CutCornerShape(cut: 5).fill(active ? Theme.accent : Theme.panelRaised))
-                        .overlay(CutCornerShape(cut: 5).stroke(done ? Theme.accent : Theme.hairlineStrong, lineWidth: 1))
-                        .shadow(color: active ? Theme.accent.opacity(0.6) : .clear, radius: 6)
-                    Text(loc.t("wizard.step.\(s.rawValue)").uppercased())
-                        .font(Theme.label(10)).tracking(0.3)
-                        .foregroundStyle(active ? Theme.textPrimary : (done ? Theme.textSecondary : Theme.textMuted))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                if s != steps.last {
-                    Rectangle().fill(done ? Theme.accent : Theme.hairline).frame(width: 8, height: 1)
+        ScrollView {
+            Group {
+                switch model.wizard.step {
+                case .preparation: PreparationStepView(showSettings: $showSettings)
+                case .baseline, .subOnly, .mainsOnly: CaptureStepView()
+                case .verification:
+                    if model.wizard.report == nil { CaptureStepView() } else { AlignmentCheckView() }
+                case .results: ResultsStepView()
+                case .eqPoints, .eqVerification: EQPointsView()
+                case .eqTuning: EQTuningView()
+                case .finished: FinishedStepView()
                 }
             }
+            .padding(.horizontal, 32)
         }
-        .padding(10)
-        .background(CutCornerShape().fill(Theme.panel))
-        .overlay(CutCornerShape().stroke(Theme.hairline, lineWidth: 1))
     }
 }
 

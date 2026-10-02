@@ -1,47 +1,45 @@
 import SSMTCore
 import SwiftUI
 
-/// Step 5 after the verification capture: tuner gauges for the crossover result.
+/// Step 5 result: verdict, two instruments, advice only when something is wrong.
 struct AlignmentCheckView: View {
     @EnvironmentObject var model: AppModel
     @EnvironmentObject var loc: Localizer
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            if let r = model.wizard.report {
-                InstructionHeader(marking: "STEP 5 · VERIFY", title: loc.t("verdict.\(r.verdict.rawValue)"),
-                                  text: loc.t("verdict.\(r.verdict.rawValue).text"))
-                HStack(alignment: .top, spacing: 12) {
-                    let dip = r.after?.dipDepthDB
-                    TunerGauge(title: loc.t("verify.dip"), value: dip.map { 1 - $0 / 9 }, mode: .oneSided,
-                               tolerance: 1 - 3.0 / 9,
-                               readout: dip.map { String(format: "%.1f dB", $0) } ?? "—",
-                               instruction: r.before.map { String(format: loc.t("gauge.before"), $0.dipDepthDB) } ?? "",
-                               large: model.stageMode,
-                               scaleLabels: ["9", "6.8", "4.5", "2.3", "0"], unit: "dB",
-                               telemetry: (String(format: "XO %.0f Hz", model.wizard.alignment?.crossover ?? 0), "TARGET <3"))
-                    TunerGauge(title: loc.t("verify.predictionError"),
-                               value: r.predictionErrorDB.isFinite ? 1 - r.predictionErrorDB / 4 : 0, mode: .oneSided,
-                               tolerance: 1 - 2.0 / 4,
-                               readout: r.predictionErrorDB.isFinite ? String(format: "±%.1f dB", r.predictionErrorDB) : "—",
-                               instruction: loc.t(r.predictionErrorDB < 2 ? "gauge.matches" : "gauge.differs"),
-                               large: model.stageMode,
-                               scaleLabels: ["4", "3", "2", "1", "0"], unit: "dB",
-                               telemetry: ("RMS Δ", "TARGET <2"))
-                }
-                if r.advice != .none {
-                    HazardNotice(text: loc.t("advice.\(r.advice.rawValue)"),
-                                 color: r.verdict == .checkSettings ? Theme.statusError : Theme.signalYellow)
-                }
-                Panel(title: loc.t("verify.curves"), marking: "A/B") {
-                    ComparisonPlotView(curves: curves, band: model.wizard.alignment?.overlapBand).frame(height: 220)
-                }
-                HStack(spacing: 12) {
-                    Button(loc.t("wizard.back")) { model.wizardBack() }.buttonStyle(SSMTButtonStyle())
-                    Button(loc.t("verify.again")) { model.wizardBeginVerification() }.buttonStyle(SSMTButtonStyle())
-                    WizardPrimaryButton(title: loc.t("wizard.next.eq"), systemImage: "slider.horizontal.3") {
-                        model.wizardBeginEQ()
+        if let r = model.wizard.report {
+            StepScaffold(title: loc.t("verdict.\(r.verdict.rawValue)"), subtitle: loc.t("verdict.\(r.verdict.rawValue).text")) {
+                VStack(spacing: 22) {
+                    HStack(alignment: .top, spacing: 18) {
+                        let dip = r.after?.dipDepthDB
+                        TunerGauge(title: loc.t("verify.dip"), value: dip.map { 1 - $0 / 9 }, mode: .oneSided,
+                                   tolerance: 1 - 3.0 / 9,
+                                   readout: dip.map { String(format: "%.1f", $0) } ?? "—",
+                                   instruction: r.before.map { String(format: loc.t("gauge.before"), $0.dipDepthDB) } ?? "",
+                                   large: model.stageMode,
+                                   scaleLabels: ["9", "", "4.5", "", "0"], unit: "dB")
+                        TunerGauge(title: loc.t("verify.predictionError"),
+                                   value: r.predictionErrorDB.isFinite ? 1 - r.predictionErrorDB / 4 : 0, mode: .oneSided,
+                                   tolerance: 1 - 2.0 / 4,
+                                   readout: r.predictionErrorDB.isFinite ? String(format: "%.1f", r.predictionErrorDB) : "—",
+                                   instruction: loc.t(r.predictionErrorDB < 2 ? "gauge.matches" : "gauge.differs"),
+                                   large: model.stageMode,
+                                   scaleLabels: ["4", "", "2", "", "0"], unit: "dB")
                     }
+                    if r.advice != .none {
+                        Text(loc.t("advice.\(r.advice.rawValue)")).font(.system(size: 14))
+                            .foregroundStyle(r.verdict == .checkSettings ? Theme.statusError : Theme.signalYellow)
+                            .multilineTextAlignment(.center)
+                    }
+                    Collapsible(title: loc.t("verify.curves")) {
+                        ComparisonPlotView(curves: curves, band: model.wizard.alignment?.overlapBand).frame(height: 220)
+                    }
+                }
+            } actions: {
+                ActionRow(primaryTitle: loc.t("wizard.next.eq"), primaryIcon: "slider.horizontal.3",
+                          primaryAction: { model.wizardBeginEQ() }) {
+                    QuietButton(title: loc.t("wizard.back"), icon: "chevron.left") { model.wizardBack() }
+                    QuietButton(title: loc.t("verify.again"), icon: "arrow.counterclockwise") { model.wizardBeginVerification() }
                 }
             }
         }
@@ -59,40 +57,40 @@ struct AlignmentCheckView: View {
     }
 }
 
-/// Final summary: alignment settings, entered EQ, scores and export.
+/// Final summary: settings in one row, two result instruments, export.
 struct FinishedStepView: View {
     @EnvironmentObject var model: AppModel
     @EnvironmentObject var loc: Localizer
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            InstructionHeader(marking: "DONE", title: loc.t("finished.title"), text: loc.t("finished.text"))
-            if !model.wizard.actionCards.isEmpty {
-                HStack(alignment: .top, spacing: 12) {
-                    ForEach(Array(model.wizard.actionCards.enumerated()), id: \.offset) { _, card in
-                        ActionCardView(card: card)
+        StepScaffold(title: loc.t("finished.title"), subtitle: loc.t("finished.subtitle")) {
+            VStack(spacing: 24) {
+                if !model.wizard.actionCards.isEmpty {
+                    HStack(spacing: 10) {
+                        ForEach(Array(model.wizard.actionCards.enumerated()), id: \.offset) { _, card in
+                            ActionCardView(card: card)
+                        }
                     }
                 }
-            }
-            EQResultGauges()
-            Panel(title: loc.t("eq.bands"), marking: "EXPORT") {
-                Text(model.exportText).font(Theme.mono(11)).foregroundStyle(Theme.textPrimary)
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                HStack {
-                    Button(loc.t("export.copy")) { model.copyExportToClipboard() }.buttonStyle(SSMTButtonStyle())
-                    Button(loc.t("export.text")) { model.saveExport(csv: false) }.buttonStyle(SSMTButtonStyle())
-                    Button(loc.t("export.csv")) { model.saveExport(csv: true) }.buttonStyle(SSMTButtonStyle())
+                EQResultGauges()
+                HStack(spacing: 10) {
+                    Button(loc.t("report.pdf.short")) { model.exportReport(pdf: true, localizer: loc) }.buttonStyle(SSMTButtonStyle(kind: .primary))
+                    Button(loc.t("report.png.short")) { model.exportReport(pdf: false, localizer: loc) }.buttonStyle(SSMTButtonStyle())
+                    Button(loc.t("export.text.short")) { model.saveExport(csv: false) }.buttonStyle(SSMTButtonStyle())
+                    Button("CSV") { model.saveExport(csv: true) }.buttonStyle(SSMTButtonStyle())
+                    Button(loc.t("session.save.short")) { model.saveSession() }.buttonStyle(SSMTButtonStyle())
                 }
-                HStack {
-                    Button(loc.t("report.pdf")) { model.exportReport(pdf: true, localizer: loc) }.buttonStyle(SSMTButtonStyle(kind: .primary))
-                    Button(loc.t("report.png")) { model.exportReport(pdf: false, localizer: loc) }.buttonStyle(SSMTButtonStyle())
-                    Button(loc.t("session.save")) { model.saveSession() }.buttonStyle(SSMTButtonStyle())
+                Collapsible(title: loc.t("eq.bands")) {
+                    Text(model.exportText).font(Theme.mono(11)).foregroundStyle(Theme.textPrimary)
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
-            HStack(spacing: 12) {
-                Button(loc.t("wizard.back")) { model.wizardBack() }.buttonStyle(SSMTButtonStyle())
-                Button(loc.t("wizard.restart")) { model.wizardRestart() }.buttonStyle(SSMTButtonStyle())
+        } actions: {
+            HStack(spacing: 18) {
+                QuietButton(title: loc.t("wizard.back"), icon: "chevron.left") { model.wizardBack() }
+                Spacer()
+                QuietButton(title: loc.t("wizard.restart"), icon: "arrow.counterclockwise") { model.wizardRestart() }
             }
         }
     }

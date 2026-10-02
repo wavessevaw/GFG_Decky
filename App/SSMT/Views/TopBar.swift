@@ -1,15 +1,17 @@
 import SSMTCore
 import SwiftUI
 
+/// Minimal top bar: logo · step progress · noise · mini window · menu · STOP.
 struct TopBar: View {
     @EnvironmentObject var model: AppModel
     @EnvironmentObject var loc: Localizer
     var brandNamespace: Namespace.ID? = nil
     var showBrand = true
+    @Binding var showSettings: Bool
     @State private var showAbout = false
 
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 16) {
             Button { showAbout = true } label: {
                 ZStack {
                     if showBrand {
@@ -21,72 +23,67 @@ struct TopBar: View {
             .buttonStyle(.plain)
             .help(loc.t("about.title"))
             .popover(isPresented: $showAbout) { AboutView() }
-            VStack(alignment: .leading, spacing: 0) {
-                Text(loc.t("app.title")).font(Theme.heading(15)).tracking(1.5).foregroundStyle(Theme.textPrimary)
-                Text(loc.t("app.subtitle")).font(Theme.label(9)).tracking(1).foregroundStyle(Theme.textMuted)
+
+            if model.appMode == .wizard {
+                ProgressStrip(step: SSMTCoreStep(index: model.wizard.step.rawValue))
+            } else {
+                Text(loc.t("mode.expert").uppercased()).font(Theme.label(11)).tracking(1.4)
+                    .foregroundStyle(Theme.textSecondary)
             }
-            Rectangle().fill(Theme.hairline).frame(width: 1, height: 26)
-            Picker("", selection: $model.appMode) {
-                Text(loc.t("mode.wizard")).tag(AppMode.wizard)
-                Text(loc.t("mode.expert")).tag(AppMode.expert)
-            }
-            .labelsHidden()
-            .pickerStyle(.segmented)
-            .frame(width: 200)
-            Toggle(loc.t("mode.stage"), isOn: $model.stageMode)
-                .toggleStyle(.button)
-                .help(loc.t("mode.stage.help"))
-            engineStatus
+
             Spacer()
-            if let d = model.delay {
-                VStack(alignment: .trailing, spacing: 0) {
-                    Text(loc.t("delay.locked")).font(Theme.label(9)).foregroundStyle(Theme.textMuted)
-                    Text(String(format: "%.2f ms  ·  %.2f m", d.milliseconds, d.meters(celsius: model.temperatureCelsius)))
-                        .font(Theme.mono(12, weight: .semibold)).foregroundStyle(Theme.textPrimary)
+
+            if let d = model.delay, d.isReliable {
+                Text(String(format: "Δt %.2f ms", d.milliseconds)).font(Theme.mono(11)).foregroundStyle(Theme.textMuted)
+            }
+
+            Button { model.toggleNoise() } label: {
+                HStack(spacing: 6) {
+                    Circle().fill(model.noiseOn ? Theme.accentHot : Theme.textMuted).frame(width: 7, height: 7)
+                        .shadow(color: model.noiseOn ? Theme.accentHot : .clear, radius: 4)
+                    Text(loc.t("noise.short"))
                 }
             }
-            Button {
-                model.toggleNoise()
-            } label: {
-                Label(model.noiseOn ? loc.t("noise.on") : loc.t("noise.start"),
-                      systemImage: model.noiseOn ? "waveform" : "play.fill")
-            }
-            .buttonStyle(SSMTButtonStyle(kind: .primary, active: model.noiseOn))
+            .buttonStyle(SSMTButtonStyle(active: model.noiseOn))
             .keyboardShortcut(.space, modifiers: [])
+            .help(loc.t("noise.toggle"))
 
-            Button {
-                MiniPanelController.shared.toggle()
+            Button { MiniPanelController.shared.toggle() } label: { Image(systemName: "rectangle.on.rectangle") }
+                .buttonStyle(SSMTButtonStyle())
+                .help(loc.t("mini.toggle"))
+
+            Menu {
+                Picker(loc.t("mode.title"), selection: $model.appMode) {
+                    Text(loc.t("mode.wizard")).tag(AppMode.wizard)
+                    Text(loc.t("mode.expert")).tag(AppMode.expert)
+                }
+                .pickerStyle(.inline)
+                Toggle(loc.t("mode.stage"), isOn: $model.stageMode)
+                Divider()
+                if model.appMode == .wizard {
+                    Button(loc.t("settings.open")) { showSettings = true }
+                }
+                Button(loc.t("session.save")) { model.saveSession() }
+                Button(loc.t("session.open")) { model.openSession() }
+                Button(loc.t("report.pdf")) { model.exportReport(pdf: true, localizer: loc) }
             } label: {
-                Image(systemName: "rectangle.on.rectangle")
+                Image(systemName: "gearshape")
             }
-            .buttonStyle(SSMTButtonStyle())
-            .help(loc.t("mini.toggle"))
+            .menuStyle(.borderlessButton)
+            .frame(width: 34)
 
-            Button {
-                model.emergencyStop()
-            } label: {
+            Button { model.emergencyStop() } label: {
                 Label(loc.t("action.stop"), systemImage: "stop.fill")
-                    .font(Theme.heading(model.stageMode ? 26 : 16))
-                    .padding(.horizontal, model.stageMode ? 22 : 10)
+                    .font(Theme.heading(model.stageMode ? 24 : 15))
+                    .padding(.horizontal, model.stageMode ? 20 : 8)
                     .padding(.vertical, model.stageMode ? 6 : 0)
             }
             .buttonStyle(SSMTButtonStyle(kind: .danger))
             .help(loc.t("action.stop.help"))
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 18)
         .padding(.vertical, 10)
-        .background(Theme.panel)
+        .background(Theme.background)
         .overlay(alignment: .bottom) { Rectangle().fill(Theme.hairline).frame(height: 1) }
-    }
-
-    @ViewBuilder private var engineStatus: some View {
-        if model.isRunning {
-            StatusBadge(level: .good, text: loc.t("engine.running"))
-        } else {
-            StatusBadge(level: .idle, text: loc.t("engine.stopped"))
-        }
-        if let s = model.snapshot, s.discontinuities > 0 {
-            StatusBadge(level: .warning, text: loc.t("engine.dropouts"))
-        }
     }
 }

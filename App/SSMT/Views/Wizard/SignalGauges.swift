@@ -20,9 +20,7 @@ struct SignalQualityGauge: View {
             instruction: instruction(q, clipped: clipped),
             large: model.stageMode,
             scaleLabels: ["30", "44", "58", "71", "85"],
-            unit: "%",
-            telemetry: (String(format: "BAND %.0f–%.0fk", band.lowerBound, band.upperBound / 1000),
-                        "AVG \(model.snapshot?.transfer?.averages ?? 0)"))
+            unit: "%")
     }
 
     private var quality: Double? {
@@ -58,8 +56,7 @@ struct SNRGauge: View {
                 ?? loc.t(model.noiseFloor == nil ? "gauge.snr.needNoise" : "tuner.waiting"),
             large: model.stageMode,
             scaleLabels: ["0", "8", "15", "23", "30"],
-            unit: "dB",
-            telemetry: ("SNR 50–12k", "TARGET ≥20"))
+            unit: "dB")
     }
 
     private var liveSNR: Double? {

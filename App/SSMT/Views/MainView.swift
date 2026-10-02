@@ -7,17 +7,20 @@ struct MainView: View {
     var brandNamespace: Namespace.ID? = nil
     var showBrand = true
 
+    @State private var showSettings = false
+
     var body: some View {
         VStack(spacing: 0) {
-            TopBar(brandNamespace: brandNamespace, showBrand: showBrand)
+            TopBar(brandNamespace: brandNamespace, showBrand: showBrand, showSettings: $showSettings)
             HStack(spacing: 0) {
-                if !model.stageMode {
-                    SetupSidebar(expert: model.appMode == .expert)
+                // The setup panel is permanent only in Expert mode; the wizard keeps it in a sheet.
+                if model.appMode == .expert && !model.stageMode {
+                    SetupSidebar(expert: true)
                     Rectangle().fill(Theme.hairline).frame(width: 1)
                 }
                 switch model.appMode {
                 case .wizard:
-                    WizardView()
+                    WizardView(showSettings: $showSettings)
                 case .expert:
                     VStack(spacing: 12) {
                         MeterPanel()
@@ -28,10 +31,26 @@ struct MainView: View {
             }
         }
         .background(Theme.background)
-        .overlay(Scanlines().ignoresSafeArea())
+        .overlay(Scanlines(opacity: 0.02).ignoresSafeArea())
         .preferredColorScheme(.dark)
         .tint(Theme.accent)
         .frame(minWidth: 1100, minHeight: 720)
+        .sheet(isPresented: $showSettings) {
+            VStack(spacing: 0) {
+                HStack {
+                    Text(loc.t("settings.title")).font(Theme.heading(18))
+                    Spacer()
+                    Button(loc.t("settings.done")) { showSettings = false }.buttonStyle(SSMTButtonStyle(kind: .primary))
+                }
+                .padding(16)
+                SetupSidebar(expert: false)
+            }
+            .frame(width: 340, height: 640)
+            .background(Theme.background)
+            .environmentObject(model)
+            .environmentObject(loc)
+            .preferredColorScheme(.dark)
+        }
     }
 
     private var graphs: some View {
