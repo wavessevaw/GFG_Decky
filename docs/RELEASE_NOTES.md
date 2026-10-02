@@ -1,45 +1,33 @@
-# SSMT 1.0.0 — SoundSolution Multi Tool
+# SSMT 1.1.0 — Input list и стейдж-план · Input list and stage plan
 
 ## Русский
 
-**Автоматическая настройка звуковой системы** — функция №1 SoundSolution Multi Tool.
+**Новое: функция №2 — конструктор input list и стейдж-плана.** В боковой панели переключатель
+«Настройка системы / Input list и сцена».
 
-- **Мастер из 5 этапов:** подготовка (чек-лист: звуковая карта, микрофон, автоуровень, задержка тракта) →
-  замеры (вся система, только сабы, только сателлиты) → склейка сабов и сателлитов по фазе (задержка,
-  полярность, уровень) с живыми стрелками-тюнерами → EQ по зоне прослушивания с вводом полос по стрелке →
-  итог, отчёт PDF/PNG, экспорт фильтров TXT/CSV, сессия.
-- **Надёжная склейка:** совпадение фаз по всей полосе перекрытия, защита от «проскока» на период по времени
-  прихода звука, предупреждение о неоднозначных решениях, проверочный замер «прогноз ↔ факт».
-- **EQ:** полосы на стандартных частотах ISO 1/3 октавы (или 1/6, или любые), по возрастанию; только мягкие
-  подъёмы, провалы и интерференция не «лечатся».
-- **Микрофоны:** ваши файлы калибровки и 22 встроенных типовых профиля (Shure SM81, Soyuz 011/013 FET,
-  Soyuz 022 Bomblet, AKG C414 XLII и др., точность ±2–3 дБ).
-- **Пульт / процессор:** профиль с шагом и максимумом задержки, числом полос PEQ на выходах сабов и сателлитов,
-  шагом усиления и шириной в Q или октавах; пресеты Behringer X32 / Midas M32, Allen & Heath SQ и dLive, Midas HD96, Yamaha CL, TF и RIVAGE PM
-  (только подтверждённые значения) и «Свой пульт».
-- **Звуковые карты:** любые через Core Audio (USB, Thunderbolt, Dante/AVB), вход и выход на разных устройствах.
-- **Интерфейс:** «Мастер» / «Эксперт», «Сцена» (крупные цифры), мини-окно, STOP / Esc, русский и английский;
-  «Облегчённая графика» для старых Mac (включается автоматически на Intel).
-- **Симуляция:** весь мастер можно пройти без оборудования.
+- **Шоу:** артист, мероприятие, площадка, дата, инженер, контакт, заметки — в шапке каждого листа.
+- **Каналы:** добавить, дублировать, переместить (кнопками или перетаскиванием), удалить, перенумеровать
+  (ручные пропуски сохраняются); шаблоны групп (ударные 10/4, бас, гитары, клавиши, вокал, бэки,
+  фонограмма, перкуссия, зальные, толкбэк); стереопара L/R; автозаполнение входов стейджбокса;
+  подсказки моделей микрофонов и автоматическое +48 V для конденсаторов и активных DI; цвет группы;
+  проверки (повтор номера или входа, пустой источник).
+- **Мониторные миксы** (монитор, ушной, сайдфилл, драм-филл, стерео) и сводка **«Что выдать на сцену»**
+  (микрофоны, DI, стойки, +48 V).
+- **Стейдж-план:** 18 простых векторных символов оборудования и текст; перетаскивание с привязкой 25 см,
+  поворот, размер, подписи и «каналы/микс», слои, сдвиг стрелками; размер сцены в метрах.
+- **Экспорт:** PDF (A4 альбом, чёрным по белому: каналы, миксы и сводка, сцена), PNG (input list, сцена),
+  CSV (каналы, миксы). Файлы `.ssmtinput`, автосохранение, отмена ⌘Z.
 
-**Что нового по сравнению с 0.9.x:** анализ звука вдвое быстрее; показания тюнеров не нагружают интерфейс;
-программа корректно останавливается, если звуковая карта пропала (раньше замер мог «зависнуть»);
-сообщения об ошибках видны на любом экране; уборка неиспользуемого кода.
-
-Приложение не подписано Apple Developer ID — см. установку ниже.
+Функция №1 (автоматическая настройка системы) — без изменений по сравнению с 1.0.0.
 
 ## English
 
-**Automatic sound system setup** — function #1 of SoundSolution Multi Tool: a 5-stage wizard (prepare →
-captures → sub/satellite phase alignment with live needle tuners → zone-averaged EQ entered band by band →
-report, filter export, session); robust alignment (phase match over the overlap band, cycle-slip
-rejection by arrival time, ambiguity warning, verification capture); EQ bands on ISO 1/3-octave
-frequencies in ascending order; microphone correction (your files + 22 typical profiles, ±2–3 dB); any
-Core Audio interface; console/processor profiles (delay limits, PEQ bands per output, gain step, width as Q or octaves); Wizard/Expert/Stage modes, mini window, Russian and English, reduced graphics for
-older Macs; full simulation.
-
-New since 0.9.x: twice-as-fast analysis, tuner readings off the main thread, a clean stop when the audio
-interface disappears, error messages visible on every screen, dead-code cleanup.
+**New: function #2 — input list and stage plan builder** (sidebar switch "System setup / Input list &
+stage plan"): show header; channel tools (add, duplicate, move, delete, renumber, group templates,
+stereo pairs, stage box numbering, mic suggestions with automatic +48 V, group colours, checks);
+monitor mixes and a pull list; a quick stage plan with 18 vector equipment symbols and text (drag with
+25 cm snap, rotate, resize, captions, layers); export to PDF, PNG and CSV; `.ssmtinput` files, autosave
+and undo. Function #1 is unchanged since 1.0.0.
 
 ---
 
