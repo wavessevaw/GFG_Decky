@@ -120,8 +120,7 @@ final class SnapshotTests: XCTestCase {
             if let size { view.frame(width: size.width, height: size.height, alignment: .top) } else { view }
         }
         let root = framed
-            .environmentObject(Self.model)
-            .environmentObject(loc)
+            .ssmtEnvironment(Self.model, loc)
             .environment(\.colorScheme, .dark)
             .background(Theme.background)
         let host = NSHostingView(rootView: root)

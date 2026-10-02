@@ -5,6 +5,7 @@ import SwiftUI
 /// (median coherence, shown as a percentage — the word coherence stays in the Expert view).
 struct SignalQualityGauge: View {
     @EnvironmentObject var model: AppModel
+    @EnvironmentObject var live: LiveData
     @EnvironmentObject var loc: Localizer
     var band: ClosedRange<Double>
 
@@ -42,6 +43,7 @@ struct SignalQualityGauge: View {
 /// Live signal-to-noise needle against the measured room noise (target ≥ 20 dB).
 struct SNRGauge: View {
     @EnvironmentObject var model: AppModel
+    @EnvironmentObject var live: LiveData
     @EnvironmentObject var loc: Localizer
 
     var body: some View {

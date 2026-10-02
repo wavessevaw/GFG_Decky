@@ -22,9 +22,7 @@ struct EQPointsView: View {
                         PointMap(total: total, done: done, qualities: qualities).frame(width: 280).glassCard(padding: 16)
                         SignalQualityGauge(band: 40...16000)
                     }
-                    if model.wizardCaptureRunning, let p = model.snapshot?.capture {
-                        ProgressView(value: p.fraction).tint(Theme.closeness(p.fraction)).frame(maxWidth: 480)
-                    }
+                    if model.wizardCaptureRunning { CaptureProgressBar() }
                     if let acc = model.lastAcceptance, case .rejected(let reasons) = acc {
                         Text(loc.t("eq.point.rejected") + " " + reasons.map { loc.t("reason.\($0.rawValue)") }.joined(separator: " "))
                             .font(.system(size: 13)).foregroundStyle(Theme.statusError)
@@ -188,6 +186,7 @@ struct EQResultGauges: View {
 /// band's instrument. Everything else (curves, simulation, notes) is collapsed.
 struct EQTuningView: View {
     @EnvironmentObject var model: AppModel
+    @EnvironmentObject var tuning: TuningData
     @EnvironmentObject var loc: Localizer
 
     var body: some View {

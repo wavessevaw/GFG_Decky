@@ -46,10 +46,15 @@ public enum Smoothing {
         let power = smoothPower(values.map { $0.magnitudeSquared }, frequencies: frequencies,
                                 octaves: octaves, weights: weights)
         let half = octaves / 2
+        // Frequencies ascend, so each window is a contiguous index range found by moving two pointers.
+        var start = 0, end = 0
         return frequencies.indices.map { i in
             let lo = frequencies[i] * pow(2, -half), hi = frequencies[i] * pow(2, half)
+            while start < frequencies.count && frequencies[start] < lo { start += 1 }
+            if end < start { end = start }
+            while end < frequencies.count && frequencies[end] <= hi { end += 1 }
             var acc = Complex.zero
-            for j in frequencies.indices where frequencies[j] >= lo && frequencies[j] <= hi {
+            for j in start..<end {
                 let v = values[j]
                 let m = v.magnitude
                 guard m > 0, m.isFinite else { continue }

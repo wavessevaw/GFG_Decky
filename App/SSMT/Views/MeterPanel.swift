@@ -3,6 +3,7 @@ import SwiftUI
 
 struct MeterPanel: View {
     @EnvironmentObject var model: AppModel
+    @EnvironmentObject var live: LiveData
     @EnvironmentObject var loc: Localizer
 
     var body: some View {

@@ -9,6 +9,8 @@ import SwiftUI
 struct TunerGauge: View {
     enum Mode { case centered, oneSided }
 
+    @Environment(\.reducedEffects) private var reducedEffects
+
     var title: String
     var value: Double?
     var mode: Mode = .centered
@@ -94,7 +96,7 @@ struct TunerGauge: View {
                         .fill(color)
                         .overlay(ArcPointer(geometry: g, position: position)
                             .stroke(Color(hex: 0x131715), lineWidth: g.lineWidth * 0.6))
-                        .shadow(color: color.opacity(0.35), radius: 6)
+                        .softShadow(color.opacity(0.35), radius: 6)
                 }
                 VStack(spacing: 2) {
                     Text(readout)
@@ -108,7 +110,7 @@ struct TunerGauge: View {
                 .frame(width: g.radius * 1.3)
                 .position(x: g.center.x, y: g.center.y - g.radius * 0.6 + (large ? 30 : 24))
             }
-            .animation(.spring(response: 0.5, dampingFraction: 0.8), value: position)
+            .animation(.needle(reduced: reducedEffects), value: position)
             .animation(.easeInOut(duration: 0.3), value: closeness)
         }
         .frame(height: large ? 214 : 158)
@@ -220,6 +222,7 @@ struct IndicatorLamp: View {
 
 /// Compact list indicator: a thin track with a target zone and a pointer, plus the value.
 struct MiniMeter: View {
+    @Environment(\.reducedEffects) private var reducedEffects
     /// Normalized error −1…1 (0 = target).
     var value: Double?
     var tolerance: Double
@@ -249,7 +252,7 @@ struct MiniMeter: View {
                 }
             }
             .frame(width: width, height: 12)
-            .animation(.spring(response: 0.45, dampingFraction: 0.85), value: v)
+            .animation(.needle(reduced: reducedEffects), value: v)
             Text(readout)
                 .font(Theme.mono(13))
                 .foregroundStyle(value == nil ? Theme.textMuted : Theme.textPrimary)

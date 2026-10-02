@@ -37,13 +37,7 @@ struct PreparationStepView: View {
                     }
                 }
                 divider
-                ChecklistRow(done: micPresent && !micClipped, failed: micClipped, icon: "mic.fill", title: loc.t("prep.mic"),
-                             detail: micDetail) {
-                    HStack(spacing: 14) {
-                        MicProfileMenu()
-                        LevelStrip(dbfs: model.snapshot?.microphone.rmsDBFS, clipped: micClipped)
-                    }
-                }
+                MicCheckRow()
                 divider
                 ChecklistRow(done: levelState == 1, failed: levelState == 0, icon: "dial.medium", title: loc.t("prep.level"),
                              detail: levelState == nil ? loc.t("prep.level.hint") : levelValue) {
@@ -129,16 +123,6 @@ struct PreparationStepView: View {
 
     // MARK: Values
 
-    private var micClipped: Bool { model.snapshot?.microphone.clipped ?? false }
-    private var micPresent: Bool { (model.snapshot?.microphone.rmsDBFS ?? -120) > -70 }
-    private var micDetail: String {
-        let state = loc.t(micClipped ? "prep.mic.clip" : (micPresent ? "prep.mic.ok" : "prep.mic.hint"))
-        guard micPresent && !micClipped else { return state }
-        if model.calibration.selectedMicrophone == nil { return state + " " + loc.t("prep.mic.noProfile") }
-        if model.calibration.selectedProfile != nil { return state + " " + loc.t("prep.mic.typical") }
-        return state
-    }
-
     private var levelValue: String {
         switch model.autoLevelState {
         case .idle: return "—"
@@ -211,5 +195,33 @@ struct LevelStrip: View {
                 .foregroundStyle(Theme.textPrimary).frame(width: 54, alignment: .trailing)
         }
         .animation(.easeOut(duration: 0.12), value: x)
+    }
+}
+
+/// Microphone row of the checklist: the only live part of the preparation step.
+struct MicCheckRow: View {
+    @EnvironmentObject var model: AppModel
+    @EnvironmentObject var live: LiveData
+    @EnvironmentObject var loc: Localizer
+
+    var body: some View {
+        let mic = live.snapshot?.microphone
+        let clipped = mic?.clipped ?? false
+        let present = (mic?.rmsDBFS ?? -120) > -70
+        ChecklistRow(done: present && !clipped, failed: clipped, icon: "mic.fill", title: loc.t("prep.mic"),
+                     detail: detail(present: present, clipped: clipped)) {
+            HStack(spacing: 14) {
+                MicProfileMenu()
+                LevelStrip(dbfs: mic?.rmsDBFS, clipped: clipped)
+            }
+        }
+    }
+
+    private func detail(present: Bool, clipped: Bool) -> String {
+        let state = loc.t(clipped ? "prep.mic.clip" : (present ? "prep.mic.ok" : "prep.mic.hint"))
+        guard present && !clipped else { return state }
+        if model.calibration.selectedMicrophone == nil { return state + " " + loc.t("prep.mic.noProfile") }
+        if model.calibration.selectedProfile != nil { return state + " " + loc.t("prep.mic.typical") }
+        return state
     }
 }

@@ -435,6 +435,7 @@ STRINGS = {
     "prep.mic.profile": ("Microphone profile", "Профиль микрофона"),
     "prep.mic.noProfile": ("Choose your microphone.", "Выберите свой микрофон."),
     "prep.mic.typical": ("Typical profile.", "Типовой профиль."),
+    "graphics.reduced": ("Reduced graphics (older Macs)", "Облегчённая графика (старые Mac)"),
 }
 
 DYNAMIC_PREFIXES = {

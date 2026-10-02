@@ -13,7 +13,7 @@ struct TopBar: View {
             }
             Spacer()
 
-            statusPill
+            StatusPill()
 
             Button { model.toggleNoise() } label: {
                 HStack(spacing: 7) {
@@ -36,6 +36,7 @@ struct TopBar: View {
                 }
                 .pickerStyle(.inline)
                 Toggle(loc.t("mode.stage"), isOn: $model.stageMode)
+                Toggle(loc.t("graphics.reduced"), isOn: $model.reducedEffects)
                 Divider()
                 Button(loc.t("settings.open")) { model.showSettings = true }
                 Button(loc.t("session.save")) { model.saveSession() }
@@ -65,8 +66,15 @@ struct TopBar: View {
         }
         .padding(.vertical, 6)
     }
+}
 
-    private var statusPill: some View {
+/// System status (audio off / running / ready / clipping) — observes live data on its own.
+struct StatusPill: View {
+    @EnvironmentObject var model: AppModel
+    @EnvironmentObject var live: LiveData
+    @EnvironmentObject var loc: Localizer
+
+    var body: some View {
         let (key, color): (String, Color) = {
             if !model.isRunning { return ("status.off", Theme.textMuted) }
             if model.snapshot?.microphone.clipped == true { return ("meters.clip", Theme.statusError) }
@@ -75,7 +83,7 @@ struct TopBar: View {
         }()
         return HStack(spacing: 8) {
             Circle().fill(color).frame(width: 8, height: 8)
-                .shadow(color: color.opacity(0.8), radius: 4)
+                .softShadow(color.opacity(0.8), radius: 4)
             Text(loc.t(key)).font(.system(size: 13)).foregroundStyle(Theme.textPrimary)
             if let d = model.delay, d.isReliable {
                 Text(String(format: "Δt %.2f ms", d.milliseconds)).font(Theme.mono(12)).foregroundStyle(Theme.textSecondary)

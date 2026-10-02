@@ -65,7 +65,12 @@ final class AppModel: ObservableObject {
 
     // Live state
     @Published private(set) var isRunning = false
-    @Published private(set) var snapshot: LiveSnapshot?
+    /// Live snapshot, stored in `live` so it does not invalidate every view of the model.
+    let live = LiveData()
+    private(set) var snapshot: LiveSnapshot? {
+        get { live.snapshot }
+        set { live.snapshot = newValue }
+    }
     @Published private(set) var delay: DelayEstimate?
     @Published private(set) var delaySearchRunning = false
     @Published var lastError: String?
@@ -87,7 +92,12 @@ final class AppModel: ObservableObject {
     // Tuner (live alignment needle)
     @Published private(set) var tunerActive = false
     @Published private(set) var tunerStage: AlignmentTuner.Stage = .adjustSub
-    @Published private(set) var tunerReading: AlignmentTuner.Reading?
+    /// Tuner readings, stored in `tuning` (see `LiveData`).
+    let tuning = TuningData()
+    private(set) var tunerReading: AlignmentTuner.Reading? {
+        get { tuning.alignment }
+        set { tuning.alignment = newValue }
+    }
     /// Virtual processor knobs (simulation only) — turned by the user like a real processor.
     @Published var simProcessor = VirtualProcessorSettings() {
         didSet {
@@ -100,7 +110,10 @@ final class AppModel: ObservableObject {
     private var lastTunerUpdate = Date.distantPast
 
     // EQ tuner
-    @Published private(set) var eqTunerReading: EQTuner.Reading?
+    private(set) var eqTunerReading: EQTuner.Reading? {
+        get { tuning.eq }
+        set { tuning.eq = newValue }
+    }
     @Published private(set) var eqReferenceCapturing = false
     @Published var eqSelectedBand = 0
     private var eqTuner: EQTuner?
@@ -110,6 +123,10 @@ final class AppModel: ObservableObject {
     @Published var coherenceThreshold: Double = 0.6
     @Published var visibleGraphs: Set<GraphKind> = [.magnitude, .phase, .coherence]
     @Published var stageMode = false
+    /// Reduced graphics effects (automatic on Intel / low-core Macs; see `GraphicsQuality`).
+    @Published var reducedEffects = GraphicsQuality.initialReduced {
+        didSet { UserDefaults.standard.set(reducedEffects, forKey: GraphicsQuality.defaultsKey) }
+    }
     /// Audio and calibration settings sheet (wizard mode).
     @Published var showSettings = false
 
@@ -608,7 +625,7 @@ final class AppModel: ObservableObject {
     }
 
     func exportReport(pdf: Bool, localizer: Localizer) {
-        let view = ReportView(report: setupReport, wizard: wizard).environmentObject(localizer)
+        let view = ReportView(report: setupReport, wizard: wizard).ssmtEnvironment(self, localizer)
         do { try ReportExporter.export(view, pdf: pdf) } catch { lastError = error.localizedDescription }
     }
 

@@ -22,7 +22,7 @@ struct MainView: View {
                     case .expert:
                         VStack(spacing: 14) {
                             MeterPanel()
-                            graphs
+                            ExpertGraphs()
                         }
                         .padding(.bottom, 4)
                     }
@@ -32,6 +32,7 @@ struct MainView: View {
         }
         .preferredColorScheme(.dark)
         .tint(Theme.accent)
+        .environment(\.reducedEffects, model.reducedEffects)
         .frame(minWidth: 1100, minHeight: 720)
         .sheet(isPresented: $model.showSettings) {
             VStack(spacing: 0) {
@@ -45,14 +46,21 @@ struct MainView: View {
             }
             .frame(width: 360, height: 660)
             .background(Backdrop())
-            .environmentObject(model)
-            .environmentObject(loc)
+            .ssmtEnvironment(model, loc)
             .preferredColorScheme(.dark)
         }
     }
+}
 
-    private var graphs: some View {
-        let tf = model.displayTransfer
+/// Expert graphs: the only part of the expert screen redrawn on each live snapshot.
+/// The response is smoothed once and shared by all plots.
+struct ExpertGraphs: View {
+    @EnvironmentObject var model: AppModel
+    @EnvironmentObject var live: LiveData
+    @EnvironmentObject var loc: Localizer
+
+    var body: some View {
+        let tf = model.displayTransfer.map { Smoothing.smooth($0, resolution: model.smoothing) }
         let kinds = GraphKind.allCases.filter { model.visibleGraphs.contains($0) }
         return Panel(title: loc.t("graphs.title"), marking: model.smoothing == .none ? "RAW" : "1/\(model.smoothing.rawValue) OCT") {
             if tf == nil {
@@ -64,7 +72,7 @@ struct MainView: View {
             } else {
                 VStack(spacing: 6) {
                     ForEach(kinds) { k in
-                        TransferPlotView(kind: k, transfer: tf, smoothing: model.smoothing,
+                        TransferPlotView(kind: k, transfer: tf, smoothing: .none,
                                          coherenceThreshold: model.coherenceThreshold,
                                          title: loc.t("graph.\(k.rawValue)"))
                             .frame(maxHeight: k == .magnitude ? .infinity : 200)

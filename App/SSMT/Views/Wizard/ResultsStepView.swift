@@ -33,27 +33,12 @@ struct ResultsStepView: View {
                 }
             }
         } actions: {
-            if model.tunerNeedsMainsStage && model.tunerStage == .adjustSub {
-                ActionRow(primaryTitle: loc.t("tuner.next.mains"), primaryIcon: "arrow.right",
-                          primaryEnabled: subStageDone, primaryAction: { model.tunerAdvanceToMains() }) {
-                    QuietButton(title: loc.t("wizard.back"), icon: "chevron.left") { model.wizardBack() }
-                }
-            } else {
-                ActionRow(primaryTitle: loc.t(allInTune ? "tuner.verify.ready" : "results.applied"),
-                          primaryIcon: "checkmark", primaryAction: { model.wizardBeginVerification() }) {
-                    QuietButton(title: loc.t("wizard.back"), icon: "chevron.left") { model.wizardBack() }
-                }
-            }
+            TunerActions()
         }
         .onAppear { model.startTuner() }
         .onDisappear { model.stopTuner() }
     }
 
-    private var allInTune: Bool { model.tunerReading?.allInTune ?? false }
-    private var subStageDone: Bool {
-        guard let r = model.tunerReading else { return false }
-        return !r.polarityWrong && r.levelInTune
-    }
 
     private func chipLabel(_ c: ActionCard) -> String {
         switch c {
@@ -107,5 +92,32 @@ struct ActionCardView: View {
         case .polarity(let invert): return loc.t(invert ? "polarity.invert" : "polarity.normal")
         case .subLevel(let db): return String(format: "%+.1f dB", db)
         }
+    }
+}
+
+/// Tuner step actions; their titles follow the live reading, so they observe it on their own.
+struct TunerActions: View {
+    @EnvironmentObject var model: AppModel
+    @EnvironmentObject var tuning: TuningData
+    @EnvironmentObject var loc: Localizer
+
+    var body: some View {
+        if model.tunerNeedsMainsStage && model.tunerStage == .adjustSub {
+            ActionRow(primaryTitle: loc.t("tuner.next.mains"), primaryIcon: "arrow.right",
+                      primaryEnabled: subStageDone, primaryAction: { model.tunerAdvanceToMains() }) {
+                QuietButton(title: loc.t("wizard.back"), icon: "chevron.left") { model.wizardBack() }
+            }
+        } else {
+            ActionRow(primaryTitle: loc.t(allInTune ? "tuner.verify.ready" : "results.applied"),
+                      primaryIcon: "checkmark", primaryAction: { model.wizardBeginVerification() }) {
+                QuietButton(title: loc.t("wizard.back"), icon: "chevron.left") { model.wizardBack() }
+            }
+        }
+    }
+
+    private var allInTune: Bool { tuning.alignment?.allInTune ?? false }
+    private var subStageDone: Bool {
+        guard let r = tuning.alignment else { return false }
+        return !r.polarityWrong && r.levelInTune
     }
 }

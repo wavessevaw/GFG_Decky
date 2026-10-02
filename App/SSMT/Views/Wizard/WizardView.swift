@@ -83,7 +83,7 @@ struct WizardPrimaryButton: View {
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(LinearGradient(colors: [Theme.accent, Theme.accentHot], startPoint: .leading, endPoint: .trailing))
-                    .shadow(color: Theme.accent.opacity(enabled ? 0.35 : 0), radius: 16, y: 6))
+                    .softShadow(Theme.accent.opacity(enabled ? 0.35 : 0), radius: 16, y: 6))
             .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Color.white.opacity(0.25)))
             .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }

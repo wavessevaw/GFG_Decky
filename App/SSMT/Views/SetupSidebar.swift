@@ -122,13 +122,7 @@ struct SetupSidebar: View {
             }
             levelSlider(loc.t("setup.level"), value: $model.levelDBFS, range: -80...0) { model.applyLevel() }
             levelSlider(loc.t("setup.max.level"), value: $model.maximumLevelDBFS, range: -60...0) { model.applyLevel() }
-            if let s = model.snapshot {
-                HStack {
-                    Text(loc.t("setup.output.level")).font(Theme.label(11)).foregroundStyle(Theme.textSecondary)
-                    Spacer()
-                    Text(String(format: "%.1f dBFS", s.generatorLevelDBFS)).font(Theme.mono(12))
-                }
-            }
+            GeneratorLevelRow()
             autoLevelRow
             hazard(loc.t("safety.hf.warning"))
             Button {
@@ -273,5 +267,21 @@ struct SetupSidebar: View {
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: Theme.radiusSmall, style: .continuous).fill(Theme.signalYellow.opacity(0.10)))
+    }
+}
+
+/// Current generator output level (live).
+struct GeneratorLevelRow: View {
+    @EnvironmentObject var live: LiveData
+    @EnvironmentObject var loc: Localizer
+
+    var body: some View {
+        if let s = live.snapshot {
+            HStack {
+                Text(loc.t("setup.output.level")).font(Theme.label(11)).foregroundStyle(Theme.textSecondary)
+                Spacer()
+                Text(String(format: "%.1f dBFS", s.generatorLevelDBFS)).font(Theme.mono(12))
+            }
+        }
     }
 }

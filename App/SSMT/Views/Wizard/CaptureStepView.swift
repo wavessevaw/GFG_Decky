@@ -15,9 +15,7 @@ struct CaptureStepView: View {
                 groupPills
                 SignalQualityGauge(band: step.qualityBand(crossover: model.wizard.configuration.crossover))
                     .frame(maxWidth: 480)
-                if model.wizardCaptureRunning, let p = model.snapshot?.capture {
-                    ProgressView(value: p.fraction).tint(Theme.closeness(p.fraction)).frame(maxWidth: 480)
-                }
+                if model.wizardCaptureRunning { CaptureProgressBar() }
                 if let acc = model.lastAcceptance { acceptanceNotice(acc) }
                 if model.isSimulation { simulationHelpers }
             }
@@ -79,6 +77,17 @@ struct CaptureStepView: View {
         case .streamRestarted:
             Text(loc.t("capture.streamRestarted")).font(.system(size: 13)).foregroundStyle(Theme.statusError)
                 .multilineTextAlignment(.center)
+        }
+    }
+}
+
+/// Capture progress (live).
+struct CaptureProgressBar: View {
+    @EnvironmentObject var live: LiveData
+
+    var body: some View {
+        if let p = live.snapshot?.capture {
+            ProgressView(value: p.fraction).tint(Theme.closeness(p.fraction)).frame(maxWidth: 480)
         }
     }
 }

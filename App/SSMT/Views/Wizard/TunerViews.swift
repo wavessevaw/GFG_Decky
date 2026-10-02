@@ -6,15 +6,11 @@ struct PolarityLamp: View {
     @EnvironmentObject var loc: Localizer
     var wrong: Bool?
     var large = false
-    @State private var blink = false
+    @State private var blinkStart = Date()
 
     var body: some View {
         HStack(spacing: 14) {
-            Image(systemName: wrong == true ? "arrow.triangle.2.circlepath" : (wrong == false ? "checkmark.circle.fill" : "circle.dashed"))
-                .font(.system(size: large ? 26 : 22, weight: .regular))
-                .foregroundStyle(color)
-                .opacity(wrong == true && blink ? 0.4 : 1)
-                .frame(width: 30)
+            icon.frame(width: 30)
             VStack(alignment: .leading, spacing: 2) {
                 Text(loc.t("card.polarity")).font(Theme.label(12)).foregroundStyle(Theme.textSecondary)
                 Text(text).font(.system(size: large ? 18 : 15, weight: .medium)).foregroundStyle(color)
@@ -27,8 +23,21 @@ struct PolarityLamp: View {
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
         .background(GlassBackground())
-        .onAppear {
-            withAnimation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true)) { blink = true }
+    }
+
+    /// The "switch" icon pulses (0.6 s on / 0.6 s dimmed); a cheap periodic timeline instead of a
+    /// never-ending animation, and only while polarity is wrong.
+    @ViewBuilder private var icon: some View {
+        let image = Image(systemName: wrong == true ? "arrow.triangle.2.circlepath" : (wrong == false ? "checkmark.circle.fill" : "circle.dashed"))
+            .font(.system(size: large ? 26 : 22, weight: .regular))
+            .foregroundStyle(color)
+        if wrong == true {
+            TimelineView(.periodic(from: blinkStart, by: 0.6)) { ctx in
+                let tick = Int((ctx.date.timeIntervalSince(blinkStart) / 0.6).rounded())
+                image.opacity(tick % 2 == 0 ? 1 : 0.35)
+            }
+        } else {
+            image
         }
     }
 
@@ -52,6 +61,7 @@ struct PolarityLamp: View {
 /// Live tuning block: polarity lamp and the delay / level instruments. No explanatory text.
 struct TunerPanel: View {
     @EnvironmentObject var model: AppModel
+    @EnvironmentObject var tuning: TuningData
     @EnvironmentObject var loc: Localizer
 
     var body: some View {

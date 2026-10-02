@@ -2705,6 +2705,23 @@
         }
       }
     },
+    "graphics.reduced": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reduced graphics (older Macs)"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Облегчённая графика (старые Mac)"
+          }
+        }
+      }
+    },
     "graphs.empty": {
       "extractionState": "manual",
       "localizations": {

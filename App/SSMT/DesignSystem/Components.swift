@@ -26,7 +26,7 @@ struct GlassBackground: View {
             .overlay(shape.strokeBorder(
                 LinearGradient(colors: [Color.white.opacity(highlighted ? 0.22 : 0.12), Color.white.opacity(0.03)],
                                startPoint: .top, endPoint: .bottom), lineWidth: 1))
-            .shadow(color: .black.opacity(0.35), radius: 18, y: 8)
+            .softShadow(.black.opacity(0.35), radius: 18, y: 8)
     }
 }
 

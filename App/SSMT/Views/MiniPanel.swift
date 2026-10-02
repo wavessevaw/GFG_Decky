@@ -53,7 +53,7 @@ final class MiniPanelController: NSObject, NSWindowDelegate {
             p.hasShadow = true
             p.delegate = self
             p.contentView = NSHostingView(rootView: MiniDiagnosticsView()
-                .environmentObject(model).environmentObject(localizer))
+                .ssmtEnvironment(model, localizer))
             if let screen = NSScreen.main?.visibleFrame {
                 p.setFrameOrigin(NSPoint(x: screen.maxX - 400, y: screen.maxY - 350))
             }
@@ -96,6 +96,7 @@ final class MiniPanelController: NSObject, NSWindowDelegate {
 /// Compact live diagnostics in the instrument style.
 struct MiniDiagnosticsView: View {
     @EnvironmentObject var model: AppModel
+    @EnvironmentObject var live: LiveData
     @EnvironmentObject var loc: Localizer
     @State private var settings = false
 
@@ -168,6 +169,7 @@ struct MiniDiagnosticsView: View {
         .frame(maxHeight: .infinity, alignment: .top)
         .background(GlassBackground())
         .preferredColorScheme(.dark)
+        .environment(\.reducedEffects, model.reducedEffects)
     }
 
     private var statusLine: String {

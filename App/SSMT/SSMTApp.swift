@@ -10,8 +10,7 @@ struct SSMTApp: App {
     var body: some Scene {
         WindowGroup {
             RootView()
-                .environmentObject(model)
-                .environmentObject(localizer)
+                .ssmtEnvironment(model, localizer)
                 .onAppear {
                     appDelegate.model = model
                     MiniPanelController.shared.attach(model: model, localizer: localizer)
