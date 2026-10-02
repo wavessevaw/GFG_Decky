@@ -13,6 +13,15 @@ public struct RunningCue: Equatable, Identifiable, Sendable {
     /// Current loop iteration (1-based) of a looping audio cue.
     public var iteration: Int?
 
+    public init(id: UUID, phase: Phase, elapsed: Double, duration: Double?, paused: Bool, iteration: Int?) {
+        self.id = id
+        self.phase = phase
+        self.elapsed = elapsed
+        self.duration = duration
+        self.paused = paused
+        self.iteration = iteration
+    }
+
     public var remaining: Double? { duration.map { max(0, $0 - elapsed) } }
     public var progress: Double? { duration.map { $0 > 0 ? min(1, max(0, elapsed / $0)) : 1 } }
 }
@@ -23,6 +32,12 @@ public struct ShowSnapshot: Equatable, Sendable {
     public var running: [RunningCue]
     /// Cues that could not play (missing file…), most recent last.
     public var problems: [UUID: String]
+    public init(listID: UUID?, playhead: UUID?, running: [RunningCue], problems: [UUID: String]) {
+        self.listID = listID
+        self.playhead = playhead
+        self.running = running
+        self.problems = problems
+    }
     public static let empty = ShowSnapshot(listID: nil, playhead: nil, running: [], problems: [:])
 }
 
