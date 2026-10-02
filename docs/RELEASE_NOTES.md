@@ -1,3 +1,21 @@
+# SSMT 0.9.1 — быстрее на старых Mac · faster on older Macs
+
+## Что нового · What's new
+
+- **Русский.** Оптимизация для Mac на Intel и со встроенной графикой (например, MacBook Pro 2017):
+  при обновлении живых данных перерисовываются только приборы, уровни и графики, а не всё окно;
+  сглаживание графиков работает быстрее; мигание полярности без постоянной анимации.
+  Новый режим **«Облегчённая графика»** — включается автоматически на Intel и на процессорах
+  с < 6 ядрами (меню «⋯»): без больших теней и свечения, короткая анимация стрелок.
+- **English.** Optimised for Intel Macs with integrated graphics (e.g. MacBook Pro 2017): live updates
+  redraw only gauges, meters and graphs instead of the whole window; faster graph smoothing; no
+  never-ending polarity animation. New **Reduced graphics** mode, automatic on Intel and on < 6 cores
+  (the "⋯" menu): no large shadows or glows, short needle animation.
+
+Обновление: установите поверх 0.9.0 · Install over 0.9.0.
+
+---
+
 # SSMT 0.9.0 — первая публичная версия · first public version
 
 ## Русский
