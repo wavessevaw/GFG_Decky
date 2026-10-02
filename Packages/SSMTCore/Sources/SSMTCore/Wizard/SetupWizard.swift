@@ -4,8 +4,8 @@ public struct WizardConfiguration: Equatable, Codable, Sendable {
     public var hasSubwoofer = true
     /// Known crossover frequency; nil = detect automatically.
     public var crossover: Double?
-    /// Fast mode: skip the whole-system ("before") capture; mains and subs are still measured
-    /// separately. The verification then has no "before" curve to compare with.
+    /// Legacy option from earlier versions (derive the mains as "whole system − subs"); the
+    /// phase-match flow always measures the satellites and the subs separately.
     public var fastMode = false
     public var captureSeconds: Double = 12
     public var delayStep: Double = 0.00001
@@ -138,8 +138,10 @@ public struct SetupWizard: Codable, Sendable {
 
     // MARK: Navigation
 
-    /// Capture order: mains (satellites) alone, then subwoofers alone, then the whole system as it
-    /// is now ("before", skipped in fast mode). Without subwoofers only the whole system is measured.
+    /// Phase-match flow: 1) satellites alone are captured and become the fixed reference;
+    /// 2) only the subwoofers play and the user turns the sub delay / polarity / level live until the
+    /// sub is in phase with the stored satellites, then that state is captured; 3) everything on for
+    /// the verification. Without subwoofers only the whole system is measured.
     public mutating func start() {
         guard isPrepared else { return }
         step = configuration.hasSubwoofer ? .mainsOnly : .baseline
@@ -150,8 +152,8 @@ public struct SetupWizard: Codable, Sendable {
         case .preparation: break
         case .mainsOnly: step = .preparation
         case .subOnly: step = .mainsOnly
-        case .baseline: step = configuration.hasSubwoofer ? .subOnly : .preparation
-        case .results: step = configuration.fastMode ? .subOnly : .baseline
+        case .baseline: step = .preparation
+        case .results: step = .subOnly
         case .verification: step = .results
         case .eqPoints: step = configuration.hasSubwoofer ? .verification : .baseline
         case .eqTuning: step = .eqPoints
@@ -183,17 +185,17 @@ public struct SetupWizard: Codable, Sendable {
         switch step {
         case .mainsOnly:
             mainsOnly = capture
+            mainsDelayAddedStorage = nil
+            phaseMatchStartStorage = nil
             step = .subOnly
         case .subOnly:
             subOnly = capture
-            if configuration.fastMode {
-                computeResults()
-            } else {
-                step = .baseline
-            }
+            computeResults()
+            // Glued already (the user matched the phase live): go straight to the verification.
+            if isAlignedWithinTolerance { beginVerification() }
         case .baseline:
             baseline = capture
-            if configuration.hasSubwoofer { computeResults() } else { step = .eqPoints }
+            step = .eqPoints
         case .verification:
             verification = capture
             evaluateVerification()
@@ -210,9 +212,69 @@ public struct SetupWizard: Codable, Sendable {
         return .accepted(capture.assessment.quality)
     }
 
-    /// Mains response used for the alignment (measured, or derived in fast mode).
+    /// Delay the user added to the satellites during the phase match because the subwoofers arrive
+    /// later (s). The stored satellite response is shifted by it.
+    public var mainsDelayAdded: Double { mainsDelayAddedStorage ?? 0 }
+    /// Optional so that sessions saved before this field existed still decode.
+    private var mainsDelayAddedStorage: Double?
+
+    /// The subs arrive later than the satellites: the user enters `seconds` of delay on the
+    /// satellites (muted at that moment) and the stored reference is shifted accordingly.
+    public mutating func addMainsDelay(_ seconds: Double) {
+        guard seconds > 0, step == .subOnly else { return }
+        mainsDelayAddedStorage = mainsDelayAdded + seconds
+    }
+
+    /// The correction the live phase match asked for at its start, i.e. the total change from the
+    /// original processor state (the user enters it while watching the needle).
+    public struct PhaseMatchCorrection: Codable, Equatable, Sendable {
+        /// Delay for the subwoofers (s); negative = the satellites get the delay.
+        public var delay: Double
+        public var invertPolarity: Bool
+        public var subGainDB: Double
+        public var crossover: Double
+        public init(delay: Double, invertPolarity: Bool, subGainDB: Double, crossover: Double) {
+            self.delay = delay
+            self.invertPolarity = invertPolarity
+            self.subGainDB = subGainDB
+            self.crossover = crossover
+        }
+    }
+
+    public var phaseMatchStart: PhaseMatchCorrection? { phaseMatchStartStorage }
+    private var phaseMatchStartStorage: PhaseMatchCorrection?
+
+    /// Records the first reliable live reading of the phase match (once per subwoofer step).
+    public mutating func recordPhaseMatchStart(_ c: PhaseMatchCorrection) {
+        guard step == .subOnly, phaseMatchStartStorage == nil else { return }
+        phaseMatchStartStorage = c
+    }
+
+    /// Total change from the original state: what the phase match asked for, plus anything the
+    /// results step still asks for; without a phase match, the alignment recommendation itself.
+    public var totalCorrection: PhaseMatchCorrection? {
+        guard let a = alignment else { return phaseMatchStart }
+        guard let s = phaseMatchStart else {
+            return PhaseMatchCorrection(delay: a.roundedDelay, invertPolarity: a.best.invertPolarity,
+                                        subGainDB: a.subGainDB, crossover: a.crossover)
+        }
+        let step = configuration.delayStep
+        return PhaseMatchCorrection(delay: ((s.delay + a.roundedDelay) / step).rounded() * step,
+                                    invertPolarity: s.invertPolarity != a.best.invertPolarity,
+                                    subGainDB: ((s.subGainDB + a.subGainDB) / configuration.levelStep).rounded() * configuration.levelStep,
+                                    crossover: a.crossover)
+    }
+
+    /// True when the alignment result needs no further change on the processor.
+    public var isAlignedWithinTolerance: Bool {
+        guard let a = alignment else { return false }
+        return abs(a.roundedDelay * a.crossover * 360) <= 10 && !a.best.invertPolarity && abs(a.subGainDB) <= 1
+    }
+
+    /// Mains response used for the alignment (measured, or derived in fast mode), including any
+    /// delay added to the satellites during the phase match.
     public var mainsResponse: TransferFunction? {
-        if let m = mainsOnly { return m.transfer }
+        if let m = mainsOnly { return mainsDelayAdded > 0 ? m.transfer.delayed(by: mainsDelayAdded) : m.transfer }
         if configuration.fastMode, let b = baseline, let s = subOnly { return b.transfer.subtracting(s.transfer) }
         return nil
     }
@@ -330,21 +392,26 @@ public struct SetupWizard: Codable, Sendable {
     }
 
     /// Action cards for the results screen, in processor terms.
+    /// The total processor settings (change from the original state) for the summary and report.
     public var actionCards: [ActionCard] {
-        guard let a = alignment else { return [] }
+        guard let t = totalCorrection else { return [] }
         let c = Acoustics.speedOfSound(celsius: configuration.temperatureCelsius)
         var cards: [ActionCard] = []
-        switch a.delayTarget {
-        case .sub: cards.append(.delaySub(seconds: a.roundedDelay, meters: a.roundedDelay * c))
-        case .mains: cards.append(.delayMains(seconds: -a.roundedDelay, meters: -a.roundedDelay * c))
-        case .none: cards.append(.noDelayChange)
+        if abs(t.delay) < 1e-9 {
+            cards.append(.noDelayChange)
+        } else if t.delay > 0 {
+            cards.append(.delaySub(seconds: t.delay, meters: t.delay * c))
+        } else {
+            cards.append(.delayMains(seconds: -t.delay, meters: -t.delay * c))
         }
-        cards.append(.polarity(invert: a.best.invertPolarity))
-        cards.append(.subLevel(dB: a.subGainDB))
+        cards.append(.polarity(invert: t.invertPolarity))
+        cards.append(.subLevel(dB: t.subGainDB))
         return cards
     }
 
     private mutating func invalidateCaptures() {
+        mainsDelayAddedStorage = nil
+        phaseMatchStartStorage = nil
         baseline = nil
         subOnly = nil
         mainsOnly = nil

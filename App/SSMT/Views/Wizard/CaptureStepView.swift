@@ -30,15 +30,7 @@ struct CaptureStepView: View {
         }
     }
 
-    /// "Capture 1 of 3 · Subs muted, satellites on" for the alignment captures.
-    private var subtitle: String {
-        let short = loc.t("capture.\(step.rawValue).short")
-        let c = model.wizard.configuration
-        guard step.isAlignmentCapture, c.hasSubwoofer else { return short }
-        let order: [WizardStep] = c.fastMode ? [.mainsOnly, .subOnly] : [.mainsOnly, .subOnly, .baseline]
-        guard let i = order.firstIndex(of: step) else { return short }
-        return String(format: loc.t("capture.counter"), i + 1, order.count) + " · " + short
-    }
+    private var subtitle: String { loc.t("capture.\(step.rawValue).short") }
 
     private var retry: Bool {
         if case .rejected = model.lastAcceptance { return true }

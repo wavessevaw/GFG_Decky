@@ -11,7 +11,8 @@ struct WizardView: View {
             Group {
                 switch model.wizard.step {
                 case .preparation: PreparationStepView()
-                case .baseline, .subOnly, .mainsOnly: CaptureStepView()
+                case .baseline, .mainsOnly: CaptureStepView()
+                case .subOnly: PhaseMatchStepView()
                 case .verification:
                     if model.wizard.report == nil { CaptureStepView() } else { AlignmentCheckView() }
                 case .results: ResultsStepView()

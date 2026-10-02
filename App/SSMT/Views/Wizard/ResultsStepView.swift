@@ -184,7 +184,6 @@ struct PhaseMatchView: View {
     @State private var after = true
 
     var body: some View {
-        let curves = phaseCurves(after: after)
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 CardTitle(title: loc.t("match.phase.title"))
@@ -194,12 +193,41 @@ struct PhaseMatchView: View {
                 }
                 .pickerStyle(.segmented).labelsHidden().frame(width: 200)
             }
+            PhaseOverlayPlot(mains: mains, sub: sub,
+                             subDelay: after ? alignment.roundedDelay : 0,
+                             invertSub: after && alignment.best.invertPolarity,
+                             crossover: alignment.crossover, overlap: alignment.overlapBand,
+                             mainsLabel: loc.t("match.phase.mains"), subLabel: loc.t("match.phase.sub"))
+        }
+        .frame(maxWidth: .infinity)
+        .glassCard(padding: 18)
+        .animation(.easeInOut(duration: 0.25), value: after)
+    }
+}
+
+/// Phase of two groups (wrapped, 1/6-oct smoothed) around the crossover with the overlap band
+/// shaded, a legend and the mean phase gap in the band. `subDelay` / `invertSub` apply a correction
+/// to the subwoofer curve.
+struct PhaseOverlayPlot: View {
+    @EnvironmentObject var loc: Localizer
+    var mains: TransferFunction
+    var sub: TransferFunction
+    var subDelay: Double = 0
+    var invertSub = false
+    var crossover: Double
+    var overlap: ClosedRange<Double>
+    var mainsLabel: String
+    var subLabel: String
+
+    var body: some View {
+        let curves = phaseCurves()
+        VStack(alignment: .leading, spacing: 10) {
             Canvas { ctx, size in draw(&ctx, size: size, curves: curves) }
                 .frame(height: 220)
                 .background(RoundedRectangle(cornerRadius: Theme.radiusSmall, style: .continuous).fill(Color.white.opacity(0.03)))
             HStack(spacing: 16) {
-                legend(Theme.dataSecondary, loc.t("match.phase.mains"))
-                legend(Theme.accent, loc.t("match.phase.sub"))
+                legend(Theme.dataSecondary, mainsLabel)
+                legend(Theme.accent, subLabel)
                 Spacer()
                 if let gap = curves.gap {
                     Text(String(format: loc.t("match.phase.gap"), gap))
@@ -208,9 +236,6 @@ struct PhaseMatchView: View {
                 }
             }
         }
-        .frame(maxWidth: .infinity)
-        .glassCard(padding: 18)
-        .animation(.easeInOut(duration: 0.25), value: after)
     }
 
     private func legend(_ color: Color, _ text: String) -> some View {
@@ -220,8 +245,6 @@ struct PhaseMatchView: View {
         }
     }
 
-    // MARK: Data
-
     struct Curves {
         var frequencies: [Double]
         var mains: [Double?]
@@ -230,46 +253,39 @@ struct PhaseMatchView: View {
     }
 
     private var range: ClosedRange<Double> {
-        let fc = alignment.crossover
-        return max(20, fc / 4)...min(2000, fc * 4)
+        max(20, crossover / 4)...min(2000, crossover * 4)
     }
 
-    private func phaseCurves(after: Bool) -> Curves {
+    private func phaseCurves() -> Curves {
         let m = Smoothing.smooth(mains, resolution: .oct6)
         let s = Smoothing.smooth(sub, resolution: .oct6)
-        guard m.frequencies.count == s.frequencies.count else { return Curves(frequencies: [], mains: [], sub: [], gap: nil) }
-        let tau = after ? alignment.roundedDelay : 0
-        let sign = after && alignment.best.invertPolarity ? -1.0 : 1.0
+        guard m.frequencies == s.frequencies else { return Curves(frequencies: [], mains: [], sub: [], gap: nil) }
+        let sign = invertSub ? -1.0 : 1.0
         var fs: [Double] = [], pm: [Double?] = [], ps: [Double?] = [], gaps: [Double] = []
         for i in m.frequencies.indices where range.contains(m.frequencies[i]) {
             let f = m.frequencies[i]
             let hm = m.response[i]
-            let hs = s.response[i] * Complex.polar(magnitude: sign, phase: -2 * .pi * f * tau)
+            let hs = s.response[i] * Complex.polar(magnitude: sign, phase: -2 * .pi * f * subDelay)
             let okM = hm.magnitude.isFinite && hm.magnitude > 0
             let okS = hs.magnitude.isFinite && hs.magnitude > 0
             fs.append(f)
             pm.append(okM ? hm.phase * 180 / .pi : nil)
             ps.append(okS ? hs.phase * 180 / .pi : nil)
-            if okM && okS && alignment.overlapBand.contains(f) {
+            if okM && okS && overlap.contains(f) {
                 gaps.append(abs((hs / hm).phase) * 180 / .pi)
             }
         }
         return Curves(frequencies: fs, mains: pm, sub: ps, gap: gaps.isEmpty ? nil : gaps.reduce(0, +) / Double(gaps.count))
     }
 
-    // MARK: Drawing
-
     private func draw(_ ctx: inout GraphicsContext, size: CGSize, curves: Curves) {
         let plot = CGRect(x: 40, y: 8, width: size.width - 52, height: size.height - 28)
         let lo = log10(range.lowerBound), hi = log10(range.upperBound)
         func x(_ f: Double) -> CGFloat { plot.minX + CGFloat((log10(f) - lo) / (hi - lo)) * plot.width }
         func y(_ deg: Double) -> CGFloat { plot.midY - CGFloat(deg / 180) * plot.height / 2 }
-        // Overlap band.
-        let band = alignment.overlapBand
-        let bx0 = x(max(band.lowerBound, range.lowerBound)), bx1 = x(min(band.upperBound, range.upperBound))
+        let bx0 = x(max(overlap.lowerBound, range.lowerBound)), bx1 = x(min(overlap.upperBound, range.upperBound))
         ctx.fill(Path(CGRect(x: bx0, y: plot.minY, width: max(0, bx1 - bx0), height: plot.height)),
                  with: .color(Theme.accent.opacity(0.07)))
-        // Grid.
         for deg in [-180.0, -90, 0, 90, 180] {
             var g = Path(); g.move(to: CGPoint(x: plot.minX, y: y(deg))); g.addLine(to: CGPoint(x: plot.maxX, y: y(deg)))
             ctx.stroke(g, with: .color(.white.opacity(deg == 0 ? 0.14 : 0.06)), lineWidth: 1)
@@ -282,10 +298,8 @@ struct PhaseMatchView: View {
             ctx.draw(Text(FrequencyAxis.label(f)).font(Theme.mono(10)).foregroundColor(Theme.textMuted),
                      at: CGPoint(x: x(f), y: plot.maxY + 10))
         }
-        let fc = alignment.crossover
-        var xo = Path(); xo.move(to: CGPoint(x: x(fc), y: plot.minY)); xo.addLine(to: CGPoint(x: x(fc), y: plot.maxY))
+        var xo = Path(); xo.move(to: CGPoint(x: x(crossover), y: plot.minY)); xo.addLine(to: CGPoint(x: x(crossover), y: plot.maxY))
         ctx.stroke(xo, with: .color(Theme.accent.opacity(0.35)), style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
-        // Curves; wrapped phase, broken at the ±180° jumps.
         func trace(_ values: [Double?], color: Color) {
             var p = Path()
             var last: Double?

@@ -78,11 +78,7 @@ struct PreparationStepView: View {
     private var systemCard: some View {
         Panel(title: loc.t("prep.system"), tint: Theme.dataSecondary) {
             VStack(alignment: .leading, spacing: 14) {
-                HStack {
-                    Toggle(loc.t("prep.hasSub"), isOn: $model.wizard.configuration.hasSubwoofer)
-                    Spacer()
-                    Toggle(loc.t("prep.fastMode.short"), isOn: $model.wizard.configuration.fastMode)
-                }
+                Toggle(loc.t("prep.hasSub"), isOn: $model.wizard.configuration.hasSubwoofer)
                 HStack {
                     Toggle(loc.t("prep.knownCrossover"), isOn: Binding(
                         get: { model.wizard.configuration.crossover != nil },
@@ -111,10 +107,6 @@ struct PreparationStepView: View {
                         }
                         .pickerStyle(.segmented).labelsHidden()
                     }
-                }
-                if model.wizard.configuration.fastMode {
-                    Text(loc.t("prep.fastMode.warning")).font(.system(size: 11)).foregroundStyle(Theme.signalYellow)
-                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             .font(.system(size: 13))

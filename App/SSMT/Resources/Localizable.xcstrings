@@ -841,13 +841,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Subs muted, satellites on"
+            "value": "Subs muted, satellites on — they become the reference for the phase match"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Сабы — мьют, сателлиты — включены"
+            "value": "Сабы — мьют, сателлиты — включены. Они станут эталоном для склейки"
           }
         }
       }
@@ -858,13 +858,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mute the subwoofers on the processor. Leave only the mains (satellites) on."
+            "value": "Mute the subwoofers on the processor and leave only the satellites on. This capture is stored and the subwoofers are then matched to it in phase."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Замьютьте сабвуферы на процессоре. Оставьте включёнными только сателлиты."
+            "value": "Замьютьте сабвуферы на процессоре, оставьте включёнными только сателлиты. Этот замер сохранится, и дальше сабвуферы будут подгоняться к нему по фазе."
           }
         }
       }
@@ -875,13 +875,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mains only"
+            "value": "Satellites"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Только сателлиты"
+            "value": "Сателлиты"
           }
         }
       }
@@ -967,23 +967,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Принят, но сигнал был слабым"
-          }
-        }
-      }
-    },
-    "capture.counter": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Capture %ld of %ld"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Замер %ld из %ld"
           }
         }
       }
@@ -2960,6 +2943,108 @@
         }
       }
     },
+    "match.do.addSub": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add %.2f ms to the subs"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Добавьте сабам %.2f мс"
+          }
+        }
+      }
+    },
+    "match.do.glued": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glued in phase"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Склеено по фазе"
+          }
+        }
+      }
+    },
+    "match.do.level": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sub level: %+.1f dB"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Уровень саба: %+.1f дБ"
+          }
+        }
+      }
+    },
+    "match.do.polarity": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invert the sub polarity first"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сначала инвертируйте полярность саба"
+          }
+        }
+      }
+    },
+    "match.do.reduceSub": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reduce the sub delay by %.2f ms"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Уменьшите задержку саба на %.2f мс"
+          }
+        }
+      }
+    },
+    "match.do.weak": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Too little signal — check the noise and the microphone"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Мало сигнала — проверьте шум и микрофон"
+          }
+        }
+      }
+    },
     "match.headline.mains": {
       "extractionState": "manual",
       "localizations": {
@@ -3011,6 +3096,40 @@
         }
       }
     },
+    "match.lateSubs": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The subs arrive later than the satellites. If the sub delay is already 0, delay the satellites by %.2f ms (they are muted now) and press the button."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сабы приходят позже сателлитов. Если задержка саба уже 0 — задержите сателлиты на %.2f мс (сейчас они замьючены) и нажмите кнопку."
+          }
+        }
+      }
+    },
+    "match.lateSubs.button": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entered %.2f ms on the satellites"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ввёл %.2f мс на сателлиты"
+          }
+        }
+      }
+    },
     "match.level": {
       "extractionState": "manual",
       "localizations": {
@@ -3024,6 +3143,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "Уровень сабвуферов %+.1f дБ"
+          }
+        }
+      }
+    },
+    "match.lock": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glued — capture the subs"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Склеено — зафиксировать сабы"
+          }
+        }
+      }
+    },
+    "match.lock.anyway": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capture the subs"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Зафиксировать сабы"
           }
         }
       }
@@ -3096,6 +3249,23 @@
         }
       }
     },
+    "match.phase.liveSub": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subs (live)"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сабы (сейчас)"
+          }
+        }
+      }
+    },
     "match.phase.mains": {
       "extractionState": "manual",
       "localizations": {
@@ -3109,6 +3279,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Сателлиты"
+          }
+        }
+      }
+    },
+    "match.phase.savedMains": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Satellites (stored)"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сателлиты (замер)"
           }
         }
       }
@@ -3177,6 +3364,57 @@
           "stringUnit": {
             "state": "translated",
             "value": "Полярность сабвуферов: оставить"
+          }
+        }
+      }
+    },
+    "match.step.info": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mute the satellites, leave the subwoofers on. Several times a second SSMT compares the live subwoofer with the stored satellites in the crossover region — the same full alignment as the calculation: phase match over the overlap band, the correct cycle checked against the arrival time, polarity and level. Turn the sub delay (and polarity / level if asked) until everything is green and the two phase curves lie on top of each other, then capture the subs. If the subs arrive later than the satellites, the delay goes to the satellites."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Замьютьте сателлиты, оставьте сабвуферы. Несколько раз в секунду SSMT сравнивает живой сабвуфер с сохранёнными сателлитами в зоне раздела — тем же полным расчётом склейки: совпадение фаз по полосе перекрытия, проверка правильного периода по времени прихода, полярность и уровень. Крутите задержку саба (и полярность/уровень, если попросит), пока всё не станет зелёным и кривые фаз не лягут друг на друга, затем зафиксируйте сабы. Если сабы приходят позже сателлитов, задержка уходит на сателлиты."
+          }
+        }
+      }
+    },
+    "match.step.subtitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Satellites are stored. Only the subs play — turn the sub delay until the phases coincide"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сателлиты сохранены. Играют только сабы — крутите задержку саба, пока фазы не совпадут"
+          }
+        }
+      }
+    },
+    "match.step.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Phase match"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Склейка по фазе"
           }
         }
       }
@@ -5408,6 +5646,23 @@
         }
       }
     },
+    "sim.phaseMatch": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Simulation: turn the knobs as asked"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Симуляция: покрутить ручки как просят"
+          }
+        }
+      }
+    },
     "sim.sub": {
       "extractionState": "manual",
       "localizations": {
@@ -5499,13 +5754,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Satellites, subs, system"
+            "value": "Stored reference"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Сателлиты, сабы, система"
+            "value": "Эталон для склейки"
           }
         }
       }
@@ -5516,13 +5771,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Captures"
+            "value": "Satellites"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Замеры"
+            "value": "Сателлиты"
           }
         }
       }
@@ -5533,13 +5788,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Delay, polarity, level"
+            "value": "Live: delay, polarity, level"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Задержка, полярность, уровень"
+            "value": "Вживую: задержка, полярность, уровень"
           }
         }
       }
