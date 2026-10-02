@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<title>SSMT · аналоговые приборы</title>
+<style>
+  body { margin:0; background:#0A0A0B; color:#F2F2F2; font-family:"DejaVu Sans Condensed","DejaVu Sans",sans-serif; }
+  .wrap { display:flex; gap:20px; padding:24px; flex-wrap:nowrap; }
+  .card { background:#121316; padding:16px 16px 12px; border:1px solid rgba(255,255,255,.12);
+          clip-path: polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px); }
+  .cap { font-size:12px; letter-spacing:1px; max-width:420px; color:#A3A6AD; text-transform:uppercase; margin:8px 2px 0; }
+  .cap b { color:#FF6B1A; font-weight:700; margin-right:6px; }
+  h1 { font-size:16px; letter-spacing:2px; margin:24px 28px 0; color:#A3A6AD; font-weight:600; }
+</style></head>
+<body>
+<h1>SSMT · ВАРИАНТЫ СТРЕЛОЧНОГО ПРИБОРА (ЗАДЕРЖКА САБВУФЕРА, ОСТАТОК +1.25 МС)</h1>
+<div class="wrap" id="wrap"></div>
+<script>
+// Closeness colour: 0 red → 0.4 orange → 0.75 yellow → 1 green (same stops as the app).
+function closeness(c){
+  const s=[[0,[255,45,61]],[0.4,[255,107,26]],[0.75,[255,194,26]],[1,[75,224,138]]];
+  c=Math.max(0,Math.min(1,c));
+  for(let i=1;i<s.length;i++) if(c<=s[i][0]){const[a0,a]=s[i-1],[a1,b]=s[i];const t=(c-a0)/(a1-a0);
+    return `rgb(${a.map((v,k)=>Math.round(v+(b[k]-v)*t)).join(',')})`;}
+  return 'rgb(75,224,138)';
+}
+const TOL=0.12;
+const cl=p=>{const a=Math.abs(p);return a<=TOL?1:Math.max(0,1-(a-TOL)/(1-TOL));};
+
+function meter(o){
+  const W=420,H=310,cx=210,cy=330,R=275,SPAN=36; // pivot below the window, hidden by the plate
+  const pos=o.value; // -1..1
+  const ang=p=>(-90+p*SPAN)*Math.PI/180;
+  const pt=(p,r)=>[cx+r*Math.cos(ang(p)),cy+r*Math.sin(ang(p))];
+  const face=o.face, ink=o.ink;
+  let svg=`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+   <linearGradient id="bk${o.id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a2622"/><stop offset=".5" stop-color="#16130f"/><stop offset="1" stop-color="#0b0a08"/></linearGradient>
+   <linearGradient id="fc${o.id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${face[0]}"/><stop offset="1" stop-color="${face[1]}"/></linearGradient>
+   <linearGradient id="gl${o.id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset=".45" stop-color="#fff" stop-opacity=".03"/><stop offset=".46" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="mr${o.id}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8d939a"/><stop offset=".5" stop-color="#e7ecf0"/><stop offset="1" stop-color="#7c8188"/></linearGradient>
+   <clipPath id="win${o.id}"><rect x="22" y="20" width="${W-44}" height="${H-96}" rx="6"/></clipPath>
+   <filter id="glow${o.id}" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="grain${o.id}"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .07 0"/></filter>
+  </defs>
+  <rect x="2" y="2" width="${W-4}" height="${H-4}" rx="14" fill="url(#bk${o.id})" stroke="#000" stroke-width="2"/>
+  <rect x="2" y="2" width="${W-4}" height="${H-4}" rx="14" filter="url(#grain${o.id})"/>
+  <rect x="22" y="20" width="${W-44}" height="${H-92}" rx="6" fill="url(#fc${o.id})" stroke="#000" stroke-width="2"/>`;
+  // printed coloured sector
+  const N=60;
+  for(let i=0;i<N;i++){const p0=-1+2*i/N,p1=-1+2*(i+1)/N;const [x0,y0]=pt(p0,R-12),[x1,y1]=pt(p1,R-12);
+    svg+=`<path d="M${x0} ${y0} A${R-12} ${R-12} 0 0 1 ${x1} ${y1}" stroke="${closeness(cl((p0+p1)/2))}" stroke-opacity="${o.sectorOpacity}" stroke-width="${o.sectorWidth}" fill="none"/>`;}
+  // mirror strip (anti-parallax)
+  if(o.mirror){const [a,b]=pt(-1,R-28),[c,d]=pt(1,R-28);
+    svg+=`<path d="M${a} ${b} A${R-28} ${R-28} 0 0 1 ${c} ${d}" stroke="url(#mr${o.id})" stroke-width="6" fill="none" opacity=".85"/>`;}
+  // ticks + numbers
+  for(let i=-20;i<=20;i++){const p=i/20,major=i%10===0,mid=i%5===0;
+    const [x0,y0]=pt(p,R-(major?52:mid?46:40)),[x1,y1]=pt(p,R-20);
+    svg+=`<line x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}" stroke="${ink}" stroke-width="${major?2.2:mid?1.6:1}"/>`;}
+  [[-1,'−2'],[-0.5,'−1'],[0,'0'],[0.5,'+1'],[1,'+2']].forEach(([p,t])=>{const[x,y]=pt(p,R-70);
+    svg+=`<text x="${x}" y="${y+5}" fill="${ink}" font-size="17" font-weight="700" text-anchor="middle" font-family="DejaVu Sans Condensed">${t}</text>`;});
+  // markings
+  svg+=`<text x="${cx}" y="${H-104}" fill="${ink}" font-size="19" font-weight="700" text-anchor="middle" font-family="DejaVu Serif">мс</text>
+  <text x="40" y="${H-82}" fill="${ink}" font-size="11" font-family="DejaVu Sans Mono" opacity=".8">КЛ.1,5  ⊓  ⊥</text>
+  <text x="${W-40}" y="${H-82}" fill="${ink}" font-size="11" text-anchor="end" font-family="DejaVu Sans Mono" opacity=".8">SSMT № 0471</text>
+  <text x="40" y="${H-100}" fill="${ink}" font-size="11" letter-spacing="2" font-family="DejaVu Sans Condensed" opacity=".85">◀ МЕНЬШЕ</text>
+  <text x="${W-40}" y="${H-100}" fill="${ink}" font-size="11" letter-spacing="2" text-anchor="end" font-family="DejaVu Sans Condensed" opacity=".85">БОЛЬШЕ ▶</text>
+  <text x="${cx}" y="40" fill="${ink}" font-size="10" letter-spacing="3" text-anchor="middle" font-family="DejaVu Sans Condensed" opacity=".7">ЗАДЕРЖКА САБВУФЕРА</text>`;
+  // needle with counterweight
+  const [tx,ty]=pt(pos,R-14),[bx,by]=pt(pos,0);
+  svg+=`<g clip-path="url(#win${o.id})"><g filter="drop-shadow(2px 3px 2px rgba(0,0,0,.45))">
+   <line x1="${bx}" y1="${by}" x2="${tx}" y2="${ty}" stroke="${o.needle}" stroke-width="2.4" stroke-linecap="round"/>`;
+  if(o.tip){const[mx,my]=pt(pos,R-60);svg+=`<line x1="${mx}" y1="${my}" x2="${tx}" y2="${ty}" stroke="#FF6B1A" stroke-width="3" stroke-linecap="round"/>`;}
+  svg+=`</g></g>`;
+  // face window clipped bottom: pivot cover plate
+  // lower plate hides the movement; a slot shows where the needle enters the window
+  svg+=`<path d="M22 ${H-76} L${W-22} ${H-76} L${W-22} ${H-72} L22 ${H-72} Z" fill="#000" opacity=".6"/>`;
+  // glass glare
+  svg+=`<rect x="22" y="20" width="${W-44}" height="${H-92}" rx="6" fill="url(#gl${o.id})"/>`;
+  // bottom: digital window + lamp + caption
+  const c=cl(pos), lamp=closeness(c);
+  svg+=`<rect x="34" y="${H-62}" width="190" height="44" rx="4" fill="#070605" stroke="#2c2620"/>`;
+  if(o.nixie){
+    svg+=`<text x="129" y="${H-29}" fill="#3a1d0a" font-size="32" text-anchor="middle" font-family="DejaVu Sans Mono" letter-spacing="2">88.88</text>
+    <text x="129" y="${H-29}" fill="#FF8A3D" font-size="32" text-anchor="middle" font-family="DejaVu Sans Mono" letter-spacing="2" filter="url(#glow${o.id})">+1.25</text>`;
+  } else {
+    svg+=`<text x="129" y="${H-29}" fill="${lamp}" font-size="30" font-weight="700" text-anchor="middle" font-family="DejaVu Sans Mono">+1.25</text>`;
+  }
+  svg+=`<circle cx="270" cy="${H-40}" r="14" fill="${lamp}" filter="url(#glow${o.id})" opacity=".95"/>
+  <circle cx="270" cy="${H-40}" r="14" fill="none" stroke="#000" stroke-width="3"/>
+  <circle cx="265" cy="${H-45}" r="4" fill="#fff" opacity=".35"/>
+  <text x="294" y="${H-44}" fill="#C9C2B4" font-size="12" font-family="DejaVu Sans Condensed" letter-spacing="1.5">ДОБАВЬТЕ</text>
+  <text x="294" y="${H-28}" fill="#C9C2B4" font-size="12" font-family="DejaVu Sans Condensed" letter-spacing="1.5">ЗАДЕРЖКУ</text>`;
+  // screws
+  [[16,16],[W-16,16],[16,H-16],[W-16,H-16]].forEach(([x,y],k)=>{const a=[20,75,130,160][k]*Math.PI/180;
+    svg+=`<circle cx="${x}" cy="${y}" r="6.5" fill="#3b352e" stroke="#000"/><line x1="${x-5*Math.cos(a)}" y1="${y-5*Math.sin(a)}" x2="${x+5*Math.cos(a)}" y2="${y+5*Math.sin(a)}" stroke="#0d0b09" stroke-width="2"/>`;});
+  return svg+'</svg>';
+}
+const variants=[
+  {id:'A',cap:'<b>А</b>Авиаприбор: чёрная шкала, белая разметка, лампа и газоразрядные цифры',
+   face:['#1b1c1e','#0f1011'],ink:'#ECE6D6',needle:'#ECE6D6',tip:true,mirror:false,nixie:true,sectorOpacity:.85,sectorWidth:9,value:0.45},
+  {id:'B',cap:'<b>Б</b>Щитовой прибор: кремовая шкала, зеркальная полоса, чёрная стрелка',
+   face:['#ECE4CC','#D9CFB2'],ink:'#1A1714',needle:'#14110E',tip:false,mirror:true,nixie:true,sectorOpacity:.9,sectorWidth:8,value:0.45},
+  {id:'C',cap:'<b>В</b>Гибрид: чёрная шкала + зеркальная полоса, цифры цветом близости',
+   face:['#1b1c1e','#0f1011'],ink:'#ECE6D6',needle:'#ECE6D6',tip:true,mirror:true,nixie:false,sectorOpacity:.85,sectorWidth:9,value:0.45},
+];
+const wrap=document.getElementById('wrap');
+variants.forEach(v=>{const d=document.createElement('div');d.className='card';d.innerHTML=meter(v)+`<div class="cap">${v.cap}</div>`;wrap.appendChild(d);});
+</script>
+</body></html>
