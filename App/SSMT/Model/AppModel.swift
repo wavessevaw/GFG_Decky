@@ -591,6 +591,57 @@ final class AppModel: ObservableObject {
         simProcessor = p
     }
 
+    // MARK: - Report & session
+
+    var interfaceName: String {
+        switch source {
+        case .simulation: return "Simulation"
+        default: return inputDevice?.name ?? "—"
+        }
+    }
+
+    var setupReport: SetupReport {
+        SetupReport(wizard: wizard, interfaceName: interfaceName, sampleRate: 48000,
+                    microphone: calibration.selectedMicrophone)
+    }
+
+    func exportReport(pdf: Bool, localizer: Localizer) {
+        let view = ReportView(report: setupReport, wizard: wizard).environmentObject(localizer)
+        do { try ReportExporter.export(view, pdf: pdf) } catch { lastError = error.localizedDescription }
+    }
+
+    func copyReportText() {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(setupReport.plainText, forType: .string)
+    }
+
+    func saveSession() {
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = "SSMT-session.ssmtsession"
+        panel.canCreateDirectories = true
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        let file = SessionFile(wizard: wizard, interfaceName: interfaceName, sampleRate: 48000,
+                               microphoneCalibrationName: calibration.selectedMicrophone?.name,
+                               appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0")
+        do { try file.encoded().write(to: url, options: .atomic) } catch { lastError = error.localizedDescription }
+    }
+
+    func openSession() {
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            let file = try SessionFile.decode(Data(contentsOf: url))
+            stopTuner()
+            stopEQTuner()
+            wizard = file.wizard
+            appMode = .wizard
+        } catch {
+            lastError = "\(url.lastPathComponent): \(error)"
+        }
+    }
+
     // MARK: - Export
 
     var exportText: String { PEQExport.filterSettingsText(wizard.enteredFilters.isEmpty ? (wizard.eqResult?.filters ?? []) : wizard.enteredFilters) }

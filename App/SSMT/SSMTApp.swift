@@ -9,13 +9,27 @@ struct SSMTApp: App {
 
     var body: some Scene {
         WindowGroup {
-            MainView()
+            RootView()
                 .environmentObject(model)
                 .environmentObject(localizer)
-                .onAppear { appDelegate.model = model }
+                .onAppear {
+                    appDelegate.model = model
+                    MiniPanelController.shared.attach(model: model, localizer: localizer)
+                }
         }
         .windowStyle(.hiddenTitleBar)
         .commands {
+            CommandGroup(replacing: .newItem) {
+                Button(localizer.t("session.open")) { model.openSession() }
+                    .keyboardShortcut("o", modifiers: [.command])
+                Button(localizer.t("session.save")) { model.saveSession() }
+                    .keyboardShortcut("s", modifiers: [.command])
+                Divider()
+                Button(localizer.t("report.pdf")) { model.exportReport(pdf: true, localizer: localizer) }
+                    .keyboardShortcut("p", modifiers: [.command, .shift])
+                Button(localizer.t("report.png")) { model.exportReport(pdf: false, localizer: localizer) }
+                Button(localizer.t("report.copy")) { model.copyReportText() }
+            }
             CommandMenu("SSMT") {
                 Button(localizer.t("action.stop")) { model.emergencyStop() }
                     .keyboardShortcut(.escape, modifiers: [])
@@ -33,6 +47,10 @@ struct SSMTApp: App {
                 Divider()
                 Button(localizer.t("wizard.begin")) { model.wizardStart() }
                     .keyboardShortcut("b", modifiers: [.command])
+                Divider()
+                Button(localizer.t("mini.toggle")) { MiniPanelController.shared.toggle() }
+                    .keyboardShortcut("m", modifiers: [.command, .shift])
+                Button(localizer.t("mini.clickThroughOff")) { MiniPanelController.shared.clickThrough = false }
             }
         }
     }
@@ -43,7 +61,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     weak var model: AppModel?
     private var keyMonitor: Any?
 
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        FontRegistry.registerBundledFonts()
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Black from the very first frame: no white flash before SwiftUI draws.
+        for w in NSApp.windows { w.backgroundColor = .black }
         // Esc = STOP everywhere in the app, even while a text field or picker has focus.
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             if event.keyCode == 53 {

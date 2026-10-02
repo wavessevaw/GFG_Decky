@@ -4,13 +4,17 @@ import SwiftUI
 struct MainView: View {
     @EnvironmentObject var model: AppModel
     @EnvironmentObject var loc: Localizer
+    var brandNamespace: Namespace.ID? = nil
+    var showBrand = true
 
     var body: some View {
         VStack(spacing: 0) {
-            TopBar()
+            TopBar(brandNamespace: brandNamespace, showBrand: showBrand)
             HStack(spacing: 0) {
-                SetupSidebar(expert: model.appMode == .expert)
-                Rectangle().fill(Theme.hairline).frame(width: 1)
+                if !model.stageMode {
+                    SetupSidebar(expert: model.appMode == .expert)
+                    Rectangle().fill(Theme.hairline).frame(width: 1)
+                }
                 switch model.appMode {
                 case .wizard:
                     WizardView()

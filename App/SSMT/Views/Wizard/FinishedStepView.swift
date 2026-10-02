@@ -84,6 +84,11 @@ struct FinishedStepView: View {
                     Button(loc.t("export.text")) { model.saveExport(csv: false) }.buttonStyle(SSMTButtonStyle())
                     Button(loc.t("export.csv")) { model.saveExport(csv: true) }.buttonStyle(SSMTButtonStyle())
                 }
+                HStack {
+                    Button(loc.t("report.pdf")) { model.exportReport(pdf: true, localizer: loc) }.buttonStyle(SSMTButtonStyle(kind: .primary))
+                    Button(loc.t("report.png")) { model.exportReport(pdf: false, localizer: loc) }.buttonStyle(SSMTButtonStyle())
+                    Button(loc.t("session.save")) { model.saveSession() }.buttonStyle(SSMTButtonStyle())
+                }
             }
             HStack(spacing: 12) {
                 Button(loc.t("wizard.back")) { model.wizardBack() }.buttonStyle(SSMTButtonStyle())

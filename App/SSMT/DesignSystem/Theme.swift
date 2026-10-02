@@ -49,16 +49,21 @@ enum Theme {
         return statusGood
     }
 
-    // Typography
+    // Typography (bundled OFL fonts: Russo One for headings, JetBrains Mono for numbers;
+    // both include Cyrillic. Fall back to system fonts if registration failed.)
+    static var customFontsAvailable = false
+
     static func heading(_ size: CGFloat) -> Font {
-        .system(size: size, weight: .heavy, design: .default).width(.condensed)
+        customFontsAvailable ? .custom("Russo One", size: size)
+            : .system(size: size, weight: .heavy, design: .default).width(.condensed)
     }
     static func label(_ size: CGFloat = 11) -> Font {
         .system(size: size, weight: .semibold, design: .default).width(.condensed)
     }
     /// Monospaced, tabular digits so numbers do not jump.
     static func mono(_ size: CGFloat, weight: Font.Weight = .medium) -> Font {
-        .system(size: size, weight: weight, design: .monospaced).monospacedDigit()
+        customFontsAvailable ? Font.custom("JetBrains Mono", size: size).weight(weight).monospacedDigit()
+            : .system(size: size, weight: weight, design: .monospaced).monospacedDigit()
     }
 }
 

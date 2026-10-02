@@ -4,10 +4,23 @@ import SwiftUI
 struct TopBar: View {
     @EnvironmentObject var model: AppModel
     @EnvironmentObject var loc: Localizer
+    var brandNamespace: Namespace.ID? = nil
+    var showBrand = true
+    @State private var showAbout = false
 
     var body: some View {
         HStack(spacing: 14) {
-            BrandMark(variant: .compact, height: 22)
+            Button { showAbout = true } label: {
+                ZStack {
+                    if showBrand {
+                        BrandMark(variant: .compact, height: 22).modifier(MatchedBrand(namespace: brandNamespace))
+                    }
+                }
+                .frame(minWidth: 40, minHeight: 22)
+            }
+            .buttonStyle(.plain)
+            .help(loc.t("about.title"))
+            .popover(isPresented: $showAbout) { AboutView() }
             VStack(alignment: .leading, spacing: 0) {
                 Text(loc.t("app.title")).font(Theme.heading(15)).tracking(1.5).foregroundStyle(Theme.textPrimary)
                 Text(loc.t("app.subtitle")).font(Theme.label(9)).tracking(1).foregroundStyle(Theme.textMuted)
@@ -42,11 +55,20 @@ struct TopBar: View {
             .keyboardShortcut(.space, modifiers: [])
 
             Button {
+                MiniPanelController.shared.toggle()
+            } label: {
+                Image(systemName: "rectangle.on.rectangle")
+            }
+            .buttonStyle(SSMTButtonStyle())
+            .help(loc.t("mini.toggle"))
+
+            Button {
                 model.emergencyStop()
             } label: {
                 Label(loc.t("action.stop"), systemImage: "stop.fill")
-                    .font(Theme.heading(16))
-                    .padding(.horizontal, 10)
+                    .font(Theme.heading(model.stageMode ? 26 : 16))
+                    .padding(.horizontal, model.stageMode ? 22 : 10)
+                    .padding(.vertical, model.stageMode ? 6 : 0)
             }
             .buttonStyle(SSMTButtonStyle(kind: .danger))
             .help(loc.t("action.stop.help"))
