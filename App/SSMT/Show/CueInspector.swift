@@ -102,7 +102,7 @@ private struct CueInspectorContent: View {
     private var info: (duration: Double, channels: Int)? { path.flatMap { show.clipInfo[$0] } }
 
     @ViewBuilder private var audioSection: some View {
-        section(loc.t("show.file"), icon: "doc.waveform") {
+        section(loc.t("show.file"), icon: "music.note") {
             HStack(spacing: 8) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(cue.audio.map { ($0.file as NSString).lastPathComponent } ?? "—")
