@@ -186,6 +186,7 @@ final class SnapshotTests: XCTestCase {
 }
 
 /// Runs the full wizard (alignment + verification + EQ round) in simulation for screenshots.
+@MainActor
 enum SimulatedSession {
     static func completeWizard() throws -> SetupWizard {
         var system = AppModel.demoSystem()
