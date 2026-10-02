@@ -91,7 +91,7 @@ enum StageSymbols {
             circle(pt(0.5, 0.5), s * 0.08)
             circle(pt(0.62, 0.36), s * 0.14)
         case .micStand:
-            for a in [90.0, 210.0, 330.0] {
+            for a: CGFloat in [90, 210, 330] {
                 let rad = a * .pi / 180
                 line(pt(0.5, 0.5), CGPoint(x: r.midX + cos(rad) * s * 0.42, y: r.midY + sin(rad) * s * 0.42))
             }
