@@ -118,12 +118,17 @@ final class SnapshotTests: XCTestCase {
 
     private func snapshot<V: View>(_ view: V, size: CGSize?, name: String, loc: Localizer,
                                    file: StaticString = #filePath, line: UInt = #line) throws {
-        let root = view
+        let framed = Group {
+            if let size { view.frame(width: size.width, height: size.height, alignment: .top) } else { view }
+        }
+        let root = framed
             .environmentObject(Self.model)
             .environmentObject(loc)
             .environment(\.colorScheme, .dark)
             .background(Theme.background)
         let host = NSHostingView(rootView: root)
+        // Fixed snapshot size: do not let the hosting view resize the window to its content.
+        host.sizingOptions = []
         let target = size ?? host.fittingSize
         host.frame = CGRect(origin: .zero, size: target)
         let window = NSWindow(contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: false)

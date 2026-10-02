@@ -52,10 +52,10 @@ struct StepIndicator: View {
                         .overlay(CutCornerShape(cut: 5).stroke(done ? Theme.accent : Theme.hairlineStrong, lineWidth: 1))
                         .shadow(color: active ? Theme.accent.opacity(0.6) : .clear, radius: 6)
                     Text(loc.t("wizard.step.\(s.rawValue)").uppercased())
-                        .font(Theme.label(10)).tracking(0.5)
-                        .foregroundStyle(active ? Theme.textPrimary : Theme.textMuted)
+                        .font(Theme.label(10)).tracking(0.3)
+                        .foregroundStyle(active ? Theme.textPrimary : (done ? Theme.textSecondary : Theme.textMuted))
                         .lineLimit(1)
-                    if done { Image(systemName: "checkmark").font(.system(size: 10, weight: .bold)).foregroundStyle(Theme.accent) }
+                        .minimumScaleFactor(0.6)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 if s != steps.last {

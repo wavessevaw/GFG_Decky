@@ -328,11 +328,20 @@ struct VFDStrip: View {
     var color: Color
     var size: CGFloat
 
+    /// Upper case like a real VFD, but units keep their correct spelling (dB, Hz, ms).
+    static func display(_ text: String) -> String {
+        var t = text.uppercased()
+        for (wrong, right) in [("DB", "dB"), ("HZ", "Hz"), ("KHZ", "kHz"), ("MS", "ms")] {
+            t = t.replacingOccurrences(of: "(?<=[0-9 ])\(wrong)\\b", with: right, options: .regularExpression)
+        }
+        return t
+    }
+
     var body: some View {
         ZStack(alignment: .leading) {
             RoundedRectangle(cornerRadius: 4).fill(Color(hex: 0x050807))
                 .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color(hex: 0x1D2A26), lineWidth: 1))
-            Text(text.uppercased())
+            Text(Self.display(text))
                 .font(.system(size: size, weight: .medium, design: .monospaced))
                 .tracking(1.2)
                 .foregroundStyle(color)

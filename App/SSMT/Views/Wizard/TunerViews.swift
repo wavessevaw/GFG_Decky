@@ -157,7 +157,9 @@ struct VirtualProcessorPanel: View {
                       format: String) -> some View {
         HStack {
             Text(title).font(Theme.label(12)).foregroundStyle(Theme.textSecondary).frame(width: 150, alignment: .leading)
-            Slider(value: value, in: range, step: step).tint(Theme.accent)
+            Slider(value: Binding(get: { value.wrappedValue },
+                                  set: { value.wrappedValue = ($0 / step).rounded() * step }), in: range)
+                .tint(Theme.accent)
             Stepper("", value: value, in: range, step: step).labelsHidden()
             Text(String(format: format, value.wrappedValue)).font(Theme.mono(12)).frame(width: 80, alignment: .trailing)
         }

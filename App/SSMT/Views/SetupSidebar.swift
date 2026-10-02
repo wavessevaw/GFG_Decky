@@ -206,7 +206,9 @@ struct SetupSidebar: View {
                 Spacer()
                 Text(String(format: "%.2f", model.coherenceThreshold)).font(Theme.mono(12))
             }
-            Slider(value: $model.coherenceThreshold, in: 0.3...0.95, step: 0.05).tint(Theme.accent)
+            Slider(value: Binding(get: { model.coherenceThreshold },
+                                  set: { model.coherenceThreshold = ($0 * 20).rounded() / 20 }), in: 0.3...0.95)
+                .tint(Theme.accent)
             ForEach(GraphKind.allCases) { g in
                 Toggle(loc.t("graph.\(g.rawValue)"), isOn: Binding(
                     get: { model.visibleGraphs.contains(g) },
@@ -248,7 +250,8 @@ struct SetupSidebar: View {
                 Spacer()
                 Text(String(format: "%.0f dBFS", value.wrappedValue)).font(Theme.mono(12))
             }
-            Slider(value: value, in: range, step: 1) { _ in onCommit() }
+            // No `step:` — on macOS that draws a tick mark per step. Values are rounded to 1 dB instead.
+            Slider(value: Binding(get: { value.wrappedValue }, set: { value.wrappedValue = $0.rounded() }), in: range) { _ in onCommit() }
                 .tint(Theme.accent)
                 .onChange(of: value.wrappedValue) { _ in onCommit() }
         }

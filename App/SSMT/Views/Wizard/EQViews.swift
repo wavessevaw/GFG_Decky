@@ -345,8 +345,8 @@ struct EQTuningView: View {
                         get: { entered != nil }, set: { _ in model.simulateToggleBand(f) }))
                         .frame(width: 140, alignment: .leading)
                     if let e = entered {
-                        Slider(value: Binding(get: { e.gainDB }, set: { model.simulateSetBandGain(f, gain: $0) }),
-                               in: -12...3, step: 0.5).tint(Theme.accent)
+                        Slider(value: Binding(get: { e.gainDB }, set: { model.simulateSetBandGain(f, gain: ($0 * 2).rounded() / 2) }),
+                               in: -12...3).tint(Theme.accent)
                         Text(String(format: "%+.1f dB", e.gainDB)).font(Theme.mono(12)).frame(width: 64)
                     }
                 }
