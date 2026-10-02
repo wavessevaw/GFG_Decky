@@ -119,13 +119,4 @@ extension TransferFunction {
         }
         return out
     }
-
-    /// The same response delayed by `seconds` (pure delay: magnitude unchanged, phase −2πfτ).
-    public func delayed(by seconds: Double) -> TransferFunction {
-        var out = self
-        for i in frequencies.indices {
-            out.response[i] = response[i] * Complex.polar(magnitude: 1, phase: -2 * .pi * frequencies[i] * seconds)
-        }
-        return out
-    }
 }

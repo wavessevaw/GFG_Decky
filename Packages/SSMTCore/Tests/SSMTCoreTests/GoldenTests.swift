@@ -27,9 +27,9 @@ final class GoldenTests: XCTestCase {
     }
 
     func compute() throws -> Golden {
-        // The alignment golden values are the correction the live phase match asked for.
-        let (w, rig, reading) = try WizardTests.runWizardKeepingRig()
+        let (w, rig) = try WizardTests.runWizardKeepingRig()
         var wizard = w
+        let a = try XCTUnwrap(wizard.alignment)
         wizard.beginEQ()
         for p in 0..<wizard.configuration.eqPointCount {
             rig.backend.moveMicrophone(toPoint: p)
@@ -37,8 +37,8 @@ final class GoldenTests: XCTestCase {
             wizard.submit(try XCTUnwrap(rig.capture("eq\(p)", seconds: 8)))
         }
         let r = try XCTUnwrap(wizard.computeEQ())
-        return Golden(alignmentDelayMs: reading.delayError * 1000, invertPolarity: reading.polarityWrong,
-                      subGainDB: reading.levelError, crossover: reading.crossover,
+        return Golden(alignmentDelayMs: a.roundedDelay * 1000, invertPolarity: a.best.invertPolarity,
+                      subGainDB: a.subGainDB, crossover: a.crossover,
                       dipAfterDB: wizard.report?.after?.dipDepthDB ?? .nan,
                       filters: r.filters.map { GoldenFilter(frequency: $0.frequency, gainDB: $0.gainDB, q: $0.q, group: $0.group.rawValue) },
                       eqRmsBefore: r.rmsBeforeDB, eqRmsAfter: r.rmsAfterDB)

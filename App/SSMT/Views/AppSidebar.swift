@@ -8,8 +8,8 @@ enum WizardStage: Int, CaseIterable {
     static func of(_ step: WizardStep) -> WizardStage {
         switch step {
         case .preparation: return .prepare
-        case .baseline, .mainsOnly: return .capture
-        case .subOnly, .results, .verification: return .align
+        case .baseline, .subOnly, .mainsOnly: return .capture
+        case .results, .verification: return .align
         case .eqPoints, .eqTuning, .eqVerification: return .eq
         case .finished: return .done
         }

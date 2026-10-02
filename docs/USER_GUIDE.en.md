@@ -22,18 +22,12 @@ from red (far from target) to green ("IN TUNE").
 main listening position. Checklist: Start audio → Auto level (5 s of silence, then a slow rise to SNR ≥ 20 dB)
 → Find delay (all loudspeakers on). Describe the system (subs, crossover if known, processor steps). Start setup.
 
-**1. Satellites.** Mute the subs, leave the satellites on → Capture. This capture is stored as the reference.
+**1. Whole system** → **2. Subs only** (mute the mains) → **3. Mains only** (mute the subs). Tiles show what must
+be ON / MUTED; wait for the green "Signal quality" needle and press Capture (Return).
 
-**2. Phase match (live).** Mute the satellites, leave only the subs. Several times a second SSMT compares the live
-sub with the stored satellites using the full alignment (phase match over the overlap band, the correct cycle
-checked against the arrival time, polarity, level). Large: what to do now ("Add 3.21 ms to the subs", "Invert the
-sub polarity first"), the remaining delay in ms and the phase gap; next to it the phase curves "Satellites (stored)"
-and "Subs (live)" — glued, they lie on top of each other; the needles below. Turn the sub delay until all is green →
-"Glued — capture the subs". If the subs arrive later than the satellites, the delay goes to the satellites
-("Entered … ms on the satellites").
-
-**3. If a correction remains after the capture**, the "phase match" screen with the card and whole-system needles;
-otherwise straight to the verification.
+**4. Tuner.** The cards are the target (e.g. "+7.44 ms on the subs, Invert, −2.5 dB"). Turn the processor knobs
+while watching the polarity lamp and the delay/level needles (1–2 s response). If the mains need the delay,
+the sub is tuned first, then the mains delay. Ambiguous solutions are flagged with alternatives.
 
 **5. Verify.** All loudspeakers on → Capture. "Crossover dip" (green < 3 dB) and "Matches prediction"; if not,
 a concrete hint ("looks like the polarity was not changed").

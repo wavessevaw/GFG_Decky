@@ -108,9 +108,6 @@ final class AppModel: ObservableObject {
     }
     private var tuner: AlignmentTuner?
     private var lastTunerUpdate = Date.distantPast
-    /// A tuner reading is being computed off the main thread (the alignment search is not free on
-    /// older Macs); new snapshots are skipped meanwhile.
-    private var tunerBusy = false
 
     // EQ tuner
     private(set) var eqTunerReading: EQTuner.Reading? {
@@ -236,20 +233,8 @@ final class AppModel: ObservableObject {
         snapshot = snap
         guard let tf = snap.transfer, snap.timestamp.timeIntervalSince(lastTunerUpdate) >= 0.25 else { return }
         if tunerActive, let tuner {
-            guard !tunerBusy else { return }
             lastTunerUpdate = snap.timestamp
-            tunerBusy = true
-            // Measured as the changing group sees it (microphone correction cancels between groups).
-            Task.detached(priority: .userInitiated) { [weak self] in
-                let reading = tuner.read(live: tf)
-                await MainActor.run {
-                    guard let self else { return }
-                    self.tunerBusy = false
-                    guard self.tunerActive, self.tuner?.stage == tuner.stage, self.tuner?.fixed == tuner.fixed else { return }
-                    self.tunerReading = reading
-                    if let r = reading, r.isReliable { self.phaseMatchDidRead(r) }
-                }
-            }
+            tunerReading = tuner.read(live: tf)
         } else if let eqTuner {
             lastTunerUpdate = snap.timestamp
             eqTunerReading = eqTuner.read(live: tf)
@@ -443,7 +428,6 @@ final class AppModel: ObservableObject {
     func wizardCapture() {
         guard let engine, wizard.step.requiredGroups != nil, !wizardCaptureRunning else { return }
         if !noiseOn { setNoise(on: true) }
-        stopTuner()
         wizardCaptureRunning = true
         lastAcceptance = nil
         let step = wizard.step
@@ -453,8 +437,6 @@ final class AppModel: ObservableObject {
                 guard let self else { return }
                 self.wizardCaptureRunning = false
                 self.lastAcceptance = self.wizard.submit(capture)
-                // Not accepted on the subwoofer step: back to the live phase match.
-                if self.wizard.step == .subOnly { self.startPhaseMatch() }
                 if case .accepted = self.lastAcceptance, self.isSimulation {
                     self.simulateGroupsForStep()
                     if step == .eqPoints || step == .eqVerification { self.simulateMoveToNextPoint() }
@@ -464,10 +446,8 @@ final class AppModel: ObservableObject {
     }
 
     func wizardCancelCapture() {
-        let wasRunning = wizardCaptureRunning
         engine?.cancelCapture()
         wizardCaptureRunning = false
-        if wasRunning && wizard.step == .subOnly { startPhaseMatch() }
     }
 
     func wizardBeginVerification() {
@@ -502,52 +482,6 @@ final class AppModel: ObservableObject {
 
     /// Whether the mains need a second tuner stage (the subs arrive late).
     var tunerNeedsMainsStage: Bool { wizard.alignment?.delayTarget == .mains }
-
-    /// Live phase match (subwoofer step): the satellites were captured and are the fixed reference,
-    /// only the subwoofers play, the needle compares the live sub with them directly.
-    func startPhaseMatch() {
-        guard let engine, wizard.step == .subOnly, let mains = wizard.mainsResponse else { return }
-        tuner = AlignmentTuner(stage: .adjustSub, fixed: mains, crossover: wizard.configuration.crossover,
-                               settings: wizard.configuration.alignmentSettings, input: .changingGroupOnly)
-        tunerStage = .adjustSub
-        tunerReading = nil
-        tunerActive = true
-        if !noiseOn { setNoise(on: true) }
-        if isSimulation {
-            simulationSubOn = true
-            simulationMainOn = false
-        }
-        engine.setLiveAveraging(seconds: 1.0)
-        engine.resetLiveAverages()
-    }
-
-    private func phaseMatchDidRead(_ r: AlignmentTuner.Reading) {
-        guard wizard.step == .subOnly, let t = tuner, t.input == .changingGroupOnly else { return }
-        wizard.recordPhaseMatchStart(.init(delay: r.delayError, invertPolarity: r.polarityWrong,
-                                           subGainDB: r.levelError, crossover: r.crossover))
-        // Unknown crossover: keep the first detected one so every following reading uses the same band.
-        if t.crossover == nil {
-            tuner = AlignmentTuner(stage: .adjustSub, fixed: t.fixed, crossover: r.crossover,
-                                   settings: wizard.configuration.alignmentSettings, input: .changingGroupOnly)
-        }
-    }
-
-    /// Delay the user entered on the satellites because the subs arrive later; the stored satellite
-    /// reference is shifted by it and the needle continues on the sub.
-    func phaseMatchEnterMainsDelay(seconds: Double) {
-        guard seconds > 0, wizard.step == .subOnly else { return }
-        let step = wizard.configuration.delayStep
-        let d = (seconds / step).rounded() * step
-        wizard.addMainsDelay(d)
-        if isSimulation { simProcessor.mainsDelayMs += d * 1000 }
-        let crossover = tuner?.crossover ?? wizard.configuration.crossover
-        if let mains = wizard.mainsResponse {
-            tuner = AlignmentTuner(stage: .adjustSub, fixed: mains, crossover: crossover,
-                                   settings: wizard.configuration.alignmentSettings, input: .changingGroupOnly)
-        }
-        tunerReading = nil
-        engine?.resetLiveAverages()
-    }
 
     /// Starts the live needle: all groups on, mains are the fixed reference, the user turns the sub knobs.
     func startTuner() {
@@ -757,20 +691,6 @@ final class AppModel: ObservableObject {
     }
 
     /// Simulation only: enter the recommendation on the virtual processor (once).
-    /// Simulation only: turn the virtual sub knobs as the phase-match needle asks (one step).
-    func simulateApplyPhaseMatch() {
-        guard isSimulation, wizard.step == .subOnly, let r = tunerReading else { return }
-        if r.delayError < 0 {
-            phaseMatchEnterMainsDelay(seconds: -r.delayError)
-            return
-        }
-        var p = simProcessor
-        p.subDelayMs += (r.delayError * 1e5).rounded() / 100
-        if r.polarityWrong { p.subPolarityInverted.toggle() }
-        p.subGainDB += (r.levelError * 2).rounded() / 2
-        simProcessor = p
-    }
-
     func simulateApplyRecommendation() {
         guard isSimulation, !simulationSettingsApplied, let a = wizard.alignment else { return }
         var p = simProcessor

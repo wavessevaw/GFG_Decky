@@ -48,34 +48,11 @@ final class WizardTests: XCTestCase {
         return sys
     }
 
-    /// The live phase match as the user does it: only the subs play, the tuner compares the live sub
-    /// with the stored satellites, the user enters what the needle asks for (here in one go).
-    /// Returns the first reading (the full correction that was needed).
-    static func liveMatch(_ rig: Rig, _ wizard: inout SetupWizard) throws -> AlignmentTuner.Reading {
-        rig.backend.setActiveGroups(sub: true, main: false)
-        rig.run(seconds: 0.5)
-        let mains = try XCTUnwrap(wizard.mainsResponse)
-        let tuner = AlignmentTuner(stage: .adjustSub, fixed: mains, crossover: wizard.configuration.crossover,
-                                   settings: wizard.configuration.alignmentSettings, input: .changingGroupOnly)
-        let live = try XCTUnwrap(rig.capture("live", seconds: 6)).transfer
-        let r = try XCTUnwrap(tuner.read(live: live))
-        wizard.recordPhaseMatchStart(.init(delay: r.delayError, invertPolarity: r.polarityWrong,
-                                           subGainDB: r.levelError, crossover: r.crossover))
-        let step = wizard.configuration.delayStep
-        let delay = (r.delayError / step).rounded() * step
-        // Subs late → the delay goes to the satellites (muted now); the stored reference follows.
-        if delay < 0 { wizard.addMainsDelay(-delay) }
-        rig.backend.applyAlignment(delaySeconds: delay, invertPolarity: r.polarityWrong,
-                                   subGainDB: (r.levelError / 0.5).rounded() * 0.5)
-        rig.run(seconds: 0.5)
-        return r
-    }
-
-    @discardableResult
-    func runWizard(system: VirtualSystem = WizardTests.demoSystem()) throws -> (wizard: SetupWizard, reading: AlignmentTuner.Reading) {
-        let rig = Rig(system: system)
+    func runWizard(fastMode: Bool) throws -> SetupWizard {
+        let rig = Rig(system: Self.demoSystem())
         var config = WizardConfiguration()
         config.crossover = 90
+        config.fastMode = fastMode
         config.captureSeconds = 10
         var wizard = SetupWizard(configuration: config)
 
@@ -84,77 +61,62 @@ final class WizardTests: XCTestCase {
         XCTAssertTrue(delay.isReliable)
         wizard.lockDelay(delay, epoch: rig.backend.discontinuities.value)
         wizard.start()
+        XCTAssertEqual(wizard.step, .baseline)
 
-        // 1. Satellites only → fixed reference.
-        XCTAssertEqual(wizard.step, .mainsOnly)
-        rig.backend.setActiveGroups(sub: false, main: true)
-        rig.run(seconds: 0.5)
-        let m = try XCTUnwrap(rig.capture("mains", seconds: config.captureSeconds,
-                                          band: WizardStep.mainsOnly.qualityBand(crossover: 90)))
-        XCTAssertEqual(wizard.submit(m), .accepted(m.assessment.quality), "\(m.assessment)")
-        XCTAssertEqual(wizard.step, .subOnly)
+        for step in [WizardStep.baseline, .subOnly, .mainsOnly] {
+            if fastMode && step == .mainsOnly { break }
+            XCTAssertEqual(wizard.step, step)
+            let g = step.requiredGroups!
+            rig.backend.setActiveGroups(sub: g.sub, main: g.mains)
+            rig.run(seconds: 0.5)
+            let c = try XCTUnwrap(rig.capture("\(step)", seconds: config.captureSeconds,
+                                              band: step.qualityBand(crossover: config.crossover)))
+            XCTAssertEqual(wizard.submit(c), .accepted(c.assessment.quality), "\(step): \(c.assessment)")
+        }
+        XCTAssertEqual(wizard.step, .results)
+        let a = try XCTUnwrap(wizard.alignment, wizard.alignmentError ?? "")
+        XCTAssertTrue(a.best.invertPolarity, "polarity must be corrected")
+        XCTAssertEqual(wizard.actionCards.count, 3)
 
-        // 2. Only the subs play: live phase match, then the matched state is captured.
-        let reading = try Self.liveMatch(rig, &wizard)
-        let sub = try XCTUnwrap(rig.capture("sub", seconds: config.captureSeconds,
-                                            band: WizardStep.subOnly.qualityBand(crossover: 90)))
-        XCTAssertEqual(wizard.submit(sub), .accepted(sub.assessment.quality), "\(sub.assessment)")
-        XCTAssertTrue(wizard.isAlignedWithinTolerance, "\(String(describing: wizard.alignment))")
-        XCTAssertEqual(wizard.step, .verification, "glued → straight to the verification")
-
-        // 3. Everything on: verification.
+        // Step 5: user applies the settings, verification capture.
+        rig.backend.applyAlignment(delaySeconds: a.roundedDelay, invertPolarity: a.best.invertPolarity, subGainDB: a.subGainDB)
         rig.backend.setActiveGroups(sub: true, main: true)
+        wizard.beginVerification()
         rig.run(seconds: 0.5)
         let v = try XCTUnwrap(rig.capture("verify", seconds: config.captureSeconds))
         _ = wizard.submit(v)
+        XCTAssertEqual(wizard.step, .verification)
         XCTAssertNotNil(wizard.report)
-        return (wizard, reading)
+        return wizard
     }
 
     func testFullWizardInSimulation() throws {
-        let (w, r) = try runWizard()
-        // The live reading found the real correction: sub 2.5 m closer → ≈ 7.3 ms, wrong polarity, 3 dB hot.
-        XCTAssertEqual(r.delayError * 1000, 2.5 / Acoustics.speedOfSound(celsius: 20) * 1000, accuracy: 0.6)
-        XCTAssertTrue(r.polarityWrong, "polarity must be corrected")
-        XCTAssertLessThan(r.levelError, -1.5, "the +3 dB hot sub must be turned down")
-        XCTAssertGreaterThan(r.phaseGapDegrees, 45, "before matching the groups are far apart in phase")
-        XCTAssertTrue(r.isReliable)
-        // After entering it the groups are glued: residual alignment ≈ 0 and the sum has no dip.
-        let a = try XCTUnwrap(w.alignment)
-        XCTAssertLessThan(abs(a.roundedDelay * a.crossover * 360), 10)
-        XCTAssertFalse(a.best.invertPolarity)
-        let rep = try XCTUnwrap(w.report)
-        XCTAssertLessThan(rep.after?.dipDepthDB ?? 99, 3, "acceptance: crossover dip < 3 dB")
-        XCTAssertNotEqual(rep.verdict, .checkSettings, "\(rep)")
-        // The summary shows the total change from the original state.
-        if case .delaySub(let sec, let m) = w.actionCards[0] {
-            XCTAssertEqual(sec * 1000, r.delayError * 1000, accuracy: 0.3)
-            XCTAssertEqual(m, sec * Acoustics.speedOfSound(celsius: 20), accuracy: 1e-9)
+        let w = try runWizard(fastMode: false)
+        let a = w.alignment!
+        // Truth: sub 2.5 m closer → ≈ 7.3 ms, refined by the filter phase in the overlap.
+        XCTAssertEqual(a.roundedDelay * 1000, 2.5 / Acoustics.speedOfSound(celsius: 20) * 1000, accuracy: 0.6)
+        // Level (spec 6.5): after the change the median levels in the overlap band match.
+        let hm = try XCTUnwrap(w.mainsResponse), hs = try XCTUnwrap(w.subOnly?.transfer)
+        let medM = SubAlignment.passbandLevel(hm, band: a.overlapBand, settings: w.configuration.alignmentSettings)
+        let medS = SubAlignment.passbandLevel(hs, band: a.overlapBand, settings: w.configuration.alignmentSettings) + a.subGainDB
+        XCTAssertEqual(medM, medS, accuracy: 0.3)
+        XCTAssertLessThan(a.subGainDB, -1.5, "the +3 dB hot sub must be turned down")
+        let r = try XCTUnwrap(w.report)
+        XCTAssertGreaterThan(r.before?.dipDepthDB ?? 0, 3, "baseline must show the cancellation")
+        XCTAssertGreaterThan((r.after?.summationGainDB ?? 0) - (r.before?.summationGainDB ?? 0), 1)
+        XCTAssertLessThan(r.after?.dipDepthDB ?? 99, 3, "acceptance: crossover dip < 3 dB")
+        XCTAssertEqual(r.verdict, .excellent, "\(r)")
+        if case .delaySub(let s, let m) = w.actionCards[0] {
+            XCTAssertEqual(m, s * Acoustics.speedOfSound(celsius: 20), accuracy: 1e-9)
         } else {
             XCTFail("expected sub delay card, got \(w.actionCards[0])")
         }
-        XCTAssertEqual(w.actionCards[1], .polarity(invert: true))
-    }
-
-    /// Subs farther than the satellites: the needle asks for negative sub delay; the delay goes to the
-    /// satellites and the stored reference is shifted, then the sub is glued.
-    func testLateSubsGetMainsDelay() throws {
-        let fs = 48000.0
-        let room = VirtualRoom(reflections: [VirtualReflection(delaySamples: 168, gain: 0.3)],
-                               modes: [Biquad.design(.peaking, frequency: 63, q: 6, gainDB: 6, sampleRate: fs)])
-        let sys = VirtualSystem.typicalPA(sampleRate: fs, crossover: 90, subDistance: 11, mainDistance: 9.5,
-                                          subGainDB: 0, subInverted: false, room: room, micNoiseDBFS: -75)
-        let (w, r) = try runWizard(system: sys)
-        XCTAssertLessThan(r.delayError, 0, "the subs arrive late")
-        XCTAssertGreaterThan(w.mainsDelayAdded, 0)
-        XCTAssertLessThan(w.report?.after?.dipDepthDB ?? 99, 3)
     }
 
     /// Steps 6–8: zone points → EQ → enter filters (virtual processor) → verification points.
     func testEQStepsInSimulation() throws {
         var w = try Self.runWizardKeepingRig()
         let rig = w.rig
-        XCTAssertEqual(w.wizard.step, .verification)
         w.wizard.beginEQ()
         XCTAssertEqual(w.wizard.step, .eqPoints)
         for p in 0..<w.wizard.configuration.eqPointCount {
@@ -192,7 +154,7 @@ final class WizardTests: XCTestCase {
         XCTAssertFalse(w.wizard.canIterateEQ, "max 2 consecutive EQ iterations")
     }
 
-    static func runWizardKeepingRig() throws -> (wizard: SetupWizard, rig: Rig, reading: AlignmentTuner.Reading) {
+    static func runWizardKeepingRig() throws -> (wizard: SetupWizard, rig: Rig) {
         let rig = Rig(system: Self.demoSystem())
         var config = WizardConfiguration()
         config.crossover = 90
@@ -202,18 +164,27 @@ final class WizardTests: XCTestCase {
         let delay = try XCTUnwrap(rig.findDelay())
         wizard.lockDelay(delay, epoch: rig.backend.discontinuities.value)
         wizard.start()
-        rig.backend.setActiveGroups(sub: false, main: true)
-        rig.run(seconds: 0.5)
-        wizard.submit(try XCTUnwrap(rig.capture("mains", seconds: config.captureSeconds,
-                                                band: WizardStep.mainsOnly.qualityBand(crossover: 90))))
-        let reading = try liveMatch(rig, &wizard)
-        wizard.submit(try XCTUnwrap(rig.capture("sub", seconds: config.captureSeconds,
-                                                band: WizardStep.subOnly.qualityBand(crossover: 90))))
+        for step in [WizardStep.baseline, .subOnly, .mainsOnly] {
+            let g = step.requiredGroups!
+            rig.backend.setActiveGroups(sub: g.sub, main: g.mains)
+            rig.run(seconds: 0.5)
+            let c = try XCTUnwrap(rig.capture("\(step)", seconds: config.captureSeconds,
+                                              band: step.qualityBand(crossover: config.crossover)))
+            wizard.submit(c)
+        }
+        let a = try XCTUnwrap(wizard.alignment)
+        rig.backend.applyAlignment(delaySeconds: a.roundedDelay, invertPolarity: a.best.invertPolarity, subGainDB: a.subGainDB)
         rig.backend.setActiveGroups(sub: true, main: true)
-        if wizard.step == .results { wizard.beginVerification() }
+        wizard.beginVerification()
         rig.run(seconds: 0.5)
         wizard.submit(try XCTUnwrap(rig.capture("verify", seconds: config.captureSeconds)))
-        return (wizard, rig, reading)
+        return (wizard, rig)
+    }
+
+    func testFastModeWizard() throws {
+        let w = try runWizard(fastMode: true)
+        XCTAssertNil(w.mainsOnly)
+        XCTAssertLessThan(w.report?.after?.dipDepthDB ?? 99, 3)
     }
 
     func testStreamRestartInvalidatesWizard() throws {
@@ -236,9 +207,9 @@ final class WizardTests: XCTestCase {
         wizard.lockDelay(d, epoch: rig.backend.discontinuities.value)
         wizard.start()
         rig.backend.micPreampDB = 40
-        let c = try XCTUnwrap(rig.capture("mains", seconds: 3))
+        let c = try XCTUnwrap(rig.capture("baseline", seconds: 3))
         guard case .rejected(let reasons) = wizard.submit(c) else { return XCTFail() }
         XCTAssertTrue(reasons.contains(.clipping))
-        XCTAssertEqual(wizard.step, .mainsOnly)
+        XCTAssertEqual(wizard.step, .baseline)
     }
 }

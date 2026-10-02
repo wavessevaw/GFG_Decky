@@ -87,11 +87,6 @@ final class SnapshotTests: XCTestCase {
         try snapshot(PreparationStepView().padding(16).background(Backdrop()), size: CGSize(width: 1120, height: 1000), name: "step0-preparation", loc: Self.ru)
     }
 
-    func testPhaseMatchScreen() throws {
-        try snapshot(PhaseMatchStepView().padding(16).background(Backdrop()), size: CGSize(width: 1100, height: 1100),
-                     name: "step2-phase-match", loc: Self.ru)
-    }
-
     func testTunerScreen() throws {
         try snapshot(ResultsStepView().padding(16).background(Backdrop()), size: CGSize(width: 1000, height: 1300), name: "step4-tuner", loc: Self.ru)
     }
@@ -225,27 +220,16 @@ enum SimulatedSession {
         guard let d = delay else { throw XCTSkip("delay not found") }
         w.lockDelay(d, epoch: backend.discontinuities.value)
         w.start()
-        // Satellites → stored reference.
-        backend.setActiveGroups(sub: false, main: true)
-        run(0.5)
-        if let c = capture(8, band: WizardStep.mainsOnly.qualityBand(crossover: 90)) { w.submit(c) }
-        // Live phase match with only the subs playing, entered in one go, then the sub capture.
-        guard let mains = w.mainsResponse else { throw XCTSkip("no mains") }
-        backend.setActiveGroups(sub: true, main: false)
-        run(0.5)
-        let tuner = AlignmentTuner(stage: .adjustSub, fixed: mains, crossover: 90,
-                                   settings: config.alignmentSettings, input: .changingGroupOnly)
-        guard let live = capture(6), let r = tuner.read(live: live.transfer) else { throw XCTSkip("no reading") }
-        w.recordPhaseMatchStart(.init(delay: r.delayError, invertPolarity: r.polarityWrong,
-                                      subGainDB: r.levelError, crossover: r.crossover))
-        let delay = (r.delayError * 1e5).rounded() / 1e5
-        if delay < 0 { w.addMainsDelay(-delay) }
-        backend.applyAlignment(delaySeconds: delay, invertPolarity: r.polarityWrong, subGainDB: (r.levelError * 2).rounded() / 2)
-        run(0.5)
-        if let c = capture(8, band: WizardStep.subOnly.qualityBand(crossover: 90)) { w.submit(c) }
-        guard w.alignment != nil else { throw XCTSkip("no alignment") }
+        for step in [WizardStep.baseline, .subOnly, .mainsOnly] {
+            let g = step.requiredGroups!
+            backend.setActiveGroups(sub: g.sub, main: g.mains)
+            run(0.5)
+            if let c = capture(8, band: step.qualityBand(crossover: 90)) { w.submit(c) }
+        }
+        guard let a = w.alignment else { throw XCTSkip("no alignment") }
+        backend.applyAlignment(delaySeconds: a.roundedDelay, invertPolarity: a.best.invertPolarity, subGainDB: a.subGainDB)
         backend.setActiveGroups(sub: true, main: true)
-        if w.step == .results { w.beginVerification() }
+        w.beginVerification()
         run(0.5)
         if let c = capture(8) { w.submit(c) }
         w.beginEQ()

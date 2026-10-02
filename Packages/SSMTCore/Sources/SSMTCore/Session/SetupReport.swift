@@ -51,13 +51,11 @@ public struct SetupReport: Equatable, Sendable {
         temperatureCelsius = w.configuration.temperatureCelsius
         microphoneCalibrationName = microphone?.name
         referenceDelayMs = w.delayLock.map { $0.milliseconds }
-        if let a = w.alignment, let t = w.totalCorrection {
-            // Total settings from the original state (phase match + any remaining correction).
+        if let a = w.alignment {
             let c = Acoustics.speedOfSound(celsius: w.configuration.temperatureCelsius)
-            let target: AlignmentResult.DelayTarget = abs(t.delay) < 1e-9 ? .none : (t.delay > 0 ? .sub : .mains)
-            alignment = Alignment(delayMs: abs(t.delay) * 1000, delayMeters: abs(t.delay) * c,
-                                  delayTarget: target, invertPolarity: t.invertPolarity,
-                                  subLevelDB: t.subGainDB, crossover: t.crossover,
+            alignment = Alignment(delayMs: abs(a.roundedDelay) * 1000, delayMeters: abs(a.roundedDelay) * c,
+                                  delayTarget: a.delayTarget, invertPolarity: a.best.invertPolarity,
+                                  subLevelDB: a.subGainDB, crossover: a.crossover,
                                   crossoverDetected: a.crossoverWasDetected, ambiguous: a.isAmbiguous)
         }
         if let r = w.report {

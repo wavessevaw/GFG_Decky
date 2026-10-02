@@ -9,7 +9,7 @@ struct CaptureStepView: View {
     private var step: WizardStep { model.wizard.step }
 
     var body: some View {
-        StepScaffold(title: loc.t("capture.\(step.rawValue).title"), subtitle: subtitle,
+        StepScaffold(title: loc.t("capture.\(step.rawValue).title"), subtitle: loc.t("capture.\(step.rawValue).short"),
                      info: loc.t("capture.\(step.rawValue).text")) {
             VStack(spacing: 22) {
                 groupPills
@@ -30,8 +30,6 @@ struct CaptureStepView: View {
         }
     }
 
-    private var subtitle: String { loc.t("capture.\(step.rawValue).short") }
-
     private var retry: Bool {
         if case .rejected = model.lastAcceptance { return true }
         return false
@@ -41,8 +39,8 @@ struct CaptureStepView: View {
     private var groupPills: some View {
         let g = step.requiredGroups ?? (sub: true, mains: true)
         return HStack(spacing: 12) {
-            pill(loc.t("group.mains"), on: g.mains)
             pill(loc.t("group.subs"), on: g.sub)
+            pill(loc.t("group.mains"), on: g.mains)
         }
     }
 

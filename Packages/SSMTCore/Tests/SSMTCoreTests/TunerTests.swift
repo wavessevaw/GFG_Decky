@@ -94,29 +94,4 @@ final class TunerTests: XCTestCase {
         XCTAssertEqual(b.processorSettings.mainsDelayMs, 1, accuracy: 1e-9)
         XCTAssertEqual(b.system.sub.gainDB, 2, accuracy: 1e-9)
     }
-
-    /// Subs-only live input: the tuner compares the live sub directly with the stored satellites
-    /// (no subtraction), from the untouched state to glued, and the phase gap closes.
-    func testSubsOnlyLiveMatch() throws {
-        var sys = system(subDistance: 7)
-        let lock = 128 + sys.main.delaySamples
-        let g = captures(sys, lock: lock)
-        let tuner = AlignmentTuner(stage: .adjustSub, fixed: g.main, crossover: 90,
-                                   settings: AlignmentSettings(crossover: 90), input: .changingGroupOnly)
-        func liveSub(_ seed: UInt64) -> TransferFunction {
-            var s = sys; s.main.enabled = false
-            return TestSignals.measure(system: s, seconds: 6, referenceDelay: lock, seed: seed)
-        }
-        let r0 = try XCTUnwrap(tuner.read(live: liveSub(11)))
-        XCTAssertTrue(r0.polarityWrong)
-        XCTAssertGreaterThan(r0.phaseGapDegrees, 45)
-        XCTAssertTrue(r0.isReliable)
-
-        sys.sub.invertPolarity = false
-        sys.sub.delaySamples += Int((r0.delayError * fs).rounded())
-        sys.sub.gainDB += r0.levelError
-        let r1 = try XCTUnwrap(tuner.read(live: liveSub(12)))
-        XCTAssertTrue(r1.allInTune, "\(r1)")
-        XCTAssertLessThan(r1.phaseGapDegrees, 20, "glued: the phases coincide in the overlap band")
-    }
 }
