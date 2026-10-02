@@ -59,11 +59,10 @@ struct AppSidebar: View {
             HStack(spacing: 12) {
                 ZStack {
                     if showBrand {
-                        BrandMark(variant: .compact, height: 30).modifier(MatchedBrand(namespace: brandNamespace))
+                        BrandMark(variant: .compact, height: 40).modifier(MatchedBrand(namespace: brandNamespace))
                     }
                 }
-                .frame(width: 40, height: 40)
-                .background(RoundedRectangle(cornerRadius: 11, style: .continuous).fill(Color.white.opacity(0.06)))
+                .frame(width: 42, height: 42)
                 VStack(alignment: .leading, spacing: 1) {
                     Text("SSMT").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.textPrimary)
                     Text("SoundSolution Multi Tool").font(.system(size: 11)).foregroundStyle(Theme.textSecondary)

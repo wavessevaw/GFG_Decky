@@ -36,10 +36,10 @@ final class SnapshotTests: XCTestCase {
     func testInstruments() throws {
         let view = HStack(spacing: 16) {
             TunerGauge(title: "Задержка сабвуфера", value: 0.45, tolerance: 10.0 / 90, readout: "+1.25",
-                       instruction: "Добавьте задержку сабвуферу", leftLabel: "меньше", rightLabel: "больше",
+                       instruction: "Добавьте задержку сабвуферу",
                        scaleLabels: ["−2.8", "−1.4", "0", "+1.4", "+2.8"], unit: "мс")
             TunerGauge(title: "Задержка сабвуфера", value: 0.03, tolerance: 10.0 / 90, readout: "+0.08",
-                       instruction: "В строю", leftLabel: "меньше", rightLabel: "больше",
+                       instruction: "В строю",
                        scaleLabels: ["−2.8", "−1.4", "0", "+1.4", "+2.8"], unit: "мс")
             TunerGauge(title: "Качество сигнала", value: 0.62, mode: .oneSided, tolerance: 0.91, readout: "64",
                        instruction: "Слабо — тише или громче", scaleLabels: ["30", "44", "58", "71", "85"], unit: "%")

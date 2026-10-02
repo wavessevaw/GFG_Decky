@@ -51,6 +51,7 @@ struct TopBar: View {
             }
             .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)
+            .tint(Theme.textPrimary)
             .fixedSize()
 
             Button { model.emergencyStop() } label: {

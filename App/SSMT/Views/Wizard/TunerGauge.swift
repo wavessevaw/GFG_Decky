@@ -17,8 +17,6 @@ struct TunerGauge: View {
     var readout: String
     var instruction: String
     var reliable = true
-    var leftLabel = ""
-    var rightLabel = ""
     var large = false
     /// Five scale labels at positions −1, −½, 0, +½, +1; only the ends and the middle are shown.
     var scaleLabels: [String]? = nil
@@ -88,7 +86,7 @@ struct TunerGauge: View {
         GeometryReader { geo in
             let g = ArcGeometry(size: geo.size, large: large)
             ZStack {
-                ArcScale(geometry: g, targetZone: targetZone, labels: labels, leftLabel: leftLabel, rightLabel: rightLabel)
+                ArcScale(geometry: g, targetZone: targetZone, labels: labels)
                 if value != nil {
                     ArcFill(geometry: g, from: fillOrigin, to: position)
                         .stroke(color, style: StrokeStyle(lineWidth: g.lineWidth, lineCap: .round))
@@ -108,12 +106,12 @@ struct TunerGauge: View {
                     }
                 }
                 .frame(width: g.radius * 1.3)
-                .position(x: g.center.x, y: g.center.y - g.radius * 0.52)
+                .position(x: g.center.x, y: g.center.y - g.radius * 0.6 + (large ? 30 : 24))
             }
             .animation(.spring(response: 0.5, dampingFraction: 0.8), value: position)
             .animation(.easeInOut(duration: 0.3), value: closeness)
         }
-        .frame(height: large ? 230 : 176)
+        .frame(height: large ? 214 : 158)
     }
 }
 
@@ -127,7 +125,7 @@ struct ArcGeometry {
 
     var radius: CGFloat {
         let s = CGFloat(sin(span * .pi / 180)), c = CGFloat(cos(span * .pi / 180))
-        return max(40, min((size.width - 48) / (2 * s), (size.height - 34) / (1 - c)))
+        return max(40, min((size.width - 48) / (2 * s), (size.height - 26) / (1 - c)))
     }
     var center: CGPoint { CGPoint(x: size.width / 2, y: 10 + radius) }
     func angle(_ p: Double) -> Angle { .degrees(-90 + p * span) }
@@ -142,8 +140,6 @@ struct ArcScale: View {
     var geometry: ArcGeometry
     var targetZone: ClosedRange<Double>
     var labels: [String]
-    var leftLabel = ""
-    var rightLabel = ""
 
     var body: some View {
         Canvas { ctx, _ in
@@ -168,11 +164,6 @@ struct ArcScale: View {
             for (k, label) in labels.enumerated() where !label.isEmpty {
                 let r = g.radius - g.lineWidth - (k == 1 ? 24 : 22)
                 ctx.draw(Text(label).font(font).foregroundColor(Theme.textMuted), at: g.point(Double(k - 1), radius: r))
-            }
-            let side = Font.system(size: g.large ? 12 : 11)
-            for (p, text) in [(-1.0, leftLabel), (1.0, rightLabel)] where !text.isEmpty {
-                let end = g.point(p, radius: g.radius)
-                ctx.draw(Text(text).font(side).foregroundColor(Theme.textMuted), at: CGPoint(x: end.x, y: end.y + 18))
             }
         }
     }

@@ -65,7 +65,6 @@ struct TunerPanel: View {
         VStack(spacing: 18) {
             if !mainsStage {
                 PolarityLamp(wrong: r.map(\.polarityWrong), large: large)
-                    .frame(maxWidth: 560)
             }
             HStack(alignment: .top, spacing: 18) {
                 if showDelay {
