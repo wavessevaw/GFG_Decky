@@ -33,7 +33,7 @@ public enum StageItemKind: String, Codable, Sendable, CaseIterable {
 public struct StageItem: Codable, Equatable, Identifiable, Sendable {
     public var id = UUID()
     public var kind: StageItemKind
-    /// Centre on stage in metres: x from stage left (audience view: left), y from the front edge.
+    /// Centre on stage in metres: x from the left edge as seen from the audience (house left), y from the front edge.
     public var x: Double
     public var y: Double
     /// Size in metres.

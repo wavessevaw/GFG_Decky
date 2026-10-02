@@ -21,7 +21,7 @@ struct StageInk {
 /// Simple top-view vector symbols of typical stage equipment, drawn into a rectangle.
 enum StageSymbols {
     static func draw(_ kind: StageItemKind, in r: CGRect, ctx: inout GraphicsContext, ink: StageInk) {
-        let lw: CGFloat = max(1, min(r.width, r.height) * 0.04)
+        let lw: CGFloat = min(2, max(1, min(r.width, r.height) * 0.04))
         func stroke(_ p: Path, _ w: CGFloat? = nil) { ctx.stroke(p, with: .color(ink.line), lineWidth: w ?? lw) }
         func fill(_ p: Path) { ctx.fill(p, with: .color(ink.fill)) }
         func box(_ rect: CGRect, radius: CGFloat = 0) {

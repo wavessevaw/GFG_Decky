@@ -20,7 +20,7 @@ struct PrintHeader: View {
             HStack(alignment: .firstTextBaseline) {
                 Text(doc.artist.isEmpty ? title : doc.artist).font(.system(size: 20, weight: .bold))
                 Spacer()
-                Text(title).font(.system(size: 12, weight: .semibold)).foregroundStyle(Color(white: 0.35))
+                Text(page.isEmpty ? title : "\(title) · \(page)").font(.system(size: 12, weight: .semibold)).foregroundStyle(Color(white: 0.35))
             }
             let line = [doc.event, doc.venue, doc.date.map { $0.formatted(.dateTime.day().month(.wide).year().locale(loc.locale)) } ?? ""]
                 .filter { !$0.isEmpty }.joined(separator: " · ")
@@ -32,9 +32,6 @@ struct PrintHeader: View {
             }
             .foregroundStyle(Color(white: 0.25))
             Rectangle().fill(Color.black).frame(height: 1.5).padding(.top, 4)
-        }
-        .overlay(alignment: .bottomTrailing) {
-            Text(page).font(.system(size: 9)).foregroundStyle(Color(white: 0.45)).offset(y: 14)
         }
     }
 }

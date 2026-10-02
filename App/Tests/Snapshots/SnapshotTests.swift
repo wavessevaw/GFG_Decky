@@ -144,7 +144,7 @@ final class SnapshotTests: XCTestCase {
         for x in [3.0, 5.0, 7.0] { p.add(.wedge, at: (x, 0.4)) }
         p.add(.diBox, at: (8.4, 3.2))
         p.add(.powerDrop, at: (1.0, 5.6))
-        p.add(.text, at: (5, 3.0), label: "Stage left ← → Stage right")
+        p.add(.text, at: (5, 3.0), label: "4 × power 230 V")
         d.stage = p
         return d
     }
