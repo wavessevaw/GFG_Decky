@@ -182,6 +182,42 @@ public enum X32Codec {
         return ch
     }
 
+    // MARK: mix buses (stage monitors)
+
+    public static func busPath(_ id: Int, family: MixerFamily) -> String {
+        family == .xAir ? "/bus/\(id)" : String(format: "/bus/%02d", id)
+    }
+
+    public static func busCount(_ family: MixerFamily) -> Int { family == .xAir ? 6 : 16 }
+
+    public static func busQueryAddresses(_ id: Int, family: MixerFamily) -> [String] {
+        let p = busPath(id, family: family)
+        return ["\(p)/config/name", "\(p)/mix/fader", "\(p)/mix/on"]
+    }
+
+    public static func busMessages(from old: BusStrip?, to new: BusStrip, family: MixerFamily) -> [OSCMessage] {
+        let p = busPath(new.id, family: family)
+        var out: [OSCMessage] = []
+        if old.map({ abs($0.faderDB - new.faderDB) > 0.01 }) ?? true { out.append(OSCMessage("\(p)/mix/fader", [.float(Float(faderPosition(new.faderDB)))])) }
+        if old?.muted != new.muted { out.append(OSCMessage("\(p)/mix/on", [.int(new.muted ? 0 : 1)])) }
+        return out
+    }
+
+    @discardableResult
+    public static func apply(_ m: OSCMessage, toBuses buses: inout [Int: BusStrip]) -> Int? {
+        let parts = m.address.split(separator: "/").map(String.init)
+        guard parts.count == 4, parts[0] == "bus", let id = Int(parts[1]), var b = buses[id], let arg = m.arguments.first else { return nil }
+        var num: Double? { switch arg { case let .float(v): return Double(v); case let .int(v): return Double(v); default: return nil } }
+        switch (parts[2], parts[3]) {
+        case ("config", "name"): if case let .string(t) = arg { b.name = t }
+        case ("mix", "fader"): b.faderDB = faderDB(num ?? 0)
+        case ("mix", "on"): b.muted = (num ?? 1) == 0
+        default: return nil
+        }
+        buses[id] = b
+        return id
+    }
+
     /// Keeps the console sending parameter changes to us (must be repeated within 10 s).
     public static func subscribe(family: MixerFamily) -> OSCMessage { OSCMessage(family == .xAir ? "/xremote" : "/xremote") }
 

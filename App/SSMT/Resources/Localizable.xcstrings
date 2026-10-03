@@ -750,6 +750,176 @@
         }
       }
     },
+    "assist.g.dip": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: loop — monitor down %.0f dB"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: петля — монитор ниже на %.0f дБ"
+          }
+        }
+      }
+    },
+    "assist.g.held": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: rang again — held %.0f dB below"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: звенел снова — оставлен на %.0f дБ ниже"
+          }
+        }
+      }
+    },
+    "assist.g.notch": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: feedback at %@ — notch %.0f dB"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: фидбэк на %@ — вырез %.0f дБ"
+          }
+        }
+      }
+    },
+    "assist.g.notchReleased": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: notch released"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: вырез снят"
+          }
+        }
+      }
+    },
+    "assist.g.restored": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: monitor back where it was"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: монитор возвращён"
+          }
+        }
+      }
+    },
+    "assist.g.tonal": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: boomy (close to the mic) — %@ %.0f dB"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: бубнит (близко к микрофону) — %@ %.0f дБ"
+          }
+        }
+      }
+    },
+    "assist.g.tonalReleased": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: tone back to normal — EQ back"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: тембр в норме — EQ возвращён"
+          }
+        }
+      }
+    },
+    "assist.g.unmask": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: mass scene — %@ %.0f dB to keep the lead clear"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: массовая сцена — %@ %.0f дБ, чтобы солист читался"
+          }
+        }
+      }
+    },
+    "assist.g.unmaskReleased": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: scene over — EQ back"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: сцена закончилась — EQ возвращён"
+          }
+        }
+      }
+    },
+    "assist.g.yielded": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: you took over — the guard lets go"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: вы взяли управление — страховка отпустила"
+          }
+        }
+      }
+    },
     "assist.groupHint": {
       "extractionState": "manual",
       "localizations": {
@@ -763,6 +933,159 @@
           "stringUnit": {
             "state": "translated",
             "value": "«Оркестр» и «Хор» находят каналы по названиям на пульте (Violin, Vc, Скрипка, Choir, Хор…). Все каналы настраиваются одновременно на небольшой громкости, балансируются и поднимаются, пока измерительный микрофон слушает фидбэк."
+          }
+        }
+      }
+    },
+    "assist.guard": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show guard"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Страховка шоу"
+          }
+        }
+      }
+    },
+    "assist.guard.active": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guarding · %ld corrections"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Страхую · поправок: %ld"
+          }
+        }
+      }
+    },
+    "assist.guard.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing to correct yet."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пока нечего поправлять."
+          }
+        }
+      }
+    },
+    "assist.guard.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You mix. The assistant never moves channel faders: it notches hall feedback, pulls a ringing monitor down a step and brings it back, keeps the lead clear in mass scenes and holds tonal drift — a few dB at most, all undone when not needed. Anything you touch, it leaves alone."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Микс ведёте вы. Ассистент не трогает фейдеры каналов: вырезает фидбэк в зале, прижимает зазвеневший монитор на шаг и возвращает, держит солиста разборчивым в массовых сценах и страхует тембр — максимум на несколько дБ, всё возвращается, когда не нужно. Что тронули вы — он не трогает."
+          }
+        }
+      }
+    },
+    "assist.guard.leads": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep intelligible (leads)"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Держать разборчивыми (солисты)"
+          }
+        }
+      }
+    },
+    "assist.guard.log": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What the guard does"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Что делает страховка"
+          }
+        }
+      }
+    },
+    "assist.guard.monitors": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stage monitor mixes"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Мониторные линии на сцене"
+          }
+        }
+      }
+    },
+    "assist.guard.off": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop guarding"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Снять страховку"
+          }
+        }
+      }
+    },
+    "assist.guard.on": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guard the show"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Страховать шоу"
           }
         }
       }
@@ -1379,6 +1702,40 @@
         }
       }
     },
+    "assist.measMic": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Measurement mic"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Измерительный микрофон"
+          }
+        }
+      }
+    },
+    "assist.measMic.fromSetup": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As in system setup"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Как в настройке системы"
+          }
+        }
+      }
+    },
     "assist.micInput": {
       "extractionState": "manual",
       "localizations": {
@@ -1413,6 +1770,57 @@
         }
       }
     },
+    "assist.mode.show": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Шоу"
+          }
+        }
+      }
+    },
+    "assist.mode.soundcheck": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Soundcheck"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Саундчек"
+          }
+        }
+      }
+    },
+    "assist.networkHint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Like Mixing Station: the Mac and the console are on the same router (Wi-Fi or cable). Levels and the console RTA come over the network; the measurement mic is plugged into the Mac's audio interface."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Как Mixing Station: Mac и пульт в одной сети роутера (Wi-Fi или кабель). Уровни и RTA пульта приходят по сети; измерительный микрофон подключён к звуковой карте Mac."
+          }
+        }
+      }
+    },
     "assist.noMic": {
       "extractionState": "manual",
       "localizations": {
@@ -1426,6 +1834,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Без измерительного микрофона"
+          }
+        }
+      }
+    },
+    "assist.noStageMic": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No stage mic"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Без микрофона на сцене"
           }
         }
       }
@@ -1855,6 +2280,74 @@
         }
       }
     },
+    "assist.source": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Channel signal"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сигнал каналов"
+          }
+        }
+      }
+    },
+    "assist.source.interface": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Console audio into the Mac (USB / Dante)"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Звук пульта в Mac (USB / Dante)"
+          }
+        }
+      }
+    },
+    "assist.source.network": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From the console over the network (Wi-Fi)"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "С пульта по сети (Wi-Fi)"
+          }
+        }
+      }
+    },
+    "assist.stageMicInput": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stage mic = input %ld"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Микрофон на сцене = вход %ld"
+          }
+        }
+      }
+    },
     "assist.state.done": {
       "extractionState": "manual",
       "localizations": {
@@ -2021,6 +2514,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Настроить"
+          }
+        }
+      }
+    },
+    "assist.typical": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "typical"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "типовой"
           }
         }
       }

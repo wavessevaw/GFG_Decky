@@ -23,6 +23,10 @@ public final class SimulatedConsole {
     public var sources: [Int: Source]
     /// Room resonances (frequency, extra loop gain dB) where feedback appears first.
     public var roomModes: [(Double, Double)] = [(2500, 10), (630, 6)]
+    /// Stage monitor mixes. A bus starts to ring when its fader goes above `loopAtDB`.
+    public private(set) var buses: [Int: BusStrip] = [:]
+    public var loopAtDB: [Int: Double] = [:]
+    var busHowl: [Int: Double] = [:]
     var rng: UInt64
     var time = 0.0
     /// Running feedback tones in the room (frequency → amplitude).
@@ -56,7 +60,31 @@ public final class SimulatedConsole {
             c.strips[ch] = ChannelStrip(id: ch, name: e.0, gainDB: 20, faderDB: -10)
             c.sources[ch] = Source(kind: e.1, pitch: e.2, coloring: e.3, levelDB: e.4, couplingDB: e.1.family == .choir || e.1.family == .vocals ? -18 : -30)
         }
+        for b in 1...4 { c.buses[b] = BusStrip(id: b, name: "Mon \(b)", faderDB: -3) }
+        c.loopAtDB = [2: 0]   // Mon 2 (choir wedges) rings when pushed to unity
         return c
+    }
+
+    public func setBus(_ b: BusStrip) { buses[b.id] = b }
+
+    /// Monitor bus meters for a window, from the channel levels (dBFS) and the bus faders; a ringing bus
+    /// climbs to a steady howl within a couple of seconds.
+    public func busLevels(channelRMS: [Int: Double], seconds: Double = 1) -> [Int: Double] {
+        let sum = Decibel.fromPower(channelRMS.values.reduce(0) { $0 + pow(10, $1 / 10) } + 1e-12)
+        var out: [Int: Double] = [:]
+        for (id, b) in buses {
+            var level = b.muted ? -120 : sum + b.faderDB - 6
+            var howl = busHowl[id] ?? -60
+            if let at = loopAtDB[id], !b.muted, b.faderDB > at {
+                howl = min(-6, howl + 12 * seconds)
+            } else {
+                howl = max(-90, howl - 30 * seconds)
+            }
+            busHowl[id] = howl
+            level = Decibel.fromPower(pow(10, level / 10) + pow(10, howl / 10))
+            out[id] = level
+        }
+        return out
     }
 
     public func setStrip(_ s: ChannelStrip) { strips[s.id] = s }

@@ -24,13 +24,29 @@ struct AssistWorkspace: View {
                 if let m = store.message {
                     ErrorBanner(text: m == "nothing found" ? loc.t("assist.nothingFound") : m) { store.message = nil }
                 }
-                HStack(alignment: .top, spacing: 16) {
-                    Panel(title: loc.t("assist.console"), tint: Theme.dataBlue) { ConnectionPanel() }
-                    Panel(title: loc.t("assist.oneButton"), tint: Theme.signalYellow) { GroupPanel() }
-                        .frame(width: 400)
+                Picker("", selection: $store.mode) {
+                    Text(loc.t("assist.mode.soundcheck")).tag(AssistStore.Mode.soundcheck)
+                    Text(loc.t("assist.mode.show")).tag(AssistStore.Mode.show)
                 }
-                Panel(title: loc.t("assist.channels"), marking: "\(store.strips.count)") { AssistChannelTable() }
-                Panel(title: loc.t("assist.log"), tint: Theme.dataSecondary) { AssistLogView() }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .frame(width: 360)
+                if store.mode == .soundcheck {
+                    HStack(alignment: .top, spacing: 16) {
+                        Panel(title: loc.t("assist.console"), tint: Theme.dataBlue) { ConnectionPanel() }
+                        Panel(title: loc.t("assist.oneButton"), tint: Theme.signalYellow) { GroupPanel() }
+                            .frame(width: 400)
+                    }
+                    Panel(title: loc.t("assist.channels"), marking: "\(store.strips.count)") { AssistChannelTable() }
+                    Panel(title: loc.t("assist.log"), tint: Theme.dataSecondary) { AssistLogView() }
+                } else {
+                    HStack(alignment: .top, spacing: 16) {
+                        Panel(title: loc.t("assist.console"), tint: Theme.dataBlue) { ConnectionPanel() }
+                        Panel(title: loc.t("assist.guard"), tint: Theme.signalYellow) { GuardPanel() }
+                            .frame(width: 400)
+                    }
+                    Panel(title: loc.t("assist.guard.log"), tint: Theme.dataSecondary) { GuardLogView() }
+                }
             }
             .padding(.horizontal, 4)
             .padding(.bottom, 24)
@@ -62,6 +78,13 @@ private struct ConnectionPanel: View {
                 status
             }
             if store.family != .simulator {
+                Picker(loc.t("assist.source"), selection: $store.signalSource) {
+                    Text(loc.t("assist.source.network")).tag(AssistStore.SignalSource.network)
+                    Text(loc.t("assist.source.interface")).tag(AssistStore.SignalSource.interface)
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 520)
+                .onChange(of: store.signalSource) { _ in store.restartCapture() }
                 HStack(spacing: 10) {
                     Picker(loc.t("assist.audioIn"), selection: $store.inputDeviceUID) {
                         Text(loc.t("assist.systemInput")).tag(String?.none)
@@ -69,12 +92,30 @@ private struct ConnectionPanel: View {
                     }
                     .frame(width: 330)
                     .onChange(of: store.inputDeviceUID) { _ in store.restartCapture() }
-                    Stepper(String(format: loc.t("assist.firstInput"), store.firstInput), value: $store.firstInput, in: 1...64)
+                    if store.signalSource == .interface {
+                        Stepper(String(format: loc.t("assist.firstInput"), store.firstInput), value: $store.firstInput, in: 1...64)
+                    }
                     Stepper(store.micInput == 0 ? loc.t("assist.noMic") : String(format: loc.t("assist.micInput"), store.micInput),
                             value: $store.micInput, in: 0...64)
+                        .onChange(of: store.micInput) { _ in store.restartCapture() }
+                    Stepper(store.stageMicInput == 0 ? loc.t("assist.noStageMic") : String(format: loc.t("assist.stageMicInput"), store.stageMicInput),
+                            value: $store.stageMicInput, in: 0...64)
+                        .onChange(of: store.stageMicInput) { _ in store.restartCapture() }
                 }
                 .font(.system(size: 12))
-                Text(loc.t("assist.audioHint")).font(.system(size: 11)).foregroundStyle(Theme.textMuted)
+                Text(loc.t(store.signalSource == .network ? "assist.networkHint" : "assist.audioHint"))
+                    .font(.system(size: 11)).foregroundStyle(Theme.textMuted)
+            }
+            HStack(spacing: 10) {
+                Picker(loc.t("assist.measMic"), selection: $store.micID) {
+                    Text(loc.t("assist.measMic.fromSetup")).tag(UUID?.none)
+                    ForEach(store.micChoices) { m in Text(m.typical ? m.name + " · " + loc.t("assist.typical") : m.name).tag(UUID?.some(m.id)) }
+                }
+                .frame(width: 420)
+                if let l = store.micLevel {
+                    Text(String(format: store.micCalibrated ? "%.0f dB(A)" : "%.0f dBFS(A)", l)).monospacedDigit()
+                        .font(.system(size: 12)).foregroundStyle(Theme.textSecondary)
+                }
             }
             HStack(spacing: 10) {
                 Picker(loc.t("assist.character"), selection: $store.character) {
@@ -245,6 +286,98 @@ private struct AssistLogView: View {
         case .done: return Theme.statusGood
         case .feedback, .clipRisk, .gaveUp: return Theme.statusWarning
         default: return Theme.textPrimary
+        }
+    }
+}
+
+private struct GuardPanel: View {
+    @EnvironmentObject var store: AssistStore
+    @EnvironmentObject var loc: Localizer
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                if store.guarding {
+                    Button { store.stopGuard() } label: { Label(loc.t("assist.guard.off"), systemImage: "shield.slash") }
+                        .buttonStyle(SSMTButtonStyle(kind: .danger))
+                    StatusBadge(level: .good, text: String(format: loc.t("assist.guard.active"), store.guardian?.activeCorrections ?? 0))
+                } else {
+                    Button { store.startGuard() } label: { Label(loc.t("assist.guard.on"), systemImage: "shield.lefthalf.filled") }
+                        .buttonStyle(SSMTButtonStyle(kind: .primary))
+                        .disabled(!store.isConnected)
+                }
+            }
+            Text(loc.t("assist.guard.hint")).font(.system(size: 11)).foregroundStyle(Theme.textSecondary)
+            if let g = store.guardian {
+                Text(loc.t("assist.guard.monitors")).font(Theme.label(12)).foregroundStyle(Theme.textSecondary)
+                FlowRow(items: store.buses.map { ($0.id, $0.name.isEmpty ? "Bus \($0.id)" : $0.name, g.monitorBuses.contains($0.id)) }) { id, on in
+                    store.setMonitor(id, on)
+                }
+                Text(loc.t("assist.guard.leads")).font(Theme.label(12)).foregroundStyle(Theme.textSecondary)
+                FlowRow(items: store.strips.filter { !$0.name.isEmpty }.map { ($0.id, $0.name, g.leads.contains($0.id)) }) { id, on in
+                    store.setLead(id, on)
+                }
+            }
+        }
+    }
+}
+
+/// Toggle chips that wrap onto as many lines as needed.
+private struct FlowRow: View {
+    let items: [(Int, String, Bool)]
+    let toggle: (Int, Bool) -> Void
+
+    var body: some View {
+        let rows = stride(from: 0, to: items.count, by: 4).map { Array(items[$0..<min($0 + 4, items.count)]) }
+        VStack(alignment: .leading, spacing: 4) {
+            ForEach(rows.indices, id: \.self) { r in
+                HStack(spacing: 4) {
+                    ForEach(rows[r], id: \.0) { item in
+                        Button(item.1) { toggle(item.0, !item.2) }
+                            .buttonStyle(SSMTButtonStyle(active: item.2))
+                            .lineLimit(1)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct GuardLogView: View {
+    @EnvironmentObject var store: AssistStore
+    @EnvironmentObject var loc: Localizer
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if store.guardLog.isEmpty {
+                Text(loc.t("assist.guard.empty")).font(.system(size: 12)).foregroundStyle(Theme.textMuted)
+            }
+            ForEach(Array(store.guardLog.suffix(40).reversed().enumerated()), id: \.offset) { _, e in
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(String(format: "%02d:%02d", Int(e.time) / 60, Int(e.time) % 60)).monospacedDigit()
+                        .frame(width: 46, alignment: .trailing).foregroundStyle(Theme.textMuted)
+                    Text(text(e.action))
+                }
+                .font(.system(size: 12))
+            }
+        }
+    }
+
+    private func name(_ ch: Int) -> String { store.strips.first { $0.id == ch }?.name ?? "\(ch)" }
+    private func bus(_ id: Int) -> String { store.buses.first { $0.id == id }.map { $0.name.isEmpty ? "Bus \(id)" : $0.name } ?? "Bus \(id)" }
+
+    private func text(_ a: GuardAction) -> String {
+        switch a {
+        case let .notch(ch, f, d): return String(format: loc.t("assist.g.notch"), name(ch), PEQFilter.label(f), d)
+        case let .notchReleased(ch): return String(format: loc.t("assist.g.notchReleased"), name(ch))
+        case let .monitorDip(b, d): return String(format: loc.t("assist.g.dip"), bus(b), d)
+        case let .monitorRestored(b): return String(format: loc.t("assist.g.restored"), bus(b))
+        case let .monitorHeld(b, d): return String(format: loc.t("assist.g.held"), bus(b), d)
+        case let .unmask(ch, f, d): return String(format: loc.t("assist.g.unmask"), name(ch), PEQFilter.label(f), d)
+        case let .unmaskReleased(ch): return String(format: loc.t("assist.g.unmaskReleased"), name(ch))
+        case let .tonalHold(ch, f, d): return String(format: loc.t("assist.g.tonal"), name(ch), PEQFilter.label(f), d)
+        case let .tonalReleased(ch): return String(format: loc.t("assist.g.tonalReleased"), name(ch))
+        case let .yielded(ch, b): return String(format: loc.t("assist.g.yielded"), ch.map(name) ?? b.map(bus) ?? "")
         }
     }
 }

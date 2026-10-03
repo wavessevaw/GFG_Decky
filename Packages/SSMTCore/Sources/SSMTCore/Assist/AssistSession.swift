@@ -32,6 +32,10 @@ public final class AssistSession {
     public private(set) var features: [Int: SignalFeatures] = [:]
     /// Calibrated measurement mic level, if the user calibrated it in function #1 (dB SPL A).
     public var micSPL: Double?
+    /// Last A-weighted mic level (dB SPL if calibrated, else dBFS).
+    public private(set) var micLevel: Double?
+    /// The measurement microphone chosen from the function #1 library.
+    public var measurementMic = MeasurementMic()
     let extractor: FeatureExtractor
     let detector: FeedbackDetector
 
@@ -105,10 +109,21 @@ public final class AssistSession {
     /// One step: audio of the listened channels (at the tap) and of the measurement mic for the last window.
     /// Returns the strips that changed (send them to the console).
     public func tick(taps: [Int: [Float]], mic: [Float]?) -> [ChannelStrip] {
+        var feats: [Int: SignalFeatures] = [:]
+        for (ch, x) in taps { feats[ch] = extractor.analyze(x) }
+        return tick(features: feats, mic: mic)
+    }
+
+    /// Same, with channel features already measured (console meters and RTA over the network).
+    public func tick(features feats: [Int: SignalFeatures], mic: [Float]?) -> [ChannelStrip] {
         guard isRunning else { return [] }
         steps += 1
-        var feats: [Int: SignalFeatures] = [:]
-        for (ch, x) in taps { let f = extractor.analyze(x); feats[ch] = f; features[ch] = f }
+        for (ch, f) in feats { features[ch] = f }
+        if let mic {
+            let l = measurementMic.levelA(mic, sampleRate: sampleRate)
+            micLevel = l.value
+            if l.calibrated { micSPL = l.value }
+        }
         let events = mic.map { detector.process($0) } ?? []
         var changed: [ChannelStrip] = []
         func commit(_ s: ChannelStrip) {

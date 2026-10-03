@@ -163,6 +163,10 @@ final class AppModel: ObservableObject {
     init() {
         refreshDevices()
         microphonePermission = AVCaptureDevice.authorizationStatus(for: .audio)
+        // FOH Assist measures with any microphone of the function #1 library and its SPL calibration.
+        assist.micLibrary = { [weak self] in
+            (self?.calibration.microphones ?? [], self?.calibration.selectedMicrophoneID, self?.calibration.spl)
+        }
     }
 
     var selectedDevice: AudioDeviceInfo? {
