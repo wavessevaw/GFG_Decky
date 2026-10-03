@@ -20,6 +20,9 @@
 настоящая причина от macOS, а не общее «Файл не найден». SSMT запрашивает доступ к папкам «Рабочий стол»,
 «Документы», «Загрузки» и внешним дискам с понятным объяснением.
 
+**Qtrl: трек играет сразу после добавления, как в QLab.** Воспроизведение начинается, как только подготовлены
+первые ~1,5 с файла (доли секунды), остальное готовится в фоне быстрее, чем играет.
+
 **Qtrl:** трек, добавленный перетаскиванием, сразу запускается по GO. Раньше, если файл ещё готовился к
 воспроизведению, кью показывала «Файл не найден» и не играла; теперь она дожидается готовности файла (до 15 с),
 а в списке пишется «Файл ещё готовится». Отсутствующий файл по-прежнему сообщается сразу.
@@ -43,6 +46,9 @@ engineer; the console test report as steps.
 **Qtrl: show audio as in QLab.** Saving a show copies all its audio into "<show name> Audio" next to the show file
 (stored relative to it), so a show travels as one folder; before saving, tracks play from where they are. A file that cannot be copied or read
 shows the system's reason instead of a generic "File not found". Folder access prompts now explain why.
+
+**Qtrl: a track plays right after it is added, as in QLab** — playback starts once the first ~1.5 s are decoded
+(a fraction of a second); the rest is decoded in the background faster than it plays.
 
 **Qtrl fix:** a track dropped into the cue list now plays on GO: if its file is still being prepared, the cue waits
 for it (up to 15 s) instead of reporting "File not found"; a genuinely missing file is still reported at once. GO and Space no longer stay disabled after adding cues: the
