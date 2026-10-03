@@ -232,6 +232,12 @@ final class SnapshotTests: XCTestCase {
                      name: "show-show", loc: Self.ru)
         show.showMode = false
         show.showTimeline = false
+        // A group's own multitrack in its inspector.
+        show.selection = [show.doc.lists[0].cues[3].id]
+        show.inspectorTab = .multitrack
+        try snapshot(ShowWorkspace().padding(16).background(Backdrop()), size: CGSize(width: 1500, height: 900),
+                     name: "show-group-multitrack", loc: Self.ru)
+        show.inspectorTab = .main
     }
 
     func testWaveformEditor() throws {

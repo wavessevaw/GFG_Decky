@@ -51,6 +51,8 @@ final class ShowStore: ObservableObject {
     @Published var showTimeline = UserDefaults.standard.bool(forKey: "ssmt.show.timeline") {
         didSet { UserDefaults.standard.set(showTimeline, forKey: "ssmt.show.timeline") }
     }
+    /// Inspector tab (kept when the selection changes, as in QLab).
+    @Published var inspectorTab: InspectorTab = .main
     @Published var sidebarTab = QtrlSidebarTab(rawValue: UserDefaults.standard.string(forKey: "ssmt.show.sidebarTab") ?? "") ?? .active {
         didSet { UserDefaults.standard.set(sidebarTab.rawValue, forKey: "ssmt.show.sidebarTab") }
     }

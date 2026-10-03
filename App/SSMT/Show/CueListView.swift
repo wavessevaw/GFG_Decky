@@ -30,8 +30,9 @@ struct CueListView: View {
                                 .simultaneousGesture(TapGesture().onEnded { select(row.cue.id, rows: rows) })
                                 .contextMenu { menu(row.cue) }
                                 .onDrag { NSItemProvider(object: row.cue.id.uuidString as NSString) }
-                                .onDrop(of: [.text, .fileURL], isTargeted: nil) { providers in
-                                    drop(providers, before: row.cue)
+                                // As in QLab: dropped on the lower part of a group row, files and cues go into the group.
+                                .onDrop(of: [.text, .fileURL], isTargeted: nil) { providers, at in
+                                    drop(providers, before: row.cue, into: row.cue.kind == .group && at.y > 14 ? row.cue.id : nil)
                                 }
                         }
                         // Drop zone at the end of the list.
@@ -125,6 +126,9 @@ struct CueListView: View {
                 if !show.selection.contains(cue.id) { show.selection = [cue.id] }
                 show.duplicateSelection()
             }
+            if show.selection.count > 1 && show.selection.contains(cue.id) {
+                Button(loc.t("show.groupSelection")) { show.add(.group) }
+            }
             if cue.kind == .group {
                 Button(loc.t("show.addAudioToGroup")) {
                     let panel = NSOpenPanel()
@@ -141,7 +145,7 @@ struct CueListView: View {
     }
 
     /// Cue ids (reorder) or audio files (new cues) dropped onto a row.
-    private func drop(_ providers: [NSItemProvider], before: Cue?) -> Bool {
+    private func drop(_ providers: [NSItemProvider], before: Cue?, into group: UUID? = nil) -> Bool {
         guard !show.showMode, let lid = show.listID else { return false }
         let files = providers.filter { $0.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) }
         if !files.isEmpty {
@@ -163,6 +167,11 @@ struct CueListView: View {
                     let flat = list.cues.flattened().map(\.cue.id)
                     if let i = flat.firstIndex(of: before.id), i > 0 { after = flat[i - 1] }
                 }
+                if let group {
+                    show.addAudioFiles(audio, intoGroup: group)
+                    show.collapsed.remove(group)
+                    return
+                }
                 show.addAudioFiles(audio, after: before == nil ? show.currentList?.cues.last?.id : after)
             }
             return true
@@ -172,6 +181,12 @@ struct CueListView: View {
             guard let s = obj as? String, let id = UUID(uuidString: s) else { return }
             DispatchQueue.main.async {
                 let ids = show.selection.contains(id) ? show.orderedSelection : [id]
+                if let group {
+                    guard !ids.contains(group) else { return }
+                    show.edit(loc.t("show.move")) { $0.move(ids, before: nil, intoGroup: group, list: lid) }
+                    show.collapsed.remove(group)
+                    return
+                }
                 guard before?.id != id else { return }
                 show.edit(loc.t("show.move")) { $0.move(ids, before: before?.id, list: lid) }
             }

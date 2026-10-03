@@ -37,6 +37,11 @@
 «Списки · One-shot · Идёт»; снизу — инспектор и по кнопке таймлайн; внизу — строка состояния с «Правка / Шоу».
 Переключатель «Простой / Эксперт» и повторяющиеся панели убраны.
 
+**Qtrl: группы как локальный мультитрек (как в QLab).** Выделите несколько кью и нажмите «Группа» (или «Сгруппировать
+выделенные» в меню) — они объединятся в группу. Файлы и кью, перетащенные на нижнюю часть строки группы, попадают
+внутрь неё. У группы в инспекторе есть вкладка «Мультитрек»: каждая кью — своя дорожка, старт сдвигается
+перетаскиванием, кнопка «Добавить треки»; в режиме «Все вместе» группа играет как мультитрек.
+
 Функции №1 и №2 — без изменений.
 
 ## English
@@ -61,6 +66,10 @@ playhead on it, as in QLab. Edit mode now has a transport (GO, pause, Stop all),
 building the show; a click anywhere outside a text field (notes, name, number) or Esc ends typing, so Space is GO again. **Qtrl laid out as QLab, without duplicates:** GO, standing by with notes, Pause all and Stop all on top (same in Edit
 and Show); the cue toolbar; the cue list; a sidebar with Cue lists · One-shot · Active; the inspector and optional
 timeline at the bottom; a status bar with Edit / Show. The Simple / Expert switch and repeated panels are gone.
+
+**Qtrl groups as a local multitrack (as in QLab):** select cues and press Group (or "Group the selected cues") to wrap
+them; files and cues dropped on the lower part of a group row go into it; the group inspector has a Multitrack tab —
+one track per cue, drag to move its start, "Add tracks"; in "All together" mode the group plays as a multitrack.
 
 ---
 

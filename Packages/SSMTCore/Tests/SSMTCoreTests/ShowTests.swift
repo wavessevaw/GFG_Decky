@@ -459,6 +459,9 @@ final class ShowTests: XCTestCase {
         XCTAssertEqual(lanes.count, 3, "three overlapping audio clips need three tracks")
         let inGroup = ShowTimeline.planGroup(doc, group: g.id) { lengths[$0.audio?.file ?? ""] }
         XCTAssertEqual(inGroup.first { $0.cueID == k1.id }?.start, 1)
+        let multitrack = ShowTimeline.planGroup(doc, group: g.id, fileLength: { lengths[$0.audio?.file ?? ""] }, lanePerCue: true)
+        XCTAssertEqual(multitrack.first { $0.cueID == k1.id }?.lane, 0, "multitrack: one track per cue, in group order")
+        XCTAssertEqual(multitrack.first { $0.cueID == k2.id }?.lane, 1)
     }
 
     // MARK: Inner loop (intro → loop → outro)

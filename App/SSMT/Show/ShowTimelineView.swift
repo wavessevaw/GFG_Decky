@@ -7,6 +7,8 @@ import SwiftUI
 struct ShowTimelineView: View {
     @EnvironmentObject var show: ShowStore
     @EnvironmentObject var loc: Localizer
+    /// A group's own multitrack (inside its inspector): one track per cue, drag to set its start.
+    var group: UUID? = nil
     /// Seconds across the whole width.
     @State private var span: Double = 40
     @State private var drag: (id: UUID, dx: CGFloat)?
@@ -17,7 +19,7 @@ struct ShowTimelineView: View {
     }
 
     private var groupMode: Cue? {
-        guard let g = show.timelineGroup else { return nil }
+        guard let g = group ?? show.timelineGroup else { return nil }
         return show.doc.cue(g)
     }
 
@@ -45,10 +47,38 @@ struct ShowTimelineView: View {
                 .clipped()
             }
         }
-        .glassCard(padding: 10)
+        .glassCard(padding: group == nil ? 10 : 0, plain: group != nil)
     }
 
-    private var header: some View {
+    @ViewBuilder private var header: some View {
+        if let g = group { multitrackHeader(g) } else { liveHeader }
+    }
+
+    private func multitrackHeader(_ g: UUID) -> some View {
+        HStack(spacing: 8) {
+            Button {
+                let panel = NSOpenPanel()
+                panel.allowedContentTypes = ShowStore.audioTypes
+                panel.allowsMultipleSelection = true
+                if panel.runModal() == .OK { show.addAudioFiles(panel.urls, intoGroup: g) }
+            } label: { Label(loc.t("show.group.addTracks"), systemImage: "plus") }
+                .buttonStyle(SSMTButtonStyle())
+                .disabled(show.showMode)
+            Text(loc.t("show.group.multitrackHint")).font(.system(size: 11)).foregroundStyle(Theme.textMuted).lineLimit(2)
+            Spacer()
+            zoom
+        }
+    }
+
+    private var zoom: some View {
+        HStack(spacing: 8) {
+            Button { span = min(600, span * 1.5) } label: { Image(systemName: "minus.magnifyingglass") }.buttonStyle(.borderless)
+            Text("\(Int(span)) \(loc.t("show.sec"))").font(Theme.mono(10)).foregroundStyle(Theme.textSecondary).frame(width: 44)
+            Button { span = max(5, span / 1.5) } label: { Image(systemName: "plus.magnifyingglass") }.buttonStyle(.borderless)
+        }
+    }
+
+    private var liveHeader: some View {
         HStack(spacing: 8) {
             Text(loc.t("show.timeline").uppercased()).font(Theme.label(11)).tracking(1.2).foregroundStyle(Theme.textSecondary)
             Picker("", selection: Binding(get: { show.timelineGroup }, set: { show.timelineGroup = $0 })) {
@@ -72,7 +102,7 @@ struct ShowTimelineView: View {
 
     private func currentClips() -> [TimelineClip] {
         if let g = groupMode {
-            return ShowTimeline.planGroup(show.doc, group: g.id, fileLength: show.fileLength)
+            return ShowTimeline.planGroup(show.doc, group: g.id, fileLength: show.fileLength, lanePerCue: group != nil)
         }
         var clips: [TimelineClip] = []
         for r in show.snapshot.running {

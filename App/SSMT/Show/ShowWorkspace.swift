@@ -201,7 +201,7 @@ struct QtrlToolbar: View {
                 .buttonStyle(SSMTButtonStyle(kind: .primary))
                 .help(loc.t("show.addAudio.help"))
             ForEach(CueKind.mediaKinds.filter { $0 != .audio } + CueKind.controlKinds, id: \.self) { k in
-                tool(k.icon, loc.t("cue.kind.\(k.rawValue)")) { show.add(k) }
+                tool(k.icon, k == .group ? loc.t("show.group.help") : loc.t("cue.kind.\(k.rawValue)")) { show.add(k) }
             }
             Spacer(minLength: 8)
             let none = show.selection.isEmpty

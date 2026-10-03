@@ -14333,6 +14333,23 @@
         }
       }
     },
+    "show.group.addTracks": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add tracks"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Добавить треки"
+          }
+        }
+      }
+    },
     "show.group.count": {
       "extractionState": "manual",
       "localizations": {
@@ -14346,6 +14363,57 @@
           "stringUnit": {
             "state": "translated",
             "value": "Кью в группе: %d"
+          }
+        }
+      }
+    },
+    "show.group.help": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Group — select several cues first to put them into one group"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Группа — выделите несколько кью, чтобы объединить их в группу"
+          }
+        }
+      }
+    },
+    "show.group.multitrackHint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "One track per cue. Drag a clip to move its start; mode \"All together\" plays them as a multitrack."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Каждая кью — своя дорожка. Перетащите клип, чтобы сдвинуть старт; в режиме «Все вместе» группа играет как мультитрек."
+          }
+        }
+      }
+    },
+    "show.groupSelection": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Group the selected cues"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сгруппировать выделенные кью"
           }
         }
       }
@@ -15485,6 +15553,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Общее"
+          }
+        }
+      }
+    },
+    "show.tab.multitrack": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Multitrack"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Мультитрек"
           }
         }
       }
