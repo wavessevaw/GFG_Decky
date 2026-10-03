@@ -103,8 +103,8 @@ public final class ShowEngine {
         self.lookahead = lookahead
         self.send = send
         self.clipProvider = clipProvider
-        listID = document.lists.first?.id
-        playhead = document.lists.first?.cues.first?.id
+        listID = document.cueLists.first?.id
+        playhead = document.cueLists.first?.cues.first?.id
     }
 
     private func frames(_ seconds: Double) -> Int64 { Int64((max(0, seconds) * sampleRate).rounded()) }
@@ -112,7 +112,7 @@ public final class ShowEngine {
     // MARK: Public control
 
     public func selectList(_ id: UUID) {
-        guard let l = document.lists.first(where: { $0.id == id }) else { return }
+        guard let l = document.lists.first(where: { $0.id == id }), !l.isBank else { return }
         listID = id
         if !l.cues.contains(where: { $0.id == playhead }) { playhead = l.cues.first?.id }
     }
@@ -120,7 +120,7 @@ public final class ShowEngine {
     /// Puts the playhead on a top-level cue of the current list (nil = end of list).
     public func setPlayhead(_ id: UUID?) {
         guard let id else { playhead = nil; return }
-        for l in document.lists where l.cues.contains(where: { $0.id == id }) {
+        for l in document.cueLists where l.cues.contains(where: { $0.id == id }) {
             listID = l.id
             playhead = id
             return
@@ -149,6 +149,32 @@ public final class ShowEngine {
         trigger(id, list: lid, parent: parent, at: now + lookahead)
         advance(to: now)
     }
+
+    /// One-shot pad press (`pressed`) or release, following the pad's mode.
+    public func pad(_ id: UUID, pressed: Bool, now: Int64) {
+        guard let cue = document.cue(id) else { return }
+        let running = instances[id].map { !$0.stopping } ?? false
+        let t = now + lookahead
+        switch (cue.padMode, pressed) {
+        case (.start, true):
+            if !running { start(id, now: now); return }
+        case (.toggle, true):
+            if running { terminate(id, at: t, fade: frames(0.02)) } else { start(id, now: now); return }
+        case (.restart, true):
+            if running { terminate(id, at: t, fade: 0) }
+            start(id, now: now)
+            return
+        case (.hold, true):
+            if !running { start(id, now: now); return }
+        case (.hold, false):
+            terminate(id, at: t, fade: frames(0.02))
+        default:
+            break
+        }
+        advance(to: now)
+    }
+
+    public func isRunning(_ id: UUID) -> Bool { instances[id].map { !$0.stopping } ?? false }
 
     public func stop(_ id: UUID, now: Int64, fade: Double = 0) {
         terminate(id, at: now + lookahead, fade: frames(fade))

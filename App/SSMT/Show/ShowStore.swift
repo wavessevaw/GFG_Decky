@@ -19,6 +19,11 @@ private final class PlaybackCore: @unchecked Sendable {
     var now: Int64 { Int64(output?.mixer.framesRendered.value ?? 0) }
 }
 
+/// Player layout: "Simple" (list + one side column) or "Expert" (library, pads, timeline).
+enum ShowLayout: String, CaseIterable {
+    case simple, expert
+}
+
 /// The open show: document with undo, file handling, selection, and the link to the playback engine.
 @MainActor
 final class ShowStore: ObservableObject {
@@ -30,6 +35,15 @@ final class ShowStore: ObservableObject {
     }
     @Published var selection = Set<Cue.ID>()
     @Published var listID: UUID?
+    /// One-shot bank shown in the pad grid.
+    @Published var bankID: UUID?
+    @Published var layout: ShowLayout = ShowLayout(rawValue: UserDefaults.standard.string(forKey: "ssmt.show.layout") ?? "") ?? .simple {
+        didSet { UserDefaults.standard.set(layout.rawValue, forKey: "ssmt.show.layout") }
+    }
+    /// Timeline shows this group's contents for editing (nil = the live show).
+    @Published var timelineGroup: UUID?
+    /// File overview (peak per bucket, 0…1) by resolved path, for waveforms.
+    @Published private(set) var waveforms: [String: [Float]] = [:]
     @Published var collapsed = Set<Cue.ID>()
     /// Show mode: editing locked, big transport, keyboard GO.
     @Published var showMode = false
@@ -73,21 +87,23 @@ final class ShowStore: ObservableObject {
         } else {
             doc = ShowDocument(name: "")
         }
-        listID = doc.lists.first?.id
+        listID = doc.cueLists.first?.id
         if startAudio { outputStarted = true; restartOutput() }
     }
 
     /// For previews and snapshot tests: a document without audio output.
     init(document: ShowDocument) {
         doc = document
-        listID = document.lists.first?.id
+        listID = document.cueLists.first?.id
         outputStarted = true // never opens an audio device
     }
 
     var currentList: CueList? { doc.list(listID) }
 
     /// Snapshot tests: no audio device, and a fixed playback state to render.
-    func preview(snapshot: ShowSnapshot, clips: [String: (duration: Double, channels: Int)], meters: [Float]) {
+    func preview(snapshot: ShowSnapshot, clips: [String: (duration: Double, channels: Int)], meters: [Float],
+                 waveforms: [String: [Float]] = [:]) {
+        self.waveforms = waveforms
         outputStarted = true
         self.snapshot = snapshot
         clipInfo = clips
@@ -120,7 +136,9 @@ final class ShowStore: ObservableObject {
     private func documentEdited() {
         let d = doc
         core.queue.async { [core] in core.engine?.document = d }
-        if listID == nil || !doc.lists.contains(where: { $0.id == listID }) { listID = doc.lists.first?.id }
+        if listID == nil || !doc.cueLists.contains(where: { $0.id == listID }) { listID = doc.cueLists.first?.id }
+        if bankID == nil || !doc.banks.contains(where: { $0.id == bankID }) { bankID = doc.banks.first?.id }
+        if let g = timelineGroup, doc.cue(g) == nil { timelineGroup = nil }
         scheduleAutosave()
         refreshFiles()
     }
@@ -170,6 +188,48 @@ final class ShowStore: ObservableObject {
             if let g = intoGroup { $0.append(cues, toGroup: g) } else { $0.insert(cues, after: after ?? lastSelected, list: lid) }
         }
         selection = Set(cues.map(\.id))
+    }
+
+    // MARK: One-shot pads
+
+    var currentBank: CueList? { doc.banks.first { $0.id == bankID } ?? doc.banks.first }
+
+    /// Adds audio files as pads of the current bank, each on the next free F-key.
+    func addPads(_ urls: [URL]) {
+        if doc.banks.isEmpty { edit { $0.lists.append(CueList(name: "\(self.loc("show.bank")) 1", isBank: true)) } }
+        guard let bank = currentBank, !urls.isEmpty else { return }
+        var used = Set(doc.allCues.compactMap(\.hotkey))
+        let pads: [Cue] = urls.map { url in
+            var c = Cue.audio(file: storedPath(for: url))
+            if let key = ShowDocument.functionKeys.first(where: { !used.contains($0) }) {
+                c.hotkey = key
+                used.insert(key)
+            }
+            return c
+        }
+        edit { $0.insert(pads, after: nil, list: bank.id) }
+        selection = Set(pads.map(\.id))
+    }
+
+    func choosePads() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = Self.audioTypes
+        panel.allowsMultipleSelection = true
+        guard panel.runModal() == .OK else { return }
+        addPads(panel.urls)
+    }
+
+    func addBank() {
+        let b = CueList(name: "\(loc("show.bank")) \(doc.banks.count + 1)", isBank: true)
+        edit { $0.lists.append(b) }
+        bankID = b.id
+    }
+
+    func pad(_ id: UUID, pressed: Bool) { run { e, now in e.pad(id, pressed: pressed, now: now) } }
+
+    /// File length of an audio cue in seconds, when loaded.
+    func fileLength(_ cue: Cue) -> Double? {
+        resolvedPath(cue).flatMap { clipInfo[$0]?.duration }
     }
 
     func chooseAudioFiles() {
@@ -362,17 +422,42 @@ final class ShowStore: ObservableObject {
         guard !todo.isEmpty else { return }
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             var info: [String: (Double, Int)] = [:]
+            var waves: [String: [Float]] = [:]
             for p in todo {
-                if let c = core.clips.load(p, sampleRate: sr) { info[p] = (c.duration, c.channelCount) }
+                if let c = core.clips.load(p, sampleRate: sr) {
+                    info[p] = (c.duration, c.channelCount)
+                    waves[p] = Self.overview(c)
+                }
             }
             core.clips.forget(except: paths)
             let bytes = core.clips.totalBytes
             Task { @MainActor in
                 guard let self else { return }
                 for (k, v) in info { self.clipInfo[k] = (duration: v.0, channels: v.1) }
+                for (k, v) in waves { self.waveforms[k] = v }
                 self.memoryBytes = bytes
             }
         }
+    }
+
+    /// Peak overview of a clip (all channels), `buckets` values in 0…1.
+    nonisolated static func overview(_ clip: AudioClip, buckets: Int = 1200) -> [Float] {
+        let n = clip.frames
+        guard n > 0 else { return [] }
+        let size = max(1, n / buckets)
+        var out = [Float](repeating: 0, count: min(buckets, n))
+        for ch in clip.channels {
+            ch.withUnsafeBufferPointer { p in
+                for b in 0..<out.count {
+                    var peak: Float = 0
+                    let start = b * size, end = min(n, start + size)
+                    var i = start
+                    while i < end { peak = max(peak, abs(p[i])); i += 4 } // every 4th sample is plenty for display
+                    out[b] = max(out[b], min(1, peak))
+                }
+            }
+        }
+        return out
     }
 
     /// Looks for missing files by name inside a folder (recursively) and relinks them.
@@ -415,7 +500,7 @@ final class ShowStore: ObservableObject {
         edit { $0 = ShowDocument(name: "") }
         fileURL = nil
         selection = []
-        listID = doc.lists.first?.id
+        listID = doc.cueLists.first?.id
     }
 
     func open() {
@@ -427,7 +512,7 @@ final class ShowStore: ObservableObject {
             run { e, now in e.panic(now: now, hard: true) }
             fileURL = url
             edit { $0 = d }
-            listID = d.lists.first?.id
+            listID = d.cueLists.first?.id
             selection = []
             restartOutput()
         } catch {
@@ -468,17 +553,30 @@ final class ShowStore: ObservableObject {
     /// Space = GO, Esc = panic (twice = cut), cue hotkeys; ignored while typing in a text field.
     func installKeyMonitor() {
         guard keyMonitor == nil else { return }
-        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .keyUp]) { [weak self] event in
             guard let self else { return event }
             return MainActor.assumeIsolated { self.handleKey(event) ? nil : event }
         }
     }
+
+    private static let functionKeyCodes: [UInt16: String] = [
+        122: "F1", 120: "F2", 99: "F3", 118: "F4", 96: "F5", 97: "F6",
+        98: "F7", 100: "F8", 101: "F9", 109: "F10", 103: "F11", 111: "F12",
+    ]
 
     private func handleKey(_ event: NSEvent) -> Bool {
         guard isActive else { return false }
         if let responder = NSApp.keyWindow?.firstResponder, responder is NSText || responder is NSTextView { return false }
         let mods = event.modifierFlags.intersection([.command, .control, .option])
         guard mods.isEmpty else { return false }
+        // One-shot pads on F-keys: press and release (for "hold" pads).
+        if let fkey = Self.functionKeyCodes[event.keyCode] {
+            guard let cue = doc.allCues.first(where: { $0.hotkey == fkey }) else { return false }
+            if event.isARepeat { return true }
+            pad(cue.id, pressed: event.type == .keyDown)
+            return true
+        }
+        guard event.type == .keyDown else { return false }
         switch event.keyCode {
         case 49: go(); return true            // space
         case 53: panic(); return true         // esc
@@ -486,7 +584,7 @@ final class ShowStore: ObservableObject {
         }
         guard let ch = event.charactersIgnoringModifiers?.lowercased(), !ch.isEmpty else { return false }
         if let cue = doc.allCues.first(where: { ($0.hotkey ?? "").lowercased() == ch }) {
-            start(cue.id)
+            if doc.banks.contains(where: { $0.cues.findCue(cue.id) != nil }) { pad(cue.id, pressed: true) } else { start(cue.id) }
             return true
         }
         return false

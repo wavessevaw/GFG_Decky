@@ -350,4 +350,58 @@ final class ShowTests: XCTestCase {
         let m = try ShowDocument.decode(Data(minimal.utf8))
         XCTAssertEqual(m.lists[0].cues[0].armed, true)
     }
+
+    // MARK: Pads and timeline
+
+    func testPadModes() {
+        var doc = ShowDocument()
+        var toggle = audioCue("a", "", plays: 0); toggle.padMode = .toggle
+        var hold = audioCue("a", "", plays: 0); hold.padMode = .hold
+        var restart = audioCue("a", "", plays: 0); restart.padMode = .restart
+        doc.lists[1].cues = [toggle, hold, restart]
+        XCTAssertTrue(doc.lists[1].isBank)
+        let rig = ShowRig(doc)
+        rig.clips["a"] = constClip(0.1, frames: 4800)
+        XCTAssertNotEqual(rig.engine.playhead, toggle.id, "pads are never on the GO playhead")
+        rig.engine.pad(toggle.id, pressed: true, now: rig.now); rig.run(2000)
+        XCTAssertTrue(rig.engine.isRunning(toggle.id))
+        rig.engine.pad(toggle.id, pressed: false, now: rig.now); rig.run(2000)
+        XCTAssertTrue(rig.engine.isRunning(toggle.id), "release does nothing in toggle mode")
+        rig.engine.pad(toggle.id, pressed: true, now: rig.now); rig.run(4000)
+        XCTAssertFalse(rig.engine.isRunning(toggle.id))
+        rig.engine.pad(hold.id, pressed: true, now: rig.now); rig.run(2000)
+        XCTAssertTrue(rig.engine.isRunning(hold.id))
+        rig.engine.pad(hold.id, pressed: false, now: rig.now); rig.run(4000)
+        XCTAssertFalse(rig.engine.isRunning(hold.id))
+        rig.engine.pad(restart.id, pressed: true, now: rig.now); rig.run(2000)
+        rig.engine.pad(restart.id, pressed: true, now: rig.now); rig.run(2000)
+        XCTAssertTrue(rig.engine.isRunning(restart.id))
+        XCTAssertEqual(rig.ops.filter { if case let .start(id, _, _, _) = $0 { return id == restart.id } else { return false } }.count, 2)
+    }
+
+    func testTimelinePlan() {
+        var doc = ShowDocument()
+        var a = audioCue("a", "1"); a.continueMode = .autoContinue; a.postWait = 2
+        var f = Cue(kind: .fade, number: "2"); f.target = a.id; f.fade?.duration = 3; f.continueMode = .autoFollow
+        var g = Cue(kind: .group, number: "3"); g.groupMode = .simultaneous
+        var k1 = audioCue("b", ""); k1.preWait = 1
+        let k2 = audioCue("loop", "", plays: 0)
+        g.children = [k1, k2]
+        let after = audioCue("a", "4")
+        doc.lists[0].cues = [a, f, g, after]
+        let lengths = ["a": 10.0, "b": 4.0, "loop": 6.0]
+        let clips = ShowTimeline.plan(doc, from: a.id) { lengths[$0.audio?.file ?? ""] }
+        func clip(_ id: UUID) -> TimelineClip? { clips.first { $0.cueID == id } }
+        XCTAssertEqual(clip(a.id)?.start, 0)
+        XCTAssertEqual(clip(a.id)?.duration, 10)
+        XCTAssertEqual(clip(f.id)?.start, 2)
+        XCTAssertEqual(clip(f.id)?.lane, ShowTimeline.controlLane)
+        XCTAssertEqual(clip(k1.id)?.start, 5 + 1, "group starts when the fade ends; child pre-wait")
+        XCTAssertNil(clip(k2.id)?.duration, "loop is open-ended")
+        XCTAssertNil(clip(after.id), "group waits for GO")
+        let lanes = Set(clips.filter { $0.style == .audio }.map(\.lane))
+        XCTAssertEqual(lanes.count, 3, "three overlapping audio clips need three tracks")
+        let inGroup = ShowTimeline.planGroup(doc, group: g.id) { lengths[$0.audio?.file ?? ""] }
+        XCTAssertEqual(inGroup.first { $0.cueID == k1.id }?.start, 1)
+    }
 }

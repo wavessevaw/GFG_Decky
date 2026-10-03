@@ -2,18 +2,51 @@ import SSMTCore
 import SwiftUI
 
 /// Right column: every setting of the selected cue.
+/// Inspector tabs; which ones appear depends on the cue type.
+enum InspectorTab: String, CaseIterable {
+    case main, time, action, outputs, pad
+
+    static func tabs(for cue: Cue, isPad: Bool) -> [InspectorTab] {
+        var t: [InspectorTab] = [.main, .time]
+        if cue.kind != .memo { t.append(.action) }
+        if cue.kind == .audio { t.append(.outputs) }
+        if isPad { t.append(.pad) }
+        return t
+    }
+}
+
 struct CueInspector: View {
     @EnvironmentObject var show: ShowStore
     @EnvironmentObject var loc: Localizer
+    @State private var tab: InspectorTab = .main
 
     var body: some View {
         Group {
             if show.selection.count == 1, let id = show.selection.first, let cue = show.doc.cue(id) {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 12) {
-                        CueInspectorContent(cue: cue)
+                let isPad = show.doc.banks.contains { $0.cues.findCue(id) != nil }
+                let tabs = InspectorTab.tabs(for: cue, isPad: isPad)
+                let current = tabs.contains(tab) ? tab : .main
+                VStack(spacing: 10) {
+                    HStack(spacing: 4) {
+                        ForEach(tabs, id: \.self) { t in
+                            Button { tab = t } label: {
+                                Text(loc.t("show.tab.\(t.rawValue)"))
+                                    .font(.system(size: 12, weight: t == current ? .semibold : .regular))
+                                    .lineLimit(1)
+                                    .padding(.horizontal, 9).padding(.vertical, 5)
+                                    .frame(maxWidth: .infinity)
+                                    .background(Capsule().fill(t == current ? Theme.accent.opacity(0.2) : Color.white.opacity(0.05)))
+                                    .foregroundStyle(t == current ? Theme.textPrimary : Theme.textSecondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
-                    .padding(.bottom, 12)
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 12) {
+                            CueInspectorContent(cue: cue, tab: current)
+                        }
+                        .padding(.bottom, 12)
+                    }
                 }
             } else {
                 VStack(spacing: 10) {
@@ -32,8 +65,19 @@ private struct CueInspectorContent: View {
     @EnvironmentObject var show: ShowStore
     @EnvironmentObject var loc: Localizer
     var cue: Cue
+    var tab: InspectorTab
 
     var body: some View {
+        switch tab {
+        case .main: mainSection
+        case .time: timingSection
+        case .action: actionSection
+        case .outputs: outputsSection
+        case .pad: padSection
+        }
+    }
+
+    @ViewBuilder private var mainSection: some View {
         section(loc.t("cue.kind.\(cue.kind.rawValue)"), icon: cue.kind.icon) {
             HStack(spacing: 8) {
                 field(loc.t("show.col.number"), text: bind(\.number)).frame(width: 70)
@@ -61,7 +105,9 @@ private struct CueInspectorContent: View {
                 Toggle(loc.t("show.armed"), isOn: bind(\.armed)).toggleStyle(.switch).controlSize(.mini)
             }
         }
+    }
 
+    @ViewBuilder private var timingSection: some View {
         section(loc.t("show.timing"), icon: "timer") {
             HStack(spacing: 8) {
                 seconds(loc.t("show.preWait"), bind(\.preWait))
@@ -83,8 +129,11 @@ private struct CueInspectorContent: View {
                 }))
                 .textFieldStyle(.roundedBorder).frame(width: 44).multilineTextAlignment(.center)
             }
+            if cue.kind == .wait { seconds(loc.t("show.duration"), bind(\.duration)) }
         }
+    }
 
+    @ViewBuilder private var actionSection: some View {
         switch cue.kind {
         case .audio: audioSection
         case .fade: fadeSection
@@ -146,13 +195,44 @@ private struct CueInspectorContent: View {
                         .textFieldStyle(.roundedBorder).frame(width: 70)
                 }
             }
-            level(loc.t("show.level"), audio(\.level, 0))
             HStack(spacing: 8) {
                 seconds(loc.t("show.fadeIn"), audio(\.fadeIn, 0))
                 seconds(loc.t("show.fadeOut"), audio(\.fadeOut, 0))
             }
         }
+    }
+
+    @ViewBuilder private var outputsSection: some View {
+        section(loc.t("show.level"), icon: "speaker.wave.2") {
+            level(loc.t("show.level"), audio(\.level, 0))
+        }
         section(loc.t("show.routing"), icon: "point.3.connected.trianglepath.dotted") { routingGrid }
+    }
+
+    /// One-shot pad: press behaviour and F-key.
+    @ViewBuilder private var padSection: some View {
+        section(loc.t("show.tab.pad"), icon: "square.grid.3x3") {
+            VStack(alignment: .leading, spacing: 4) {
+                caption(loc.t("show.pad.mode"))
+                Picker("", selection: bind(\.padMode)) {
+                    ForEach(PadMode.allCases, id: \.self) { Text(loc.t("padmode.\($0.rawValue)")).tag($0) }
+                }
+                .pickerStyle(.radioGroup)
+                .labelsHidden()
+            }
+            HStack {
+                caption(loc.t("show.pad.key"))
+                Spacer()
+                Picker("", selection: Binding(get: { cue.hotkey ?? "" }, set: { v in
+                    show.updateCue(cue.id) { $0.hotkey = v.isEmpty ? nil : v }
+                })) {
+                    Text("—").tag("")
+                    ForEach(ShowDocument.functionKeys, id: \.self) { Text($0).tag($0) }
+                }
+                .labelsHidden()
+                .frame(width: 90)
+            }
+        }
     }
 
     /// Crosspoints: file channels (rows) × show outputs (columns); click to connect.

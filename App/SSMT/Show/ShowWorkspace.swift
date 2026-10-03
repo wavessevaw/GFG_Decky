@@ -52,27 +52,23 @@ func showTime(_ s: Double?) -> String {
     return m > 0 ? String(format: "%d:%04.1f", m, rest) : String(format: "%.1f", rest)
 }
 
-/// Function #3: the show player.
+/// Function #3: the show player, in two layouts.
+/// Simple: cue list + one side column (inspector while editing, operator panel in show mode).
+/// Expert: library, cue list, one-shot pads, wide multitrack timeline, inspector / operator panel.
 struct ShowWorkspace: View {
     @EnvironmentObject var show: ShowStore
     @EnvironmentObject var loc: Localizer
     @Environment(\.undoManager) private var undoManager
 
     var body: some View {
-        HStack(alignment: .top, spacing: 14) {
-            ShowTransport()
-                .frame(width: 300)
-            VStack(spacing: 10) {
-                ShowHeader()
-                if let e = show.lastError {
-                    ErrorBanner(text: e.hasPrefix("error.") ? loc.t(e) : e) { show.lastError = nil }
-                }
-                CueListView()
+        VStack(spacing: 10) {
+            ShowTopBar()
+            if let e = show.lastError {
+                ErrorBanner(text: e.hasPrefix("error.") ? loc.t(e) : e) { show.lastError = nil }
             }
-            .frame(maxWidth: .infinity)
-            if !show.showMode {
-                CueInspector()
-                    .frame(width: 330)
+            switch show.layout {
+            case .simple: simple
+            case .expert: expert
             }
         }
         .onAppear {
@@ -89,18 +85,60 @@ struct ShowWorkspace: View {
                 .preferredColorScheme(.dark)
         }
     }
+
+    private var simple: some View {
+        HStack(alignment: .top, spacing: 12) {
+            CueListView()
+                .frame(maxWidth: .infinity)
+            Group {
+                if show.showMode { OperatorColumn() } else { CueInspector() }
+            }
+            .frame(width: 320)
+        }
+    }
+
+    private var expert: some View {
+        HStack(alignment: .top, spacing: 12) {
+            VStack(spacing: 12) {
+                HStack(alignment: .top, spacing: 12) {
+                    if !show.showMode {
+                        ShowLibraryPanel().frame(width: 190)
+                    }
+                    CueListView()
+                        .frame(maxWidth: .infinity)
+                    PadGridView(columns: show.showMode ? 3 : 2)
+                        .frame(width: show.showMode ? 360 : 260)
+                }
+                .frame(maxHeight: .infinity)
+                ShowTimelineView()
+                    .frame(height: 250)
+            }
+            .frame(maxWidth: .infinity)
+            Group {
+                if show.showMode { OperatorColumn() } else { CueInspector() }
+            }
+            .frame(width: show.showMode ? 280 : 320)
+        }
+    }
 }
 
-// MARK: - Transport
+// MARK: - Operator column
 
-/// Left column: what comes next, GO, what is playing, output meters.
-struct ShowTransport: View {
+/// What comes next, what is playing, GO under the hand.
+struct OperatorColumn: View {
     @EnvironmentObject var show: ShowStore
     @EnvironmentObject var loc: Localizer
+
+    private var playhead: UUID? {
+        show.snapshot == .empty ? show.currentList?.cues.first?.id : show.snapshot.playhead
+    }
 
     var body: some View {
         VStack(spacing: 12) {
             nextCard
+            RunningCuesPanel()
+                .frame(maxHeight: .infinity, alignment: .top)
+            OutputMeters()
             goButton
             HStack(spacing: 8) {
                 Button {
@@ -118,20 +156,18 @@ struct ShowTransport: View {
                 .buttonStyle(SSMTButtonStyle(kind: .danger))
                 .help(loc.t("show.panic.help"))
             }
-            RunningCuesPanel()
-            OutputMeters()
         }
     }
 
     private var nextCard: some View {
-        let cue = show.doc.cue(show.snapshot.playhead ?? (show.snapshot == .empty ? show.currentList?.cues.first?.id : nil))
+        let cue = show.doc.cue(playhead)
         return VStack(alignment: .leading, spacing: 6) {
             Text(loc.t("show.next").uppercased())
                 .font(Theme.label(11)).tracking(1.2).foregroundStyle(Theme.textSecondary)
             if let cue {
                 HStack(alignment: .firstTextBaseline, spacing: 10) {
                     Text(cue.number.isEmpty ? "·" : cue.number)
-                        .font(Theme.numeral(40)).foregroundStyle(Theme.accent)
+                        .font(Theme.numeral(38)).foregroundStyle(Theme.accent)
                         .lineLimit(1).minimumScaleFactor(0.5)
                     Image(systemName: cue.kind.icon).foregroundStyle(Theme.textSecondary)
                 }
@@ -139,7 +175,7 @@ struct ShowTransport: View {
                     .font(.system(size: 18, weight: .semibold)).foregroundStyle(Theme.textPrimary)
                     .lineLimit(2)
                 if !cue.notes.isEmpty {
-                    Text(cue.notes).font(.system(size: 12)).foregroundStyle(Theme.textSecondary).lineLimit(4)
+                    Text(cue.notes).font(.system(size: 15, weight: .medium)).foregroundStyle(Theme.signalYellow).lineLimit(4)
                 }
             } else {
                 Text(loc.t("show.endOfList")).font(.system(size: 16, weight: .medium)).foregroundStyle(Theme.textMuted)
@@ -151,24 +187,25 @@ struct ShowTransport: View {
     }
 
     private var goButton: some View {
-        Button { show.go() } label: {
+        let ready = playhead != nil
+        return Button { show.go() } label: {
             VStack(spacing: 2) {
                 Text("GO").font(.system(size: 40, weight: .heavy, design: .rounded)).tracking(4)
-                Text(loc.t("show.go.hint")).font(.system(size: 11, weight: .medium)).opacity(0.65)
+                Text(loc.t(ready ? "show.go.hint" : "show.endOfList")).font(.system(size: 11, weight: .medium)).opacity(0.65)
             }
-            .foregroundStyle(.black)
+            .foregroundStyle(ready ? Color.black : Theme.textSecondary)
             .frame(maxWidth: .infinity)
-            .frame(height: 104)
+            .frame(height: 118)
             .background(
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(LinearGradient(colors: [Theme.accent, Theme.accentHot], startPoint: .top, endPoint: .bottom))
+                    .fill(ready ? AnyShapeStyle(LinearGradient(colors: [Theme.accent, Theme.accentHot], startPoint: .top, endPoint: .bottom))
+                                : AnyShapeStyle(Color.white.opacity(0.08)))
             )
             .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(Color.white.opacity(0.25)))
-            .shadow(color: Theme.accent.opacity(0.35), radius: 16, y: 4)
+            .shadow(color: Theme.accent.opacity(ready ? 0.35 : 0), radius: 16, y: 4)
             .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         }
         .buttonStyle(.plain)
-        .opacity(show.snapshot.playhead == nil && show.snapshot != .empty ? 0.4 : 1)
         .help(loc.t("show.go.help"))
     }
 }
@@ -264,9 +301,10 @@ struct OutputMeters: View {
     }
 }
 
-// MARK: - Header and toolbar
+// MARK: - Top bar
 
-struct ShowHeader: View {
+/// Show name, cue lists, status, layout and mode switches; the cue toolbar while editing.
+struct ShowTopBar: View {
     @EnvironmentObject var show: ShowStore
     @EnvironmentObject var loc: Localizer
     @State private var showIssues = false
@@ -276,52 +314,103 @@ struct ShowHeader: View {
             HStack(spacing: 12) {
                 TextField(loc.t("show.name.placeholder"), text: Binding(get: { show.doc.name }, set: { v in show.edit { $0.name = v } }))
                     .textFieldStyle(.plain)
-                    .font(Theme.heading(24))
+                    .font(Theme.heading(22))
+                    .frame(minWidth: 120, maxWidth: 260)
                     .disabled(show.showMode)
-                Spacer()
+                listTabs
+                Spacer(minLength: 8)
                 statusChips
+                Picker("", selection: $show.layout) {
+                    Text(loc.t("show.layout.simple")).tag(ShowLayout.simple)
+                    Text(loc.t("show.layout.expert")).tag(ShowLayout.expert)
+                }
+                .pickerStyle(.segmented).labelsHidden().frame(width: 170)
+                .help(loc.t("show.layout.help"))
                 Picker("", selection: $show.showMode) {
                     Label(loc.t("show.mode.edit"), systemImage: "pencil").tag(false)
                     Label(loc.t("show.mode.show"), systemImage: "lock.fill").tag(true)
                 }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .frame(width: 230)
+                .pickerStyle(.segmented).labelsHidden().frame(width: 190)
                 .help(loc.t("show.mode.help"))
                 Button { show.showSettings = true } label: { Image(systemName: "gearshape") }
-                    .buttonStyle(SSMTButtonStyle())
+                    .buttonStyle(ToolButtonStyle())
                     .help(loc.t("show.settings"))
             }
-            HStack(spacing: 6) {
-                ForEach(show.doc.lists) { l in
-                    let on = l.id == show.listID
-                    Button { show.selectList(l.id) } label: {
-                        Text(l.name).font(.system(size: 12, weight: on ? .semibold : .regular))
-                            .padding(.horizontal, 12).padding(.vertical, 6)
-                            .background(Capsule().fill(on ? Theme.accent.opacity(0.2) : Color.white.opacity(0.05)))
-                            .foregroundStyle(on ? Theme.textPrimary : Theme.textSecondary)
-                    }
-                    .buttonStyle(.plain)
-                    .contextMenu {
-                        if !show.showMode {
-                            Button(loc.t("show.list.rename")) { renameList(l.id) }
-                            if show.doc.lists.count > 1 {
-                                Button(loc.t("action.delete"), role: .destructive) {
-                                    show.edit { $0.lists.removeAll { $0.id == l.id } }
-                                }
-                            }
+            if !show.showMode { toolbar }
+        }
+        .glassCard(padding: 12)
+    }
+
+    private var listTabs: some View {
+        HStack(spacing: 6) {
+            ForEach(show.doc.cueLists) { l in
+                let on = l.id == show.listID
+                Button { show.selectList(l.id) } label: {
+                    Text(l.name).font(.system(size: 12, weight: on ? .semibold : .regular)).lineLimit(1)
+                        .padding(.horizontal, 12).padding(.vertical, 6)
+                        .background(Capsule().fill(on ? Theme.accent.opacity(0.2) : Color.white.opacity(0.05)))
+                        .foregroundStyle(on ? Theme.textPrimary : Theme.textSecondary)
+                }
+                .buttonStyle(.plain)
+                .contextMenu {
+                    if !show.showMode {
+                        Button(loc.t("show.list.rename")) { rename(l.id) }
+                        if show.doc.cueLists.count > 1 {
+                            Button(loc.t("action.delete"), role: .destructive) { show.edit { $0.lists.removeAll { $0.id == l.id } } }
                         }
                     }
                 }
-                if !show.showMode {
-                    Button { show.addList() } label: { Image(systemName: "plus") }
-                        .buttonStyle(.borderless).help(loc.t("show.list.add"))
-                }
-                Spacer()
             }
-            if !show.showMode { ShowToolbar(showIssues: $showIssues) }
+            if !show.showMode {
+                Button { show.addList() } label: { Image(systemName: "plus") }
+                    .buttonStyle(.borderless).help(loc.t("show.list.add"))
+            }
         }
-        .glassCard(padding: 14)
+    }
+
+    /// Labelled buttons for the common cue types, icons for list operations.
+    private var toolbar: some View {
+        HStack(spacing: 6) {
+            Button { show.chooseAudioFiles() } label: { Label(loc.t("cue.kind.audio"), systemImage: "plus").fixedSize() }
+                .buttonStyle(SSMTButtonStyle(kind: .primary))
+                .help(loc.t("show.addAudio.help"))
+            ForEach([CueKind.fade, .group, .wait, .stop, .memo], id: \.self) { k in
+                Button { show.add(k) } label: {
+                    Label(loc.t("cue.kind.\(k.rawValue)"), systemImage: k.icon).font(.system(size: 12)).fixedSize()
+                }
+                .buttonStyle(ToolButtonStyle())
+            }
+            Menu {
+                ForEach(CueKind.controlKinds, id: \.self) { k in
+                    Button { show.add(k) } label: { Label(loc.t("cue.kind.\(k.rawValue)"), systemImage: k.icon) }
+                }
+            } label: {
+                Text(loc.t("show.add.more"))
+            }
+            .menuStyle(.borderlessButton)
+            .fixedSize()
+            Rectangle().fill(Theme.hairline).frame(width: 1, height: 22).padding(.horizontal, 2)
+            let none = show.selection.isEmpty
+            tool("plus.square.on.square", loc.t("action.duplicate")) { show.duplicateSelection() }.disabled(none)
+            tool("arrow.up", loc.t("show.up")) { show.moveSelection(by: -1) }.disabled(none)
+            tool("arrow.down", loc.t("show.down")) { show.moveSelection(by: 1) }.disabled(none)
+            tool("square.stack.3d.up.slash", loc.t("show.ungroup")) { show.ungroupSelection() }
+                .disabled(!show.selection.contains { show.doc.cue($0)?.kind == .group })
+            tool("trash", loc.t("action.delete")) { show.deleteSelection() }.disabled(none)
+            tool("list.number", loc.t("show.renumber")) { show.renumberSelection() }
+            Spacer(minLength: 0)
+            Button { showIssues = true } label: {
+                Label(loc.t("show.check"), systemImage: "checklist").font(.system(size: 12)).fixedSize()
+            }
+            .buttonStyle(ToolButtonStyle())
+            .popover(isPresented: $showIssues, arrowEdge: .bottom) { ShowIssuesView().environmentObject(show).environmentObject(loc) }
+        }
+    }
+
+    private func tool(_ icon: String, _ help: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) { Image(systemName: icon).frame(width: 16) }
+            .buttonStyle(ToolButtonStyle())
+            .help(help)
     }
 
     private var statusChips: some View {
@@ -354,7 +443,7 @@ struct ShowHeader: View {
         .background(Capsule().fill(Color.white.opacity(0.06)))
     }
 
-    private func renameList(_ id: UUID) {
+    private func rename(_ id: UUID) {
         let alert = NSAlert()
         alert.messageText = loc.t("show.list.rename")
         let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 240, height: 24))
@@ -365,64 +454,6 @@ struct ShowHeader: View {
         guard alert.runModal() == .alertFirstButtonReturn else { return }
         let name = field.stringValue
         show.edit { d in if let i = d.lists.firstIndex(where: { $0.id == id }) { d.lists[i].name = name } }
-    }
-}
-
-struct ShowToolbar: View {
-    @EnvironmentObject var show: ShowStore
-    @EnvironmentObject var loc: Localizer
-    @Binding var showIssues: Bool
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Button { show.chooseAudioFiles() } label: { Label(loc.t("cue.kind.audio"), systemImage: "plus").fixedSize() }
-                .buttonStyle(SSMTButtonStyle(kind: .primary))
-                .help(loc.t("show.addAudio.help"))
-            ForEach([CueKind.fade, .group, .wait, .stop, .memo], id: \.self) { k in
-                tool(k.icon, loc.t("cue.kind.\(k.rawValue)")) { show.add(k) }
-            }
-            Menu {
-                Section(loc.t("show.add.media")) {
-                    ForEach(CueKind.mediaKinds, id: \.self) { k in
-                        Button { k == .audio ? show.chooseAudioFiles() : show.add(k) } label: {
-                            Label(loc.t("cue.kind.\(k.rawValue)"), systemImage: k.icon)
-                        }
-                    }
-                }
-                Section(loc.t("show.add.control")) {
-                    ForEach(CueKind.controlKinds, id: \.self) { k in
-                        Button { show.add(k) } label: { Label(loc.t("cue.kind.\(k.rawValue)"), systemImage: k.icon) }
-                    }
-                }
-            } label: {
-                Image(systemName: "ellipsis.circle")
-            }
-            .menuStyle(.borderlessButton)
-            .fixedSize()
-            .help(loc.t("show.add.more"))
-            Rectangle().fill(Theme.hairline).frame(width: 1, height: 22).padding(.horizontal, 2)
-            let none = show.selection.isEmpty
-            tool("plus.square.on.square", loc.t("action.duplicate")) { show.duplicateSelection() }.disabled(none)
-            tool("arrow.up", loc.t("show.up")) { show.moveSelection(by: -1) }.disabled(none)
-            tool("arrow.down", loc.t("show.down")) { show.moveSelection(by: 1) }.disabled(none)
-            tool("square.stack.3d.up.slash", loc.t("show.ungroup")) { show.ungroupSelection() }
-                .disabled(!show.selection.contains { show.doc.cue($0)?.kind == .group })
-            tool("trash", loc.t("action.delete")) { show.deleteSelection() }.disabled(none)
-            tool("list.number", loc.t("show.renumber")) { show.renumberSelection() }
-            Spacer(minLength: 0)
-            Button { showIssues = true } label: {
-                Label(loc.t("show.check"), systemImage: "checklist").labelStyle(.iconOnly).frame(width: 16)
-            }
-            .buttonStyle(ToolButtonStyle())
-            .help(loc.t("show.check"))
-            .popover(isPresented: $showIssues, arrowEdge: .bottom) { ShowIssuesView().environmentObject(show).environmentObject(loc) }
-        }
-    }
-
-    private func tool(_ icon: String, _ help: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) { Image(systemName: icon).frame(width: 16) }
-            .buttonStyle(ToolButtonStyle())
-            .help(help)
     }
 }
 

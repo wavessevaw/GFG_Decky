@@ -38,6 +38,18 @@ public enum GroupMode: String, Codable, CaseIterable, Sendable {
     case random
 }
 
+/// How a one-shot pad reacts to a press.
+public enum PadMode: String, Codable, CaseIterable, Sendable {
+    /// Every press starts the cue (a running cue keeps playing).
+    case start
+    /// Press starts, the next press stops.
+    case toggle
+    /// Every press starts the cue from the beginning.
+    case restart
+    /// Plays while the pad or key is held.
+    case hold
+}
+
 /// Shape of a fade.
 public enum FadeCurve: String, Codable, CaseIterable, Sendable {
     /// Smooth S-shaped curve in decibels: natural for most fades.
@@ -144,6 +156,8 @@ public struct Cue: Codable, Equatable, Identifiable, Sendable {
     public var stopFade: Double
     /// Devamp: also trigger the next cue in the list when the target leaves its loop.
     public var devampStartsNext: Bool
+    /// One-shot pads only: reaction to a press.
+    public var padMode: PadMode
     public var children: [Cue]
 
     public init(kind: CueKind, id: UUID = UUID(), number: String = "", name: String = "") {
@@ -168,6 +182,7 @@ public struct Cue: Codable, Equatable, Identifiable, Sendable {
         shuffle = false
         stopFade = 0
         devampStartsNext = false
+        padMode = .toggle
         children = []
     }
 
@@ -194,6 +209,7 @@ public struct Cue: Codable, Equatable, Identifiable, Sendable {
         shuffle = try c.decodeIfPresent(Bool.self, forKey: .shuffle) ?? false
         stopFade = try c.decodeIfPresent(Double.self, forKey: .stopFade) ?? 0
         devampStartsNext = try c.decodeIfPresent(Bool.self, forKey: .devampStartsNext) ?? false
+        padMode = try c.decodeIfPresent(PadMode.self, forKey: .padMode) ?? .toggle
         children = try c.decodeIfPresent([Cue].self, forKey: .children) ?? []
     }
 }
@@ -202,10 +218,21 @@ public struct CueList: Codable, Equatable, Identifiable, Sendable {
     public var id: UUID
     public var name: String
     public var cues: [Cue]
-    public init(id: UUID = UUID(), name: String, cues: [Cue] = []) {
+    /// A bank of one-shot pads: its cues are triggered directly (pads, F-keys), never by GO.
+    public var isBank: Bool
+    public init(id: UUID = UUID(), name: String, cues: [Cue] = [], isBank: Bool = false) {
         self.id = id
         self.name = name
         self.cues = cues
+        self.isBank = isBank
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        name = try c.decodeIfPresent(String.self, forKey: .name) ?? ""
+        cues = try c.decodeIfPresent([Cue].self, forKey: .cues) ?? []
+        isBank = try c.decodeIfPresent(Bool.self, forKey: .isBank) ?? false
     }
 }
 
@@ -237,7 +264,7 @@ public struct ShowDocument: Codable, Equatable, Sendable {
     public init(name: String = "") {
         version = Self.currentVersion
         self.name = name
-        lists = [CueList(name: "Main")]
+        lists = [CueList(name: "Main"), CueList(name: "Bank 1", isBank: true)]
         outputs = (0..<8).map { ShowOutput(name: "\($0 + 1)", deviceChannel: $0) }
         deviceUID = nil
         panicFade = 1.5
@@ -249,7 +276,7 @@ public struct ShowDocument: Codable, Equatable, Sendable {
         version = try c.decodeIfPresent(Int.self, forKey: .version) ?? 1
         name = try c.decodeIfPresent(String.self, forKey: .name) ?? ""
         lists = try c.decodeIfPresent([CueList].self, forKey: .lists) ?? [CueList(name: "Main")]
-        if lists.isEmpty { lists = [CueList(name: "Main")] }
+        if !lists.contains(where: { !$0.isBank }) { lists.insert(CueList(name: "Main"), at: 0) }
         outputs = try c.decodeIfPresent([ShowOutput].self, forKey: .outputs) ?? []
         deviceUID = try c.decodeIfPresent(String.self, forKey: .deviceUID)
         panicFade = try c.decodeIfPresent(Double.self, forKey: .panicFade) ?? 1.5
@@ -328,7 +355,15 @@ extension Array where Element == Cue {
 }
 
 extension ShowDocument {
-    public func list(_ id: UUID?) -> CueList? { lists.first { $0.id == id } ?? lists.first }
+    public func list(_ id: UUID?) -> CueList? { lists.first { $0.id == id } ?? cueLists.first }
+
+    /// Cue lists played with GO (not one-shot banks).
+    public var cueLists: [CueList] { lists.filter { !$0.isBank } }
+    /// One-shot banks.
+    public var banks: [CueList] { lists.filter(\.isBank) }
+
+    /// F-key name ("F1"…) of a hotkey, used by pads.
+    public static let functionKeys = (1...12).map { "F\($0)" }
 
     /// Finds a cue in any list.
     public func cue(_ id: UUID?) -> Cue? {

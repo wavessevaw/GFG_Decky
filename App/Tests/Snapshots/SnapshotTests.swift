@@ -155,7 +155,7 @@ final class SnapshotTests: XCTestCase {
                      name: "input-list", loc: Self.ru)
     }
 
-    func testShowPlayer() throws {
+    static var sampleShow: (doc: ShowDocument, intro: UUID, group: UUID, preshow: UUID, bell: UUID) {
         var doc = ShowDocument(name: "Spring gala")
         let l = doc.lists[0].id
         var preshow = Cue.audio(file: "/show/Preshow loop.wav", number: "1")
@@ -170,11 +170,12 @@ final class SnapshotTests: XCTestCase {
         intro.continueMode = .autoFollow
         var group = Cue(kind: .group, number: "4", name: "Scene 1")
         group.groupMode = .simultaneous
+        group.notes = "After the bow"
         var rain = Cue.audio(file: "/show/Rain.wav", number: "4.1")
         rain.color = "blue"
+        rain.audio?.plays = 0
         var thunder = Cue.audio(file: "/show/Thunder.wav", number: "4.2")
         thunder.preWait = 3
-        thunder.hotkey = "t"
         group.children = [rain, thunder]
         var wait = Cue(kind: .wait, number: "5")
         wait.duration = 10
@@ -182,17 +183,57 @@ final class SnapshotTests: XCTestCase {
         stop.target = group.id
         stop.stopFade = 3
         doc.insert([preshow, fade, intro, group, wait, stop, Cue(kind: .memo, name: "Interval")], after: nil, list: l)
+        var pads: [Cue] = []
+        for (i, name) in ["Phone", "Door", "Applause", "Wind", "Steps", "Clock"].enumerated() {
+            var c = Cue.audio(file: "/show/\(name).wav")
+            c.hotkey = "F\(i + 1)"
+            if name == "Wind" { c.audio?.plays = 0 }
+            pads.append(c)
+        }
+        doc.lists[1].cues = pads
+        return (doc, intro.id, group.id, preshow.id, pads[0].id)
+    }
+
+    private func prepareShow(selection: UUID, playhead: UUID) {
+        let s = Self.sampleShow
         let show = Self.model.show
-        show.doc = doc
-        show.selection = [intro.id]
-        show.preview(snapshot: ShowSnapshot(listID: l, playhead: group.id, running: [
-            RunningCue(id: preshow.id, phase: .stopping, elapsed: 1.2, duration: 3, paused: false, iteration: 4),
-            RunningCue(id: intro.id, phase: .running, elapsed: 12.4, duration: 41.5, paused: false, iteration: nil),
-        ], problems: [:]), clips: [
-            "/show/Preshow loop.wav": (95, 2), "/show/Intro.wav": (41.5, 2), "/show/Rain.wav": (180, 2), "/show/Thunder.wav": (6.2, 1),
-        ], meters: [0.5, 0.45, 0.1, 0.1, 0, 0, 0, 0])
+        show.doc = s.doc
+        show.selection = [selection]
+        var waves: [String: [Float]] = [:]
+        var clips: [String: (duration: Double, channels: Int)] = [:]
+        for (i, (name, d)) in [("Preshow loop", 95.0), ("Intro", 41.5), ("Rain", 180), ("Thunder", 6.2), ("Phone", 4), ("Door", 2),
+                                  ("Applause", 12), ("Wind", 30), ("Steps", 3), ("Clock", 5)].enumerated() {
+            let path = "/show/\(name).wav"
+            clips[path] = (d, 2)
+            waves[path] = (0..<600).map { k in Float(0.25 + 0.5 * abs(sin(Double(k) * 0.05 + Double(i)) * cos(Double(k) * 0.013))) }
+        }
+        show.preview(snapshot: ShowSnapshot(listID: s.doc.lists[0].id, playhead: playhead, running: [
+            RunningCue(id: s.preshow, phase: .stopping, elapsed: 1.2, duration: 3, paused: false, iteration: 4),
+            RunningCue(id: s.intro, phase: .running, elapsed: 12.4, duration: 41.5, paused: false, iteration: nil),
+            RunningCue(id: s.bell, phase: .running, elapsed: 1.5, duration: 4, paused: false, iteration: nil),
+        ], problems: [:]), clips: clips, meters: [0.5, 0.45, 0.1, 0.1, 0, 0, 0, 0], waveforms: waves)
+    }
+
+    func testShowPlayer() throws {
+        let s = Self.sampleShow
+        let show = Self.model.show
+        prepareShow(selection: s.intro, playhead: s.group)
+        show.layout = .simple
+        show.showMode = false
         try snapshot(ShowWorkspace().padding(16).background(Backdrop()), size: CGSize(width: 1500, height: 900),
-                     name: "show-player", loc: Self.ru)
+                     name: "show-simple-edit", loc: Self.ru)
+        show.showMode = true
+        try snapshot(ShowWorkspace().padding(16).background(Backdrop()), size: CGSize(width: 1500, height: 900),
+                     name: "show-simple-show", loc: Self.ru)
+        show.showMode = false
+        show.layout = .expert
+        try snapshot(ShowWorkspace().padding(16).background(Backdrop()), size: CGSize(width: 1700, height: 1000),
+                     name: "show-expert-edit", loc: Self.ru)
+        show.showMode = true
+        try snapshot(ShowWorkspace().padding(16).background(Backdrop()), size: CGSize(width: 1700, height: 1000),
+                     name: "show-expert-show", loc: Self.ru)
+        show.showMode = false
+        show.layout = .simple
     }
 
     func testInputListPrintSheets() throws {
