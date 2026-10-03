@@ -199,6 +199,8 @@ final class ShowStore: ObservableObject {
     @Published var showQLabImport = false
     /// A QLab file chosen with Open: the import window reads it when it appears.
     var pendingQLabFile: URL?
+    /// QLab import is hidden until it is checked on real QLab files (the code and tests stay).
+    static let qlabImportEnabled = false
     static let qlabTypes: [UTType] = ["qlab5", "qlab4", "qlab3"].compactMap { UTType(filenameExtension: $0) }
 
     /// Replaces the show with an imported QLab workspace (one undo step). Keeps this Mac's audio
@@ -660,7 +662,7 @@ final class ShowStore: ObservableObject {
 
     func open() {
         let panel = NSOpenPanel()
-        panel.allowedContentTypes = [Self.fileType, .json] + Self.qlabTypes
+        panel.allowedContentTypes = [Self.fileType, .json] + (Self.qlabImportEnabled ? Self.qlabTypes : [])
         guard panel.runModal() == .OK, let url = panel.url else { return }
         if url.pathExtension.lowercased().hasPrefix("qlab") {
             pendingQLabFile = url

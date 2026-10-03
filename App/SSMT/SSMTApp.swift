@@ -40,7 +40,9 @@ struct SSMTApp: App {
                     Button(localizer.t("il.saveAs")) { model.show.save(as: true) }
                         .keyboardShortcut("s", modifiers: [.command, .shift])
                     Button(localizer.t("show.new")) { model.show.newDocument() }
-                    Button(localizer.t("qlab.menu")) { model.show.showQLabImport = true }
+                    if ShowStore.qlabImportEnabled {
+                        Button(localizer.t("qlab.menu")) { model.show.showQLabImport = true }
+                    }
                     Button(localizer.t("show.addAudio")) { model.show.chooseAudioFiles() }
                         .keyboardShortcut("i", modifiers: [.command])
                 }
