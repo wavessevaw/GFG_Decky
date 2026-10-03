@@ -140,6 +140,7 @@ class Scene:
 
     # -- props
     def road_case(self, x, y, w, h, label=None, platform=True):
+        x, y, w, h = int(x), int(y), int(w), int(h)
         if platform:
             self.platforms.append((x, y, w))
         m = rect_mask(self.h, self.w, x, y, w, h)
@@ -226,7 +227,7 @@ class Scene:
             out[y] = np.where(use[:, None], refl, base)
             # puddle rims glint
             edge = pud & ~np.roll(pud, 1)
-            out[y][edge] = R['wall'][4]
+            out[y][edge] = R['wall'][-1]
         out[y0] = R['steel'][1]
         out[y0 + 1] = R['floor'][0]
         self.c.rgb = snap_ramps(out)
@@ -270,6 +271,7 @@ class Scene:
 
     def finish(self):
         self.c.platforms = self.platforms
+        self.c.floor = getattr(self, 'floor', FLOOR)
         return self.c
 
 
@@ -295,6 +297,7 @@ FONT3x5 = {
 
 
 def stencil(c, text, x, y, color):
+    x, y = int(x), int(y)
     for ch in text:
         g = FONT3x5.get(ch, FONT3x5[' '])
         for dy, row in enumerate(g):
@@ -368,6 +371,7 @@ R.update(
 
 def _scene_methods():
     def box(self, x, y, w, h, rmp, bevel=2.0, spec=0.0, shadow=True, line=True):
+        x, y, w, h = int(x), int(y), int(w), int(h)
         m = rect_mask(self.h, self.w, int(x), int(y), int(w), int(h))
         _, n = inflate(m, bevel, 'bevel')
         shade_into(self.c, m, n, rmp, 0.3, spec, line=INK if line else None, lightmap=self.light if shadow else None)
@@ -412,7 +416,7 @@ def _scene_methods():
     def clothes_rack(self, x, y, w, colors):
         self.pipe([(x, y), (x + w, y)], 1.5, R['steel'])
         for xx in (x + 2, x + w - 2):
-            self.pipe([(xx, y), (xx, FLOOR)], 1.2, R['steel'])
+            self.pipe([(xx, y), (xx, getattr(self, 'floor', FLOOR))], 1.2, R['steel'])
         k = 0
         for gx in range(int(x + 6), int(x + w - 6), 9):
             rmp = colors[k % len(colors)]
@@ -432,6 +436,7 @@ def _scene_methods():
         self.c.put(m, col)
 
     def speaker(self, x, y, w, h, cones=2):
+        x, y, w, h = int(x), int(y), int(w), int(h)
         self.box(x, y, w, h, R['case'], 2)
         grille = rect_mask(self.h, self.w, x + 3, y + 3, w - 6, h - 6)
         dots = grille & (((self.xx + self.yy) % 2) == 0)
@@ -810,6 +815,7 @@ def _font():
 
 
 def text_mask(text, scale, w, h, x, y, gap=2):
+    x, y = int(x), int(y)
     g = _font()
     m = np.zeros((h, w), bool)
     cx = x

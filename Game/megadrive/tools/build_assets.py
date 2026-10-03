@@ -60,50 +60,45 @@ def c_array(name, ctype, values, per_line=12, fmt='0x{:04X}'):
 
 
 def build_pages(out_c, out_h, preview_dir):
-    pages = [
-        [[scenes.cover(), scenes.ending()], [None, None]],
-        [[scenes.basement(), scenes.loading_dock()], [scenes.corridor(), scenes.dressing_room()]],
-        [[scenes.wings(), scenes.stage()], [scenes.foh(), scenes.dancefloor()]],
-    ]
+    import levels
+    covers = np.zeros((224, 640, 3), np.float32)
+    covers[:, :320] = scenes.cover().rgb
+    covers[:, 320:] = scenes.ending().rgb
+    pages = [(covers, [(0, 0, 320, 224, 200, []), (320, 0, 320, 224, 200, [])])]
+    for name in ('backstage', 'show'):
+        pages.append(levels.render_page(name))
     forced = [key(to9(md(h))) for h in UI_COLORS]
     src = ['#include <genesis.h>', '#include "gen_pages.h"', '']
-    hdr = ['#pragma once', '#include <genesis.h>', '',
-           '#define PAGE_TW 80', '#define PAGE_TH 56', f'#define PAGE_COUNT {len(pages)}', '',
-           'typedef struct { const u32 *tiles; const u8 *pal; const u16 *colors; } PageData;',
+    hdr = ['#pragma once', '#include <genesis.h>', '', f'#define PAGE_COUNT {len(pages)}', '',
+           'typedef struct { s16 x, y, w; } Platform;',
+           'typedef struct { s16 x, y, w, h, floor; u16 nplat; const Platform *plat; } PanelRect;',
+           'typedef struct { const u32 *tiles; const u8 *pal; const u16 *colors; u16 tw, th; u16 panels; const PanelRect *panel; } PageData;',
            'extern const PageData pages[PAGE_COUNT];', '']
-    for pi, cells in enumerate(pages):
-        img = page_image(cells)
+    table = []
+    for pi, (img, panels) in enumerate(pages):
+        th, tw = img.shape[0] // 8, img.shape[1] // 8
         assign, pals, idx = quantize_tiles(img, forced)
-        preview(assign, pals, idx, os.path.join(preview_dir, f'page{pi + 1}.png'), 1)
+        preview(assign, pals, idx, os.path.join(preview_dir, f'page{pi}.png'), 1)
         words = []
-        for ty in range(56):
-            for tx in range(80):
+        for ty in range(th):
+            for tx in range(tw):
                 words += pack_tile(idx[ty, tx])
         colors = []
         for p in pals:
             colors += [0] + [md_word(unkey(k)) for k in p] + [0] * (15 - len(p))
-        src.append(c_array(f'page{pi + 1}_tiles', 'u32', words, 8, '0x{:08X}'))
-        src.append(c_array(f'page{pi + 1}_pal', 'u8', assign.ravel().tolist(), 40, '{}'))
-        src.append(c_array(f'page{pi + 1}_colors', 'u16', colors, 16))
-    # Platforms (tops of road cases etc.) in cell coordinates.
-    src.append('#include "game.h"')
-    plat_cases = []
-    for pi, cells in enumerate(pages):
-        for r in range(2):
-            for c in range(2):
-                sc = cells[r][c]
-                pl = getattr(sc, 'platforms', []) if sc is not None else []
-                name = f'plat_{pi}_{c}_{r}'
-                if pl:
-                    src.append(f'static const Platform {name}[] = {{ ' + ', '.join(f'{{ {x + 8}, {y + 8}, {w} }}' for x, y, w in pl) + ' };')
-                    plat_cases.append((pi, c, r, name, len(pl)))
-    src.append('const Platform *platformsFor(u16 art, u16 col, u16 row, u16 *count)\n{')
-    for pi, c, r, name, n in plat_cases:
-        src.append(f'    if (art == {pi} && col == {c} && row == {r}) {{ *count = {n}; return {name}; }}')
-    src.append('    *count = 0;\n    return NULL;\n}\n')
+        src.append(c_array(f'page{pi}_tiles', 'u32', words, 8, '0x{:08X}'))
+        src.append(c_array(f'page{pi}_pal', 'u8', assign.ravel().tolist(), 40, '{}'))
+        src.append(c_array(f'page{pi}_colors', 'u16', colors, 16))
+        rects = []
+        for k, (x, y, w, h, floor, plats) in enumerate(panels):
+            pn = f'plat_{pi}_{k}'
+            if plats:
+                src.append(f'static const Platform {pn}[] = {{ ' + ', '.join(f'{{ {int(px)}, {int(py)}, {int(pw)} }}' for px, py, pw in plats) + ' };')
+            rects.append(f'{{ {x}, {y}, {w}, {h}, {floor}, {len(plats)}, {pn if plats else "NULL"} }}')
+        src.append(f'static const PanelRect page{pi}_panels[] = {{ ' + ', '.join(rects) + ' };')
+        table.append(f'    {{ page{pi}_tiles, page{pi}_pal, page{pi}_colors, {tw}, {th}, {len(panels)}, page{pi}_panels }},')
     src.append('const PageData pages[PAGE_COUNT] = {')
-    for pi in range(len(pages)):
-        src.append(f'    {{ page{pi + 1}_tiles, page{pi + 1}_pal, page{pi + 1}_colors }},')
+    src += table
     src.append('};')
     open(out_c, 'w').write('\n'.join(src) + '\n')
     open(out_h, 'w').write('\n'.join(hdr) + '\n')

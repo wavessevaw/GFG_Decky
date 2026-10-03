@@ -101,6 +101,7 @@ def poly(h, w, pts, ss=4):
 
 def rect_mask(h, w, x, y, rw, rh):
     m = np.zeros((h, w), bool)
+    x, y, rw, rh = int(x), int(y), int(rw), int(rh)
     m[max(0, y):max(0, y + rh), max(0, x):max(0, x + rw)] = True
     return m
 

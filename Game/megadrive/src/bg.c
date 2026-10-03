@@ -13,7 +13,7 @@ u16 BG_slotTile(u16 tx, u16 ty)
 
 static void putTile(u16 tx, u16 ty)
 {
-    const u16 i = ty * PAGE_TW + tx;
+    const u16 i = ty * page->tw + tx;
     const u16 vram = BG_slotTile(tx, ty);
     VDP_loadTileData(page->tiles + i * 8, vram, 1, DMA_QUEUE);
     VDP_setTileMapXY(BG_B, TILE_ATTR_FULL(page->pal[i], FALSE, FALSE, FALSE, vram), tx & 63, ty & 31);
@@ -35,7 +35,7 @@ void BG_loadPage(u16 p, s16 x, s16 y)
     {
         for (u16 tx = tx0; tx < tx0 + VIEW_TW; tx++)
         {
-            const u16 i = ty * PAGE_TW + tx;
+            const u16 i = ty * page->tw + tx;
             const u16 vram = BG_slotTile(tx, ty);
             VDP_loadTileData(page->tiles + i * 8, vram, 1, CPU);
             VDP_setTileMapXY(BG_B, TILE_ATTR_FULL(page->pal[i], FALSE, FALSE, FALSE, vram), tx & 63, ty & 31);

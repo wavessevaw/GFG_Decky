@@ -59,11 +59,11 @@ static u8 pendingN;
 static s16 bubbleLife;
 static const Platform *plats;
 static u16 platN;
-static s16 panX, panY, panSteps;        // pan direction / remaining tile steps
+static s16 panTX, panTY, panTotal, panDone;   // camera target, steps
 static s16 turnCol, turnPhase;
 static u16 palette[64];
 static u16 overT;
-static s16 heroFlyX0, heroFlyX1;
+static s16 flyX0, flyY0, flyX1, flyY1;        // hero leap across the gutter, page coordinates
 static s16 flashT;
 static Sprite *arrow;
 static s16 arrowDir = -1;
@@ -74,8 +74,24 @@ static const s32 zspeed[4] = { FIXF(0.6), FIXF(1.4), FIXF(0.47), FIXF(0.82) };  
 static const s16 zdamage[4] = { 2, 1, 2, 3 };
 
 static const PanelDef *panel(void) { return &story[pageI].panel[panelI]; }
-static s16 cellX(void) { return panel()->col * CELL_W; }
-static s16 cellY(void) { return panel()->row * CELL_H; }
+static const PanelRect *rect(void) { return &pages[story[pageI].art].panel[panelI]; }
+static s16 cellX(void) { return rect()->x; }
+static s16 cellY(void) { return rect()->y; }
+static s16 panelW(void) { return rect()->w; }
+static s16 floorY(void) { return rect()->floor; }
+
+// Camera for a panel: centred on it (a little low: the HUD sits over the top rows), inside the page.
+static void camFor(const PageData *pg, const PanelRect *r, s16 *cx, s16 *cy)
+{
+    s16 x = r->x + r->w / 2 - 160, y = r->y + r->h / 2 - 124;
+    const s16 mx = pg->tw * 8 - 320, my = pg->th * 8 - 224;
+    if (x > mx) x = mx;
+    if (y > my) y = my;
+    if (x < 0) x = 0;
+    if (y < 0) y = 0;
+    *cx = x & ~7;
+    *cy = y & ~7;
+}
 
 static u16 rnd(u16 n) { return random() % n; }
 
@@ -99,7 +115,7 @@ static void burst(u16 word, s16 x, s16 y)
 
 static void say(const char *s, s16 x, s16 headY, bool isHero)
 {
-    TXT_bubble(s, cellX() + x, cellY() + headY - 4, cellX() + PANEL_X0 + 2, cellX() + PANEL_X1 - 2, isHero);
+    TXT_bubble(s, cellX() + x, cellY() + headY - 4, cellX() + 2, cellX() + panelW() - 2, isHero);
     bubbleLife = 150;
 }
 
@@ -126,9 +142,9 @@ static void physics(Actor *a)
     a->x += a->vx;
     a->y += a->vy;
     a->ground = FALSE;
-    if (a->y >= FIX(FLOOR_Y))
+    if (a->y >= FIX(floorY()))
     {
-        a->y = FIX(FLOOR_Y);
+        a->y = FIX(floorY());
         a->vy = 0;
         a->ground = TRUE;
     }
@@ -146,12 +162,12 @@ static void physics(Actor *a)
             }
         }
     }
-    s16 minX = PANEL_X0 + 14, maxX = PANEL_X1 - 14;
+    s16 minX = 14, maxX = panelW() - 14;
     if (a->kind == K_HERO && exitOpen)
     {
         const u8 e = panel()->exit;
-        if (e == EX_RIGHT || e == EX_PAGE) maxX = PANEL_X1 + 6;
-        if (e == EX_LEFT) minX = PANEL_X0 - 6;
+        if (e == EX_RIGHT || e == EX_PAGE) maxX = panelW() + 6;
+        if (e == EX_LEFT) minX = -6;
     }
     if (a->x < FIX(minX)) a->x = FIX(minX);
     if (a->x > FIX(maxX)) a->x = FIX(maxX);
@@ -391,8 +407,10 @@ static void spawnEnemy(u8 kind, s16 x)
         memset(e, 0, sizeof(Actor));
         e->on = TRUE;
         e->kind = kind;
+        if (x == 0) x = 22;
+        if (x >= 999) x = panelW() - 22;
         e->x = FIX(x);
-        e->y = FIX(FLOOR_Y);
+        e->y = FIX(floorY());
         e->ground = TRUE;
         e->face = x > UNFIX(hero.x) ? -1 : 1;
         e->hp = e->maxhp = zmaxhp[kind];
@@ -403,7 +421,7 @@ static void spawnEnemy(u8 kind, s16 x)
         if (kind == K_BOSS)
         {
             SND_play(SFX_ROAR);
-            say("ФИДБЭК: ТЕСТ… РАЗ… ДВА… ВЫ УВОЛЕНЫ!", x, FLOOR_Y - 116, FALSE);
+            say("ФИДБЭК: ТЕСТ… РАЗ… ДВА… ВЫ УВОЛЕНЫ!", x, floorY() - 116, FALSE);
         }
         else SND_play(SFX_SKETCH);
         return;
@@ -529,7 +547,7 @@ static void updateShots(void)
             hurtHero(s->dmg, x - (s->vx > 0 ? 10 : -10));
             s->life = 0;
         }
-        if (s->life <= 0 || x < PANEL_X0 - 20 || x > PANEL_X1 + 20)
+        if (s->life <= 0 || x < -20 || x > panelW() + 20)
         {
             SPR_releaseSprite(s->spr);
             s->on = FALSE;
@@ -603,8 +621,8 @@ static void showArrow(s16 dir)
 static void updateArrow(void)
 {
     if (!arrow) return;
-    s16 x = arrowDir == EX_LEFT ? 20 : arrowDir == EX_DOWN ? 144 : 268;
-    s16 y = arrowDir == EX_DOWN ? 120 + ((frame >> 3) & 3) : 100;
+    s16 x = arrowDir == EX_LEFT ? 12 : arrowDir == EX_DOWN ? panelW() / 2 - 16 : panelW() - 44;
+    s16 y = (arrowDir == EX_DOWN ? floorY() - 64 + ((frame >> 3) & 3) : floorY() - 84);
     if (arrowDir != EX_DOWN) x += ((frame >> 3) & 3) * (arrowDir == EX_LEFT ? -1 : 1);
     SPR_setPosition(arrow, cellX() + x - BG_camX(), cellY() + y - BG_camY());
     SPR_setVisibility(arrow, (frame & 16) ? VISIBLE : HIDDEN);
@@ -623,7 +641,8 @@ static void startPanel(void)
 {
     const PanelDef *p = panel();
     releaseAll();
-    plats = platformsFor(story[pageI].art, p->col, p->row, &platN);
+    plats = rect()->plat;
+    platN = rect()->nplat;
 #ifdef NOENEMY
     pendingN = 0;
 #else
@@ -647,8 +666,8 @@ static void startPanel(void)
         }
         else
         {
-            k->x = p->item[i].x ? p->item[i].x : 160;
-            k->y = p->item[i].y ? p->item[i].y : FLOOR_Y;
+            k->x = p->item[i].x ? p->item[i].x : panelW() / 2;
+            k->y = p->item[i].y ? p->item[i].y : floorY();
         }
         k->spr = SPR_addSprite(&spr_item, 0, 0, TILE_ATTR(PAL0, FALSE, FALSE, FALSE));
         if (k->spr) SPR_setAnim(k->spr, k->kind - 1);
@@ -678,7 +697,9 @@ static void enterPage(u16 p, bool fade)
 #endif
     if (fade) PAL_fadeOutAll(16, FALSE);
     SYS_disableInts();
-    BG_loadPage(story[p].art, cellX(), cellY());
+    s16 cx, cy;
+    camFor(&pages[story[p].art], rect(), &cx, &cy);
+    BG_loadPage(story[p].art, cx, cy);
     SYS_enableInts();
     loadPagePalette();
     if (fade) PAL_fadeInAll(palette, 16, TRUE);
@@ -691,7 +712,7 @@ static void newGame(void)
     hero.on = TRUE;
     hero.kind = K_HERO;
     hero.x = FIX(60);
-    hero.y = FIX(FLOOR_Y);
+    hero.y = FIX(floorY());
     hero.face = 1;
     hero.hp = hero.maxhp = HERO_HP;
     hero.st = S_IDLE;
@@ -721,7 +742,7 @@ static void restartPanel(void)
     hero.st = S_IDLE;
     hero.inv = 90;
     hero.x = FIX(60);
-    hero.y = FIX(FLOOR_Y);
+    hero.y = FIX(floorY());
     TXT_clearBanner();
     PAL_fadeInAll(palette, 20, TRUE);
     HUD_health(hero.hp, HERO_HP);
@@ -736,9 +757,9 @@ static void checkExit(void)
     bool leave = FALSE;
     switch (p->exit)
     {
-        case EX_RIGHT: case EX_PAGE: leave = x >= PANEL_X1 + 2; break;
-        case EX_LEFT: leave = x <= PANEL_X0 - 2; break;
-        case EX_DOWN: leave = abs(x - 160) < 70 && hero.ground && UNFIX(hero.y) == FLOOR_Y && (joy & BUTTON_DOWN); break;
+        case EX_RIGHT: case EX_PAGE: leave = x >= panelW() + 2; break;
+        case EX_LEFT: leave = x <= -2; break;
+        case EX_DOWN: leave = abs(x - panelW() / 2) < 70 && hero.ground && UNFIX(hero.y) == floorY() && (joy & BUTTON_DOWN); break;
     }
     if (!leave) return;
     releaseAll();
@@ -754,14 +775,19 @@ static void checkExit(void)
         SND_play(SFX_PAGE);
         return;
     }
-    const u16 from = panelI;
+    // Leap from the exit point of this panel to the entry point of the next one.
+    flyX0 = cellX() + x;
+    flyY0 = cellY() + UNFIX(hero.y);
     panelI++;
-    const PanelDef *n = panel();
-    panX = n->col - story[pageI].panel[from].col;
-    panY = n->row - story[pageI].panel[from].row;
-    panSteps = panX ? 40 : 28;
-    heroFlyX0 = x;
-    heroFlyX1 = p->exit == EX_RIGHT ? 30 : p->exit == EX_LEFT ? 290 : x;
+    s16 ex = p->exit == EX_RIGHT ? 30 : p->exit == EX_LEFT ? panelW() - 30 : flyX0 - cellX();
+    if (ex < 30) ex = 30;
+    if (ex > panelW() - 30) ex = panelW() - 30;
+    flyX1 = cellX() + ex;
+    flyY1 = cellY() + floorY();
+    camFor(&pages[story[pageI].art], rect(), &panTX, &panTY);
+    panTotal = (abs(panTX - BG_camX()) + abs(panTY - BG_camY())) >> 3;
+    if (panTotal == 0) panTotal = 1;
+    panDone = 0;
     mode = M_PAN;
     SND_play(SFX_SLIDE);
 }
@@ -813,21 +839,20 @@ static void play(void)
 
 static void stepPan(void)
 {
-    BG_step(panX, panY);
-    panSteps--;
-    // The hero leaps across the gutter into the next panel.
-    const s16 total = panX ? 40 : 28, done = total - panSteps;
-    hero.x = FIX(heroFlyX0 + (heroFlyX1 - heroFlyX0) * done / total);
-    const s16 arc = (done * (total - done)) * 4 / total;
-    const s16 wx = (panX ? (panX > 0 ? -CELL_W : CELL_W) * (total - done) / total : 0);
-    const s16 wy = (panY ? -CELL_H * (total - done) / total : 0);
-    hero.y = FIX(FLOOR_Y - arc);
-    setFrame(&hero, A_JUMP, done < total / 2 ? 0 : 1);
-    if (hero.spr)
-        SPR_setPosition(hero.spr, cellX() + UNFIX(hero.x) + wx - BG_camX() - 48, cellY() + UNFIX(hero.y) + wy - BG_camY() - 92);
-    if (panSteps == 0)
+    // Camera glides one tile per frame: across first, then up or down.
+    if (BG_camX() != panTX) BG_step(panTX > BG_camX() ? 1 : -1, 0);
+    else if (BG_camY() != panTY) BG_step(0, panTY > BG_camY() ? 1 : -1);
+    panDone++;
+    const s16 t = min(panDone, panTotal);
+    const s16 px = flyX0 + (s32) (flyX1 - flyX0) * t / panTotal;
+    const s16 arc = (s32) t * (panTotal - t) * 6 / panTotal;
+    const s16 py = flyY0 + (s32) (flyY1 - flyY0) * t / panTotal - arc;
+    setFrame(&hero, A_JUMP, t < panTotal / 2 ? 0 : 1);
+    if (hero.spr) SPR_setPosition(hero.spr, px - BG_camX() - 48, py - BG_camY() - 92);
+    if (BG_camX() == panTX && BG_camY() == panTY && panDone >= panTotal)
     {
-        hero.y = FIX(FLOOR_Y);
+        hero.x = FIX(flyX1 - cellX());
+        hero.y = FIX(floorY());
         mode = M_PLAY;
         showArrow(-1);
         startPanel();
@@ -850,7 +875,11 @@ static void stepTurn(void)
             pageI++;
             panelI = 0;
             SYS_disableInts();
-            BG_loadPage(story[pageI].art, cellX(), cellY());
+            s16 cx, cy;
+            camFor(&pages[story[pageI].art], rect(), &cx, &cy);
+            BG_loadPage(story[pageI].art, cx, cy);
+            // The camera jumped: wipe the whole sheet layer, then cover the new view again.
+            VDP_clearPlane(BG_A, TRUE);
             BG_paperAll();
             SYS_enableInts();
             loadPagePalette();
@@ -867,7 +896,7 @@ static void stepTurn(void)
         {
             mode = M_PLAY;
             hero.x = FIX(40);
-            hero.y = FIX(FLOOR_Y);
+            hero.y = FIX(floorY());
             SPR_setVisibility(hero.spr, VISIBLE);
             HUD_show(TRUE);
             startPanel();
@@ -998,7 +1027,7 @@ void GAME_run(void)
                     TXT_clearCaption();
                     PAL_fadeOutAll(20, FALSE);
                     SYS_disableInts();
-                    BG_loadPage(0, CELL_W, 0);
+                    BG_loadPage(0, pages[0].panel[1].x, 0);
                     SYS_enableInts();
                     memcpy(palette, BG_colors(), 64);
                     PAL_fadeInAll(palette, 20, TRUE);
