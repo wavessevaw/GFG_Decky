@@ -1,3 +1,31 @@
+# SSMT 1.2.1 — FOH Assist: новый интерфейс
+
+## Русский
+
+**FOH Assist (beta) — переработанный интерфейс.**
+
+- **Общая шапка:** режимы «Саундчек · Шоу · Тест пульта», состояние пульта, уровень в зале и профиль микса;
+  настройки пульта, звуковой карты и измерительного микрофона — в отдельном окне (шестерёнка).
+- **Саундчек:** каналы сгруппированы по источникам (ударные, вокал, хор, струнные…) с индикаторами уровня и
+  статусом; карточка выбранного канала — входное усиление, срез НЧ, компрессор, остаток отклонения тембра,
+  кривая EQ пульта поверх спектра канала, четыре полосы и история изменений канала.
+- **Шоу:** состояние страховки (активные коррекции, всего за шоу, время), мониторные линии с уровнями и
+  обратным отсчётом восстановления, список активных коррекций — каждую можно отменить отдельно, солисты для
+  разборчивости, общий журнал ассистента и звукорежиссёра.
+- **Тест пульта:** отчёт по шагам.
+
+Функции №1–№3 — без изменений.
+
+## English
+
+**FOH Assist (beta) — redesigned interface.** A common header with the mode switch and console / hall level /
+profile status, settings in a sheet; soundcheck as a grouped channel list with live meters plus a detail card
+with the EQ curve over the channel spectrum; show mode with the guard status, monitor lines with levels and a
+restore countdown, active corrections that can be cancelled one by one, and one log for the assistant and the
+engineer; the console test report as steps. Functions #1–#3 are unchanged.
+
+---
+
 # SSMT 1.2.0 — Qtrl, Show Control Center · FOH Assist (beta)
 
 ## Русский
