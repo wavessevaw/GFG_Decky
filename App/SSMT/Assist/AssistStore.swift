@@ -394,6 +394,23 @@ final class AssistStore: ObservableObject {
         if !changed.isEmpty { buses = busMap.values.sorted { $0.id < $1.id } }
     }
 
+    // MARK: per-channel state for the table
+
+    func state(of ch: Int) -> TuningState? {
+        guard let session else { return nil }
+        if let t = session.single, t.channel == ch { return t.state }
+        return session.group?.tunings[ch]?.state
+    }
+
+    func kind(of ch: Int) -> SourceKind? {
+        guard let session else { return nil }
+        if let t = session.single, t.channel == ch { return t.kind }
+        if let t = session.group?.tunings[ch] { return t.kind }
+        return SourceClassifier.classify(name: stripMap[ch]?.name ?? "", features: features[ch]).kind
+    }
+
+    var inputDevices: [AudioDeviceInfo] { DeviceCatalog.allDevices().filter { $0.inputChannels > 0 } }
+
     // MARK: show guard
 
     func startGuard() {
