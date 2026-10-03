@@ -1,33 +1,34 @@
-# SSMT 1.1.0 — Input list и стейдж-план · Input list and stage plan
+# SSMT 1.2.0 — Qtrl, Show Control Center
 
 ## Русский
 
-**Новое: функция №2 — конструктор input list и стейдж-плана.** В боковой панели переключатель
-«Настройка системы / Input list и сцена».
+**Новое: функция №3 — Qtrl, Show Control Center.** Третий раздел в боковой панели.
 
-- **Шоу:** артист, мероприятие, площадка, дата, инженер, контакт, заметки — в шапке каждого листа.
-- **Каналы:** добавить, дублировать, переместить (кнопками или перетаскиванием), удалить, перенумеровать
-  (ручные пропуски сохраняются); шаблоны групп (ударные 10/4, бас, гитары, клавиши, вокал, бэки,
-  фонограмма, перкуссия, зальные, толкбэк); стереопара L/R; автозаполнение входов стейджбокса;
-  подсказки моделей микрофонов и автоматическое +48 V для конденсаторов и активных DI; цвет группы;
-  проверки (повтор номера или входа, пустой источник).
-- **Мониторные миксы** (монитор, ушной, сайдфилл, драм-филл, стерео) и сводка **«Что выдать на сцену»**
-  (микрофоны, DI, стойки, +48 V).
-- **Стейдж-план:** 18 простых векторных символов оборудования и текст; перетаскивание с привязкой 25 см,
-  поворот, размер, подписи и «каналы/микс», слои, сдвиг стрелками; размер сцены в метрах.
-- **Экспорт:** PDF (A4 альбом, чёрным по белому: каналы, миксы и сводка, сцена), PNG (input list, сцена),
-  CSV (каналы, миксы). Файлы `.ssmtinput`, автосохранение, отмена ⌘Z.
+- **Шоу из кью:** аудио, фейд, группа (все вместе, по очереди, плейлист, случайная), пауза, заметка, OSC и
+  управляющие кью (старт, стоп, пауза, загрузка, сброс, перейти, сменить цель, включить/выключить, выход
+  из петли). Пауза до и после, «затем»: ждать GO / следующая после паузы / следующая по окончании.
+- **Два вида:** «Простой» (список и одна панель сбоку) и «Эксперт» (библиотека, кнопки one-shot на F1–F12,
+  широкий мультитрековый таймлайн). Режимы «Правка» и «Шоу» (правка заблокирована).
+- **Звук:** старты точны до сэмпла; любые форматы, которые читает macOS, включая звук из видеофайлов;
+  файлы раскладываются в кэш на диске и читаются заранее — память не забивается, GO не ждёт диск.
+  Редактор волны: начало, конец, нарастание, затухание, петля внутри трека, прослушивание с любого места.
+  До 64 выходов с матрицей «канал файла → выход».
+- **OSC:** мастер подключения Resolume, ETC Eos, grandMA3, ChamSys MagicQ, Behringer X32 / Midas M32 и QLab
+  с подсказками, проверкой связи и предупреждением о другой сети; готовые команды и OSC-монитор.
+- **Надёжность:** «Стоп всё» (Esc) — плавно, повторно — мгновенно; защита от двойного GO; проверка шоу
+  (пропавшие и неготовые файлы, цели, номера, клавиши); поиск пропавших файлов; выход сам восстанавливается
+  после сбоя карты; Mac не засыпает, пока открыт Qtrl; выбор аудиобуфера.
 
-Функция №1 (автоматическая настройка системы) — без изменений по сравнению с 1.0.0.
+Функции №1 и №2 — без изменений.
 
 ## English
 
-**New: function #2 — input list and stage plan builder** (sidebar switch "System setup / Input list &
-stage plan"): show header; channel tools (add, duplicate, move, delete, renumber, group templates,
-stereo pairs, stage box numbering, mic suggestions with automatic +48 V, group colours, checks);
-monitor mixes and a pull list; a quick stage plan with 18 vector equipment symbols and text (drag with
-25 cm snap, rotate, resize, captions, layers); export to PDF, PNG and CSV; `.ssmtinput` files, autosave
-and undo. Function #1 is unchanged since 1.0.0.
+**New: function #3 — Qtrl, Show Control Center.** Cue-based show playback: audio, fade, group, wait,
+memo, OSC and control cues; pre/post-wait and continue modes; Simple and Expert views (one-shot pads
+on F1–F12, wide multitrack timeline); sample-accurate starts; any format macOS reads, including the
+sound of video files, cached on disk and read ahead; waveform editor with an inner loop; up to 64
+outputs; OSC with guided setup for Resolume, ETC Eos, grandMA3, MagicQ, X32/M32 and QLab; two-stage
+Stop all, double-GO guard, pre-show check, automatic output recovery, no sleep while Qtrl is open.
 
 ---
 

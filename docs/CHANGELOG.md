@@ -1,5 +1,11 @@
 # История версий · Changelog
 
+# SSMT 1.2.0
+
+Qtrl — Show Control Center (функция №3). См. `docs/RELEASE_NOTES.md`.
+
+---
+
 # SSMT 1.1.0
 
 Input list и стейдж-план (функция №2). См. `docs/RELEASE_NOTES.md`.
