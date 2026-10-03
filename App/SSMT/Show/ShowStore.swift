@@ -108,6 +108,7 @@ final class ShowStore: ObservableObject {
     private let core = PlaybackCore()
     private var autosaveWork: DispatchWorkItem?
     private var keyMonitor: Any?
+    private var clickMonitor: Any?
 
     static let fileType = UTType(filenameExtension: "ssmtshow", conformingTo: .json) ?? .json
     /// Any audio, plus video files (their sound is used).
@@ -804,6 +805,27 @@ final class ShowStore: ObservableObject {
             guard let self else { return event }
             return MainActor.assumeIsolated { self.handleKey(event) ? nil : event }
         }
+        // A click anywhere but a text input ends typing (notes, names), so Space is GO again.
+        clickMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
+            guard let self else { return event }
+            MainActor.assumeIsolated { self.leaveTextFieldIfClickedOutside(event) }
+            return event
+        }
+    }
+
+    private static func isTyping(in window: NSWindow?) -> Bool {
+        guard let r = window?.firstResponder else { return false }
+        return r is NSText || r is NSTextView
+    }
+
+    private func leaveTextFieldIfClickedOutside(_ event: NSEvent) {
+        guard isActive, let w = event.window, Self.isTyping(in: w), let content = w.contentView else { return }
+        var v = content.hitTest(content.convert(event.locationInWindow, from: nil))
+        while let view = v {
+            if view is NSTextField || view is NSTextView || view is NSText { return }
+            v = view.superview
+        }
+        w.makeFirstResponder(nil)
     }
 
     private static let functionKeyCodes: [UInt16: String] = [
@@ -813,7 +835,11 @@ final class ShowStore: ObservableObject {
 
     private func handleKey(_ event: NSEvent) -> Bool {
         guard isActive else { return false }
-        if let responder = NSApp.keyWindow?.firstResponder, responder is NSText || responder is NSTextView { return false }
+        if Self.isTyping(in: NSApp.keyWindow) {
+            // Esc ends typing in a field (the next Esc is Stop all as usual).
+            if event.type == .keyDown && event.keyCode == 53 { NSApp.keyWindow?.makeFirstResponder(nil); return true }
+            return false
+        }
         let mods = event.modifierFlags.intersection([.command, .control, .option])
         guard mods.isEmpty else { return false }
         // One-shot pads on F-keys: press and release (for "hold" pads).
