@@ -2,7 +2,7 @@
 
 # SSMT 1.2.0
 
-Qtrl — Show Control Center (функция №3). См. `docs/RELEASE_NOTES.md`.
+Qtrl — Show Control Center (функция №3) и FOH Assist (функция №4, beta). См. `docs/RELEASE_NOTES.md`.
 
 ---
 

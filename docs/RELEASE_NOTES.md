@@ -1,4 +1,4 @@
-# SSMT 1.2.0 — Qtrl, Show Control Center
+# SSMT 1.2.0 — Qtrl, Show Control Center · FOH Assist (beta)
 
 ## Русский
 
@@ -19,6 +19,20 @@
   (пропавшие и неготовые файлы, цели, номера, клавиши); поиск пропавших файлов; выход сам восстанавливается
   после сбоя карты; Mac не засыпает, пока открыт Qtrl; выбор аудиобуфера.
 
+**Новое (beta): функция №4 — FOH Assist.** Четвёртый раздел в боковой панели.
+
+- **Подключение как у Mixing Station:** Behringer X32 / Midas M32 и X Air / MR по сети через роутер (Wi-Fi или
+  кабель); уровни и RTA пульта — по сети, звуковой кабель не нужен. Карта USB/Dante — по желанию.
+- **Измерительный микрофон** — любой из библиотеки функции №1, с его калибровкой.
+- **Саундчек:** канал настраивается сам каждые 2 с (гейн, срез НЧ, 4 полосы EQ, компрессор) до «Готово»;
+  «Оркестр» и «Хор» одной кнопкой или диапазон каналов; баланс и подъём с проверкой фидбэка; характеры
+  Мюзикл / Рок / Классика / Речь; автоматическая проверка полярности пар микрофонов; откат всех изменений.
+- **Шоу (страховка):** микс ведёт звукорежиссёр; ассистент не трогает фейдеры каналов — вырезает фидбэк,
+  прижимает зазвеневший монитор и возвращает, держит солиста разборчивым в массовых сценах, убирает бубнение.
+- **Тест пульта** и **симуляция шоу:** проверка всей работы с пультом на выдуманном шоу с чтением значений обратно.
+- **Beta:** адреса и форматы протокола X32 взяты из открытого описания и ещё не сверены с живым пультом —
+  начните с «Теста пульта». WING, Yamaha, Allen & Heath — позже.
+
 Функции №1 и №2 — без изменений.
 
 ## English
@@ -29,6 +43,15 @@ on F1–F12, wide multitrack timeline); sample-accurate starts; any format macOS
 sound of video files, cached on disk and read ahead; waveform editor with an inner loop; up to 64
 outputs; OSC with guided setup for Resolume, ETC Eos, grandMA3, MagicQ, X32/M32 and QLab; two-stage
 Stop all, double-GO guard, pre-show check, automatic output recovery, no sleep while Qtrl is open.
+
+
+**New (beta): function #4 — FOH Assist.** Connects to Behringer X32 / Midas M32 and X Air / MR over the network
+like Mixing Station (levels and RTA over Wi-Fi; USB/Dante optional), measures with any microphone of the setup
+library, tunes channels by itself (gain, high-pass, EQ, compressor) and groups with one button (orchestra,
+choir, a channel range) with a feedback-checked ring-out, checks mic polarity automatically, and in Show mode
+guards the engineer's mix (feedback notches, monitor loops, lead intelligibility in mass scenes) without moving
+channel faders. Console test and show simulation exercise the whole cycle on the console with read-back.
+Beta: the X32 protocol details come from public documentation and are not yet verified on a live console.
 
 ---
 
