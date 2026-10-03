@@ -140,7 +140,7 @@ struct PadGridView: View {
                 }
             }
             group.notify(queue: .main) {
-                show.addPads(urls.filter { UTType(filenameExtension: $0.pathExtension)?.conforms(to: .audio) == true })
+                show.addPads(urls.filter { ShowStore.isPlayable($0) })
             }
             return true
         }

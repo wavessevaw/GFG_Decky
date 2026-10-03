@@ -1,5 +1,6 @@
 import AudioToolbox
 import AVFoundation
+import CoreMedia
 import CoreAudio
 import Foundation
 import SSMTAudio
@@ -14,6 +15,11 @@ final class ShowAudioOutput {
     let channelCount: Int
     let deviceName: String
     private var source: AVAudioSourceNode?
+    private var configObserver: NSObjectProtocol?
+    /// Called (on the main queue) when the output was interrupted: nil = recovered, text = still failing.
+    var onInterruption: ((String?) -> Void)?
+    /// Device I/O buffer actually in use (frames).
+    private(set) var bufferFrames: Int = 512
     private let channelPointers: UnsafeMutablePointer<UnsafeMutablePointer<Float>>
     private let silence: UnsafeMutablePointer<Float>
     private static let maxFrames = 8192
@@ -29,11 +35,13 @@ final class ShowAudioOutput {
         }
     }
 
-    init(deviceUID: String?, maxOutputs: Int) throws {
+    init(deviceUID: String?, maxOutputs: Int, bufferFrames requested: Int = 512) throws {
         let output = engine.outputNode
         var name = "System output"
+        var deviceID: AudioDeviceID? = DeviceCatalog.defaultDevice(input: false)
         if let uid = deviceUID, let info = DeviceCatalog.device(uid: uid), info.outputChannels > 0 {
             var id = info.id
+            deviceID = info.id
             guard let unit = output.audioUnit,
                   AudioUnitSetProperty(unit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0,
                                        &id, UInt32(MemoryLayout<AudioDeviceID>.size)) == noErr else {
@@ -44,6 +52,7 @@ final class ShowAudioOutput {
             name = info.name
         }
         deviceName = name
+        if let deviceID { bufferFrames = Self.setBufferFrames(deviceID, requested) }
         let hw = output.outputFormat(forBus: 0)
         sampleRate = hw.sampleRate > 0 ? hw.sampleRate : 48000
         channelCount = max(1, Int(hw.channelCount))
@@ -84,9 +93,41 @@ final class ShowAudioOutput {
         engine.connect(node, to: output, format: format)
         engine.prepare()
         do { try engine.start() } catch { throw OutputError.start(error) }
+        // Device reconfigured (sample rate, unplug/replug, another app): restart at once.
+        configObserver = NotificationCenter.default.addObserver(forName: .AVAudioEngineConfigurationChange, object: engine,
+                                                                queue: .main) { [weak self] _ in self?.recover() }
+    }
+
+    private func recover(attempt: Int = 0) {
+        guard source != nil else { return }
+        do {
+            engine.prepare()
+            try engine.start()
+            onInterruption?(nil)
+        } catch {
+            onInterruption?(error.localizedDescription)
+            // Keep trying for a while (device being replugged).
+            if attempt < 120 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in self?.recover(attempt: attempt + 1) }
+            }
+        }
+    }
+
+    /// Asks the device for an I/O buffer size; returns the size in use.
+    private static func setBufferFrames(_ device: AudioDeviceID, _ frames: Int) -> Int {
+        var value = UInt32(frames)
+        var address = AudioObjectPropertyAddress(mSelector: kAudioDevicePropertyBufferFrameSize,
+                                                 mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
+        _ = AudioObjectSetPropertyData(device, &address, 0, nil, UInt32(MemoryLayout<UInt32>.size), &value)
+        var actual: UInt32 = 0
+        var size = UInt32(MemoryLayout<UInt32>.size)
+        if AudioObjectGetPropertyData(device, &address, 0, nil, &size, &actual) == noErr, actual > 0 { return Int(actual) }
+        return frames
     }
 
     func stop() {
+        if let configObserver { NotificationCenter.default.removeObserver(configObserver) }
+        configObserver = nil
         engine.stop()
         if let source { engine.detach(source) }
         source = nil
@@ -99,13 +140,25 @@ final class ShowAudioOutput {
     }
 }
 
-/// Decodes audio files into memory at the output sample rate. Thread-safe.
+/// Audio files for the show. Each file is decoded once (any format Core Audio or AVFoundation
+/// reads, including the sound of video files) into a planar Float32 cache file at the output sample
+/// rate, then memory-mapped: RAM use stays small and opening a show again is instant. Thread-safe.
 final class ClipCache: @unchecked Sendable {
     private var clips: [String: AudioClip] = [:]
     private var failed: [String: String] = [:]
+    private var inFlight: Set<String> = []
     private let lock = NSLock()
 
-    var totalBytes: Int { lock.lock(); defer { lock.unlock() }; return clips.values.reduce(0) { $0 + $1.bytes } }
+    static let folder: URL = {
+        let base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("SSMT/Audio", isDirectory: true)
+        try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+        return base
+    }()
+
+    /// Decoded audio resident in memory (owned clips only; mapped files are paged by the system).
+    var totalBytes: Int { lock.lock(); defer { lock.unlock() }; return clips.values.filter { !$0.isMapped }.reduce(0) { $0 + $1.bytes } }
+    var diskBytes: Int { lock.lock(); defer { lock.unlock() }; return clips.values.filter(\.isMapped).reduce(0) { $0 + $1.bytes } }
 
     func cached(_ path: String, sampleRate: Double) -> AudioClip? {
         lock.lock(); defer { lock.unlock() }
@@ -120,54 +173,190 @@ final class ClipCache: @unchecked Sendable {
         clips = clips.filter { keep.contains($0.key) }
     }
 
-    /// Loads (or returns the cached) clip. Slow: call off the main thread.
+    /// Loads (or returns the cached) clip. Slow the first time a file is seen: call off the main
+    /// thread and never on the playback queue.
     @discardableResult
     func load(_ path: String, sampleRate: Double) -> AudioClip? {
         if let c = cached(path, sampleRate: sampleRate) { return c }
+        lock.lock()
+        if inFlight.contains(path) { lock.unlock(); return nil }
+        inFlight.insert(path)
+        lock.unlock()
+        defer { lock.lock(); inFlight.remove(path); lock.unlock() }
         do {
-            let clip = try Self.decode(URL(fileURLWithPath: path), sampleRate: sampleRate)
+            let clip = try Self.open(URL(fileURLWithPath: path), sampleRate: sampleRate)
             lock.lock(); clips[path] = clip; failed[path] = nil; lock.unlock()
             return clip
         } catch {
-            lock.lock(); failed[path] = "\(error.localizedDescription)"; lock.unlock()
+            lock.lock(); failed[path] = error.localizedDescription; lock.unlock()
             return nil
         }
     }
 
-    static func decode(_ url: URL, sampleRate: Double) throws -> AudioClip {
+    // MARK: Cache files
+
+    /// Cache file for a source: depends on path, size, modification date and sample rate.
+    private static func cacheURL(for url: URL, sampleRate: Double, channels: Int) -> URL? {
+        guard let a = try? FileManager.default.attributesOfItem(atPath: url.path) else { return nil }
+        let size = (a[.size] as? NSNumber)?.int64Value ?? 0
+        let mtime = (a[.modificationDate] as? Date)?.timeIntervalSince1970 ?? 0
+        var h: UInt64 = 1469598103934665603 // FNV-1a
+        for b in "\(url.path)|\(size)|\(mtime)|\(Int(sampleRate))".utf8 { h = (h ^ UInt64(b)) &* 1099511628211 }
+        return folder.appendingPathComponent(String(h, radix: 16) + "-\(channels)ch.f32")
+    }
+
+    static func open(_ url: URL, sampleRate: Double) throws -> AudioClip {
+        // Already decoded: map it.
+        for ch in 1...16 {
+            if let c = cacheURL(for: url, sampleRate: sampleRate, channels: ch), FileManager.default.fileExists(atPath: c.path),
+               let data = try? NSData(contentsOf: c, options: .alwaysMapped),
+               let clip = AudioClip(sampleRate: sampleRate, channelCount: ch, mapped: data) {
+                try? FileManager.default.setAttributes([.modificationDate: Date()], ofItemAtPath: c.path)
+                return clip
+            }
+        }
+        let tmp = folder.appendingPathComponent(UUID().uuidString + ".part")
+        defer { try? FileManager.default.removeItem(at: tmp) }
+        let channels: Int
+        do {
+            channels = try decodeWithAudioFile(url, sampleRate: sampleRate, to: tmp)
+        } catch {
+            // Containers AVAudioFile cannot read (video files, some streams): AVFoundation reader.
+            channels = try decodeWithAssetReader(url, sampleRate: sampleRate, to: tmp)
+        }
+        guard let dest = cacheURL(for: url, sampleRate: sampleRate, channels: channels) else { throw CocoaError(.fileReadUnknown) }
+        try? FileManager.default.removeItem(at: dest)
+        try FileManager.default.moveItem(at: tmp, to: dest)
+        let data = try NSData(contentsOf: dest, options: .alwaysMapped)
+        guard let clip = AudioClip(sampleRate: sampleRate, channelCount: channels, mapped: data) else { throw CocoaError(.fileReadCorruptFile) }
+        return clip
+    }
+
+    /// Planar writer: channel c of frame f lives at (c × frames + f) × 4 bytes.
+    private final class PlanarWriter {
+        let handle: FileHandle
+        let channels: Int
+        let frames: Int
+        var written = 0
+
+        init(url: URL, channels: Int, frames: Int) throws {
+            FileManager.default.createFile(atPath: url.path, contents: nil)
+            handle = try FileHandle(forWritingTo: url)
+            self.channels = channels
+            self.frames = frames
+            try handle.truncate(atOffset: UInt64(channels * frames * 4)) // zero-filled (silence)
+        }
+
+        /// Appends `count` frames given one pointer per channel.
+        func append(_ data: (Int) -> UnsafePointer<Float>, count: Int) throws {
+            let n = min(count, frames - written)
+            guard n > 0 else { return }
+            for c in 0..<channels {
+                try handle.seek(toOffset: UInt64((c * frames + written) * 4))
+                try handle.write(contentsOf: Data(bytes: data(c), count: n * 4))
+            }
+            written += n
+        }
+
+        func close() throws { try handle.close() }
+    }
+
+    private static func decodeWithAudioFile(_ url: URL, sampleRate: Double, to out: URL) throws -> Int {
         let file = try AVAudioFile(forReading: url)
         let inFormat = file.processingFormat
-        let frames = AVAudioFrameCount(file.length)
-        guard frames > 0, let input = AVAudioPCMBuffer(pcmFormat: inFormat, frameCapacity: frames) else {
-            throw CocoaError(.fileReadCorruptFile)
+        let channels = Int(inFormat.channelCount)
+        guard channels > 0, file.length > 0 else { throw CocoaError(.fileReadCorruptFile) }
+        let ratio = sampleRate / inFormat.sampleRate
+        let frames = Int((Double(file.length) * ratio).rounded(.up))
+        let writer = try PlanarWriter(url: out, channels: channels, frames: frames)
+        defer { try? writer.close() }
+        let chunk: AVAudioFrameCount = 65536
+        guard let input = AVAudioPCMBuffer(pcmFormat: inFormat, frameCapacity: chunk) else { throw CocoaError(.fileReadCorruptFile) }
+        if abs(ratio - 1) < 1e-9 {
+            while file.framePosition < file.length {
+                try file.read(into: input, frameCount: chunk)
+                guard input.frameLength > 0, let d = input.floatChannelData else { break }
+                try writer.append({ UnsafePointer(d[$0]) }, count: Int(input.frameLength))
+            }
+            return channels
         }
-        try file.read(into: input)
-        var buffer = input
-        if abs(inFormat.sampleRate - sampleRate) > 0.5 {
-            guard let outFormat = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: sampleRate,
-                                                channels: inFormat.channelCount, interleaved: false),
-                  let converter = AVAudioConverter(from: inFormat, to: outFormat) else {
-                throw CocoaError(.fileReadUnsupportedScheme)
-            }
-            converter.sampleRateConverterQuality = AVAudioQuality.max.rawValue
-            let capacity = AVAudioFrameCount(Double(frames) * sampleRate / inFormat.sampleRate) + 4096
-            guard let out = AVAudioPCMBuffer(pcmFormat: outFormat, frameCapacity: capacity) else {
-                throw CocoaError(.fileReadCorruptFile)
-            }
-            var fed = false
+        guard let outFormat = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: sampleRate,
+                                            channels: inFormat.channelCount, interleaved: false),
+              let converter = AVAudioConverter(from: inFormat, to: outFormat),
+              let output = AVAudioPCMBuffer(pcmFormat: outFormat, frameCapacity: AVAudioFrameCount(Double(chunk) * ratio) + 1024) else {
+            throw CocoaError(.fileReadUnsupportedScheme)
+        }
+        converter.sampleRateConverterQuality = AVAudioQuality.max.rawValue
+        var readError: Error?
+        var finished = false
+        while !finished {
+            output.frameLength = 0
             var convError: NSError?
-            let status = converter.convert(to: out, error: &convError) { _, outStatus in
-                if fed { outStatus.pointee = .endOfStream; return nil }
-                fed = true
+            let status = converter.convert(to: output, error: &convError) { _, outStatus in
+                if file.framePosition >= file.length { outStatus.pointee = .endOfStream; return nil }
+                do { try file.read(into: input, frameCount: chunk) } catch { readError = error; outStatus.pointee = .endOfStream; return nil }
                 outStatus.pointee = .haveData
                 return input
             }
+            if let readError { throw readError }
             if status == .error { throw convError ?? CocoaError(.fileReadCorruptFile) }
-            buffer = out
+            if output.frameLength > 0, let d = output.floatChannelData {
+                try writer.append({ UnsafePointer(d[$0]) }, count: Int(output.frameLength))
+            }
+            if status == .endOfStream || (status == .inputRanDry && file.framePosition >= file.length) { finished = true }
         }
-        guard let data = buffer.floatChannelData else { throw CocoaError(.fileReadCorruptFile) }
-        let n = Int(buffer.frameLength)
-        let channels = (0..<Int(buffer.format.channelCount)).map { Array(UnsafeBufferPointer(start: data[$0], count: n)) }
-        return AudioClip(sampleRate: sampleRate, channels: channels)
+        return channels
+    }
+
+    private static func decodeWithAssetReader(_ url: URL, sampleRate: Double, to out: URL) throws -> Int {
+        let asset = AVURLAsset(url: url)
+        guard let track = asset.tracks(withMediaType: .audio).first else { throw CocoaError(.fileReadCorruptFile) }
+        let reader = try AVAssetReader(asset: asset)
+        let desc = track.formatDescriptions.first.map { $0 as! CMFormatDescription }
+        let asbd = desc.flatMap { CMAudioFormatDescriptionGetStreamBasicDescription($0)?.pointee }
+        let channels = max(1, Int(asbd?.mChannelsPerFrame ?? 2))
+        let settings: [String: Any] = [
+            AVFormatIDKey: kAudioFormatLinearPCM, AVLinearPCMIsFloatKey: true, AVLinearPCMBitDepthKey: 32,
+            AVLinearPCMIsNonInterleaved: false, AVLinearPCMIsBigEndianKey: false,
+            AVSampleRateKey: sampleRate, AVNumberOfChannelsKey: channels,
+        ]
+        let output = AVAssetReaderTrackOutput(track: track, outputSettings: settings)
+        reader.add(output)
+        guard reader.startReading() else { throw reader.error ?? CocoaError(.fileReadCorruptFile) }
+        let seconds = CMTimeGetSeconds(asset.duration)
+        let frames = Int(((seconds.isFinite ? seconds : 0) * sampleRate).rounded(.up))
+        guard frames > 0 else { throw CocoaError(.fileReadCorruptFile) }
+        let writer = try PlanarWriter(url: out, channels: channels, frames: frames)
+        defer { try? writer.close() }
+        while let sample = output.copyNextSampleBuffer() {
+            guard let block = CMSampleBufferGetDataBuffer(sample) else { continue }
+            var length = 0
+            var ptr: UnsafeMutablePointer<CChar>?
+            guard CMBlockBufferGetDataPointer(block, atOffset: 0, lengthAtOffsetOut: nil, totalLengthOut: &length, dataPointerOut: &ptr) == noErr,
+                  let ptr else { continue }
+            let n = length / (4 * channels)
+            guard n > 0 else { continue }
+            let bufs = (0..<channels).map { _ in UnsafeMutablePointer<Float>.allocate(capacity: n) }
+            defer { bufs.forEach { $0.deallocate() } }
+            ptr.withMemoryRebound(to: Float.self, capacity: n * channels) { f in
+                for i in 0..<n {
+                    for c in 0..<channels { bufs[c][i] = f[i * channels + c] }
+                }
+            }
+            try writer.append({ UnsafePointer(bufs[$0]) }, count: n)
+        }
+        if reader.status == .failed { throw reader.error ?? CocoaError(.fileReadCorruptFile) }
+        return channels
+    }
+
+    /// Removes cache files not used for 30 days.
+    static func prune() {
+        let fm = FileManager.default
+        guard let files = try? fm.contentsOfDirectory(at: folder, includingPropertiesForKeys: [.contentModificationDateKey]) else { return }
+        let limit = Date().addingTimeInterval(-30 * 86400)
+        for f in files {
+            let d = (try? f.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
+            if d < limit || f.pathExtension == "part" { try? fm.removeItem(at: f) }
+        }
     }
 }

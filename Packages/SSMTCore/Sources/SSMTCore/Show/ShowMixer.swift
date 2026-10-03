@@ -1,18 +1,70 @@
 import Foundation
 import SSMTRealtime
 
-/// Decoded audio in memory at the output sample rate (planar). Immutable, shared between threads.
+/// Decoded audio at the output sample rate, planar (channel c starts at `samples + c * frames`).
+/// Either owned memory or a memory-mapped cache file, so long shows do not fill the RAM.
+/// Immutable, shared between threads.
 public final class AudioClip: @unchecked Sendable {
     public let sampleRate: Double
-    public let channels: [[Float]]
-    public var channelCount: Int { channels.count }
-    public var frames: Int { channels.first?.count ?? 0 }
-    public var duration: Double { Double(frames) / sampleRate }
-    public var bytes: Int { frames * channelCount * MemoryLayout<Float>.size }
+    public let channelCount: Int
+    public let frames: Int
+    public let samples: UnsafePointer<Float>
+    private let owned: UnsafeMutablePointer<Float>?
+    private let mapping: NSData?
 
+    public var duration: Double { Double(frames) / sampleRate }
+    /// Bytes of decoded audio (resident in memory only for owned clips).
+    public var bytes: Int { frames * channelCount * MemoryLayout<Float>.size }
+    public var isMapped: Bool { mapping != nil }
+
+    /// Owned copy of planar channels.
     public init(sampleRate: Double, channels: [[Float]]) {
         self.sampleRate = sampleRate
-        self.channels = channels
+        let cc = max(1, channels.count)
+        let n = channels.map(\.count).min() ?? 0
+        channelCount = cc
+        frames = n
+        let p = UnsafeMutablePointer<Float>.allocate(capacity: max(1, cc * n))
+        p.initialize(repeating: 0, count: max(1, cc * n))
+        for (c, ch) in channels.enumerated() where n > 0 {
+            ch.withUnsafeBufferPointer { src in (p + c * n).update(from: src.baseAddress!, count: n) }
+        }
+        owned = p
+        mapping = nil
+        samples = UnsafePointer(p)
+    }
+
+    /// Planar Float32 data (e.g. a memory-mapped cache file) holding `channelCount × frames` samples.
+    public init?(sampleRate: Double, channelCount: Int, mapped data: NSData) {
+        let count = data.length / MemoryLayout<Float>.size
+        guard channelCount > 0, count >= channelCount, data.length % (MemoryLayout<Float>.size * channelCount) == 0 else { return nil }
+        self.sampleRate = sampleRate
+        self.channelCount = channelCount
+        frames = count / channelCount
+        mapping = data
+        owned = nil
+        samples = data.bytes.assumingMemoryBound(to: Float.self)
+    }
+
+    deinit { owned?.deallocate() }
+
+    @inline(__always) public func channel(_ c: Int) -> UnsafeBufferPointer<Float> {
+        UnsafeBufferPointer(start: samples + min(c, channelCount - 1) * frames, count: frames)
+    }
+
+    /// Reads one sample per memory page from `start` for `count` frames so a mapped file is in RAM
+    /// before the audio thread needs it. Call off the audio thread.
+    @discardableResult
+    public func prefetch(from start: Int, count: Int) -> Float {
+        guard mapping != nil, frames > 0 else { return 0 }
+        let a = max(0, min(frames - 1, start)), b = max(a, min(frames, start + count))
+        var sink: Float = 0
+        for c in 0..<channelCount {
+            let p = samples + c * frames
+            var i = a
+            while i < b { sink += p[i]; i += 1024 } // 4 KB pages
+        }
+        return sink
     }
 }
 
@@ -247,6 +299,12 @@ public final class ShowMixer: @unchecked Sendable {
     private var patchCommand: MixerCommand?
     private let bus: UnsafeMutablePointer<Float>
     private let busFrames = 1024
+    /// Per-segment scratch: sample index, interpolation fraction, envelope (shared by all outputs).
+    private let scratchIndex: UnsafeMutablePointer<Int>
+    private let scratchFrac: UnsafeMutablePointer<Float>
+    private let scratchEnv: UnsafeMutablePointer<Float>
+    /// Automatic fade-in when a voice starts inside a file (avoids a click), in frames.
+    private let startDeclick: Double
     /// Short ramp used to avoid clicks on hard stops (≈ 3 ms).
     private let declick: Int64
 
@@ -260,6 +318,13 @@ public final class ShowMixer: @unchecked Sendable {
         patch = Array(0..<maxOutputs)
         bus = .allocate(capacity: maxOutputs * busFrames)
         bus.initialize(repeating: 0, count: maxOutputs * busFrames)
+        scratchIndex = .allocate(capacity: busFrames)
+        scratchIndex.initialize(repeating: 0, count: busFrames)
+        scratchFrac = .allocate(capacity: busFrames)
+        scratchFrac.initialize(repeating: 0, count: busFrames)
+        scratchEnv = .allocate(capacity: busFrames)
+        scratchEnv.initialize(repeating: 0, count: busFrames)
+        startDeclick = sampleRate * 0.002
         peaks = (0..<maxOutputs).map { _ in AtomicFloat(0) }
         declick = Int64(sampleRate * 0.003)
     }
@@ -270,6 +335,9 @@ public final class ShowMixer: @unchecked Sendable {
         ssmt_ptrq_destroy(inbox)
         ssmt_ptrq_destroy(garbage)
         bus.deallocate()
+        scratchIndex.deallocate()
+        scratchFrac.deallocate()
+        scratchEnv.deallocate()
     }
 
     // MARK: Control thread
@@ -440,46 +508,60 @@ public final class ShowMixer: @unchecked Sendable {
     }
 
     /// Mixes one segment; returns false when the voice has finished.
+    /// Positions and the envelope are computed once per segment and shared by every channel and output.
     private func mix(_ v: Voice, clip: AudioClip, setup: VoiceSetup, crosspoints xp: [Float],
                      from f0: Int64, to f1: Int64, blockStart: Int64) -> Bool {
         let n = Int(f1 - f0)
-        guard n > 0 else { return true }
+        guard n > 0, n <= busFrames else { return true }
         let map = v.map
         let total = map.total ?? .infinity
         let rate = setup.rate
-        let fadeIn = Double(setup.fadeInFrames), fadeOut = Double(setup.fadeOutFrames)
-        // Block-rate gains, linearly interpolated per sample.
+        var fadeIn = Double(setup.fadeInFrames)
+        if fadeIn < startDeclick && map.regionStart > 0 { fadeIn = startDeclick }
+        let fadeOut = Double(setup.fadeOutFrames)
         let main0 = v.main.gain(at: f0) * v.stopEnv.gain(at: f0)
         let main1 = v.main.gain(at: f1) * v.stopEnv.gain(at: f1)
+        let last = clip.frames - 1
+        guard last >= 0 else { return false }
+
+        // Positions, interpolation and envelope (fades × main level ramp) for the segment.
+        var pos = v.played
+        var count = 0
+        let invN = 1.0 / Double(n)
+        while count < n && pos < total {
+            let idx = map.position(pos)
+            let i0 = min(Int(idx), last)
+            scratchIndex[count] = i0
+            scratchFrac[count] = i0 < last ? Float(idx - Double(i0)) : 0
+            var env = 1.0
+            if fadeIn > 0 && pos < fadeIn { env = pos / fadeIn }
+            if fadeOut > 0 && total.isFinite && pos > total - fadeOut { env = min(env, max(0, (total - pos) / fadeOut)) }
+            scratchEnv[count] = Float(env * (main0 + (main1 - main0) * Double(count) * invN))
+            pos += rate
+            count += 1
+        }
+
         let busOffset = Int(f0 - blockStart)
         let chCount = clip.channelCount
-        for o in 0..<maxOutputs {
-            let og0 = v.outputs[o].gain(at: f0), og1 = v.outputs[o].gain(at: f1)
-            if og0 == 0 && og1 == 0 { continue }
-            var any = false
-            for c in 0..<chCount where xp[c * maxOutputs + o] != 0 { any = true; break }
-            if !any { continue }
-            let g0 = main0 * og0, g1 = main1 * og1
-            if g0 == 0 && g1 == 0 { continue }
-            let dst = bus + o * busFrames + busOffset
-            for c in 0..<chCount {
-                let x = xp[c * maxOutputs + o]
-                if x == 0 { continue }
-                clip.channels[c].withUnsafeBufferPointer { src in
-                    var pos = v.played
-                    for i in 0..<n {
-                        if pos >= total { break }
-                        let idx = map.position(pos)
-                        let i0 = Int(idx)
-                        let frac = Float(idx - Double(i0))
-                        var s = src[min(i0, src.count - 1)]
-                        if frac > 0 { s += (src[min(i0 + 1, src.count - 1)] - s) * frac }
-                        var env = 1.0
-                        if fadeIn > 0 && pos < fadeIn { env = pos / fadeIn }
-                        if fadeOut > 0 && total.isFinite && pos > total - fadeOut { env = min(env, max(0, (total - pos) / fadeOut)) }
-                        let g = g0 + (g1 - g0) * Double(i) / Double(n)
-                        dst[i] += s * x * Float(g * env)
-                        pos += rate
+        if count > 0 && (main0 > 0 || main1 > 0) {
+            for o in 0..<maxOutputs {
+                let og0 = v.outputs[o].gain(at: f0), og1 = v.outputs[o].gain(at: f1)
+                if og0 == 0 && og1 == 0 { continue }
+                let dst = bus + o * busFrames + busOffset
+                let ogStep = Float((og1 - og0) * invN)
+                for c in 0..<chCount {
+                    let x = xp[c * maxOutputs + o]
+                    if x == 0 { continue }
+                    let src = clip.samples + c * clip.frames
+                    var og = Float(og0) * x
+                    let step = ogStep * x
+                    for i in 0..<count {
+                        let i0 = scratchIndex[i]
+                        var s = src[i0]
+                        let fr = scratchFrac[i]
+                        if fr != 0 { s += (src[i0 + 1] - s) * fr }
+                        dst[i] += s * scratchEnv[i] * og
+                        og += step
                     }
                 }
             }

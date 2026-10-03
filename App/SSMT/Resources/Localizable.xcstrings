@@ -2790,6 +2790,23 @@
         }
       }
     },
+    "error.show.notReady": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file is still being prepared"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Файл ещё готовится"
+          }
+        }
+      }
+    },
     "export.copy": {
       "extractionState": "manual",
       "localizations": {
@@ -9114,6 +9131,57 @@
         }
       }
     },
+    "show.buffer": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audio buffer"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Аудиобуфер"
+          }
+        }
+      }
+    },
+    "show.buffer.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Larger is safer (no dropouts on a busy or older Mac); smaller reacts faster. 512 suits most shows."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Больше — надёжнее (без выпадений на загруженном или старом Mac), меньше — быстрее отклик. Для большинства шоу подходит 512."
+          }
+        }
+      }
+    },
+    "show.buffer.value": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d samples · %.1f ms"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d сэмплов · %.1f мс"
+          }
+        }
+      }
+    },
     "show.channel": {
       "extractionState": "manual",
       "localizations": {
@@ -9148,6 +9216,40 @@
         }
       }
     },
+    "show.check.interruptions": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The audio output was interrupted %d times and recovered — check the interface and cables"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Аудиовыход прерывался %d раз и восстанавливался — проверьте карту и кабели"
+          }
+        }
+      }
+    },
+    "show.check.loading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Files still being prepared: %d — wait before the show"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Файлы ещё готовятся: %d — дождитесь перед шоу"
+          }
+        }
+      }
+    },
     "show.check.ok": {
       "extractionState": "manual",
       "localizations": {
@@ -9161,6 +9263,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Всё готово"
+          }
+        }
+      }
+    },
+    "show.check.unreadable": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: this file cannot be read"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: файл не читается"
           }
         }
       }

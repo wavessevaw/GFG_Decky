@@ -496,7 +496,7 @@ struct ShowIssuesView: View {
         let issues = show.checkShow()
         VStack(alignment: .leading, spacing: 10) {
             Text(loc.t("show.check")).font(Theme.heading(15))
-            if issues.isEmpty {
+            if issues.isEmpty && show.loadingFiles == 0 && show.unreadableFiles.isEmpty && show.outputError == nil {
                 Label(loc.t("show.check.ok"), systemImage: "checkmark.circle.fill").foregroundStyle(Theme.statusGood)
             }
             ForEach(Array(issues.enumerated()), id: \.offset) { _, issue in
@@ -508,6 +508,19 @@ struct ShowIssuesView: View {
             }
             if show.outputError != nil {
                 Label(loc.t("show.output.error"), systemImage: "hifispeaker.slash").foregroundStyle(Theme.statusError)
+            }
+            if show.loadingFiles > 0 {
+                Label(String(format: loc.t("show.check.loading"), show.loadingFiles), systemImage: "hourglass")
+                    .font(.system(size: 12)).foregroundStyle(Theme.statusWarning)
+            }
+            ForEach(show.unreadableFiles.keys.sorted(), id: \.self) { p in
+                Label(String(format: loc.t("show.check.unreadable"), (p as NSString).lastPathComponent), systemImage: "xmark.octagon.fill")
+                    .font(.system(size: 12)).foregroundStyle(Theme.statusError)
+                    .help(show.unreadableFiles[p] ?? "")
+            }
+            if show.interruptions > 0 {
+                Label(String(format: loc.t("show.check.interruptions"), show.interruptions), systemImage: "exclamationmark.triangle.fill")
+                    .font(.system(size: 12)).foregroundStyle(Theme.statusWarning)
             }
         }
         .padding(16)

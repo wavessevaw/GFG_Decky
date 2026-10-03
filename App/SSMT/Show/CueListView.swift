@@ -146,7 +146,7 @@ struct CueListView: View {
                 }
             }
             group.notify(queue: .main) {
-                let audio = urls.filter { UTType(filenameExtension: $0.pathExtension)?.conforms(to: .audio) == true }
+                let audio = urls.filter { ShowStore.isPlayable($0) }
                 // Dropped onto a row: insert before it (after the previous cue).
                 var after: UUID?
                 if let before, let list = show.currentList {

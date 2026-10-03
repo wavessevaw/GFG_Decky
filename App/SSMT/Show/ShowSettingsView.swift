@@ -76,6 +76,19 @@ struct ShowSettingsView: View {
                 stepper(loc.t("show.panicFade"), value: Binding(get: { show.doc.panicFade }, set: { v in show.edit { $0.panicFade = v } }), range: 0...10, step: 0.5)
                 stepper(loc.t("show.goGuard"), value: Binding(get: { show.doc.doubleGoGuard }, set: { v in show.edit { $0.doubleGoGuard = v } }), range: 0...2, step: 0.1)
             }
+            HStack(spacing: 10) {
+                Text(loc.t("show.buffer")).font(.system(size: 13))
+                Picker("", selection: $show.bufferFrames) {
+                    ForEach([128, 256, 512, 1024, 2048], id: \.self) { n in
+                        Text(String(format: loc.t("show.buffer.value"), n, Double(n) / max(1, show.sampleRate) * 1000)).tag(n)
+                    }
+                }
+                .labelsHidden()
+                .frame(width: 200)
+                Spacer()
+            }
+            Text(loc.t("show.buffer.hint")).font(.system(size: 11)).foregroundStyle(Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
             Text(loc.t("show.settings.hint")).font(.system(size: 11)).foregroundStyle(Theme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }

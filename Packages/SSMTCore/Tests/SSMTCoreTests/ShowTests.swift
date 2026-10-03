@@ -606,4 +606,101 @@ final class ShowTests: XCTestCase {
         XCTAssertEqual(lists.first?.children.first?.fileTarget, "Music/Overture.wav")
         XCTAssertNil(QLabImport.lists(fromFile: Data("not a workspace".utf8)))
     }
+
+    // MARK: Reliability
+
+    func testMappedClipPlaysLikeOwnedClip() throws {
+        let samples = (0..<4800).map { Float(sin(Double($0) * 0.01)) }
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("ssmt-mapped-\(UUID()).raw")
+        let raw = samples + samples.map { -$0 }
+        try raw.withUnsafeBytes { Data($0) }.write(to: url)
+        defer { try? FileManager.default.removeItem(at: url) }
+        let mapped = try XCTUnwrap(AudioClip(sampleRate: 48000, channelCount: 2,
+                                             mapped: try NSData(contentsOf: url, options: .alwaysMapped)))
+        XCTAssertTrue(mapped.isMapped)
+        XCTAssertEqual(mapped.frames, 4800)
+        XCTAssertEqual(mapped.channel(1)[100], -samples[100])
+        mapped.prefetch(from: 0, count: 4800)
+        XCTAssertNil(AudioClip(sampleRate: 48000, channelCount: 3, mapped: NSData(data: Data(count: 10))))
+    }
+
+    /// Thousands of random operations (GO, stops, pauses, pads, panic, edits while playing):
+    /// nothing may crash, and a hard panic always leaves silence and no running cues.
+    func testRandomOperationsNeverBreakTheEngine() {
+        var doc = ShowDocument()
+        var cues: [Cue] = []
+        for i in 0..<30 {
+            var c: Cue
+            switch i % 7 {
+            case 0: c = audioCue("a", "\(i)", plays: 0)
+            case 1: c = Cue(kind: .fade, number: "\(i)"); c.fade?.duration = 0.2
+            case 2: c = Cue(kind: .group, number: "\(i)"); c.groupMode = GroupMode.allCases[i % 4]; c.children = [audioCue("b", ""), audioCue("a", "")]
+            case 3: c = Cue(kind: .wait, number: "\(i)"); c.duration = 0.1
+            case 4: c = Cue(kind: .devamp, number: "\(i)")
+            case 5: c = Cue(kind: .stop, number: "\(i)")
+            default: c = audioCue("b", "\(i)")
+            }
+            c.continueMode = ContinueMode.allCases[i % 3]
+            c.preWait = Double(i % 3) * 0.05
+            cues.append(c)
+        }
+        for i in cues.indices where cues[i].kind.needsTarget { cues[i].target = cues[(i + 3) % cues.count].id }
+        doc.lists[0].cues = cues
+        doc.lists[1].cues = [audioCue("a", ""), audioCue("b", "")]
+        doc.doubleGoGuard = 0
+        let rig = ShowRig(doc)
+        rig.clips["a"] = constClip(0.1, frames: 2400)
+        rig.clips["b"] = constClip(0.1, frames: 900, channels: 1)
+        var rng = SystemRandomNumberGenerator()
+        rig.engine.random = { Double.random(in: 0..<1, using: &rng) }
+        let pads = doc.lists[1].cues.map(\.id)
+        for step in 0..<3000 {
+            let all = rig.engine.document.allCues.map(\.id)
+            switch Int.random(in: 0..<10, using: &rng) {
+            case 0, 1, 2: rig.engine.go(now: rig.now)
+            case 3: if let id = all.randomElement(using: &rng) { rig.engine.stop(id, now: rig.now, fade: 0.05) }
+            case 4: if let id = all.randomElement(using: &rng) { rig.engine.pause(id, now: rig.now) }
+            case 5: if let id = all.randomElement(using: &rng) { rig.engine.resume(id, now: rig.now) }
+            case 6: rig.engine.pad(pads.randomElement(using: &rng)!, pressed: Bool.random(using: &rng), now: rig.now)
+            case 7: rig.engine.setPlayhead(rig.engine.document.lists[0].cues.randomElement(using: &rng)?.id)
+            case 8:
+                // Edit while playing: delete or re-add cues.
+                var d = rig.engine.document
+                if step % 2 == 0, let id = all.randomElement(using: &rng) { d.delete([id]) } else { d.lists[0].cues.append(audioCue("a", "x")) }
+                rig.engine.document = d
+            default: rig.engine.panic(now: rig.now)
+            }
+            rig.run(Int.random(in: 64...2048, using: &rng))
+            rig.engine.prefetch(now: rig.now)
+            _ = rig.engine.snapshot(now: rig.now)
+        }
+        rig.engine.panic(now: rig.now, hard: true)
+        rig.run(4096)
+        XCTAssertFalse(rig.engine.isActive)
+        XCTAssertTrue(rig.out[0].suffix(1024).allSatisfy { $0 == 0 }, "silence after a hard panic")
+        XCTAssertEqual(rig.mixer.droppedCommands.value, 0)
+    }
+
+    /// 64 stereo voices with fades must render far faster than real time.
+    func testMixerHandlesManyVoicesQuickly() {
+        let m = ShowMixer(sampleRate: 48000, maxOutputs: 16, maxVoices: 128)
+        let clip = constClip(0.01, frames: 48000 * 10)
+        for i in 0..<64 {
+            var xp = [[Double]](repeating: [Double](repeating: showSilenceDB, count: 16), count: 2)
+            xp[0][i % 16] = 0; xp[1][(i + 1) % 16] = 0
+            let setup = VoiceSetup(regionStart: 1000, regionLength: 48000 * 9, plays: 0, rate: i % 2 == 0 ? 1 : 0.97, levelDB: -6,
+                                   outputLevelsDB: [Double](repeating: 0, count: 16), crosspointsDB: xp, fadeInFrames: 4800, fadeOutFrames: 0)
+            m.send(.start(UUID(), clip: clip, setup: setup, at: 0))
+        }
+        let bufs = (0..<16).map { _ in UnsafeMutablePointer<Float>.allocate(capacity: 512) }
+        defer { bufs.forEach { $0.deallocate() } }
+        let blocks = 48000 * 5 / 512 // 5 s of audio
+        let t0 = Date()
+        for _ in 0..<blocks {
+            bufs.withUnsafeBufferPointer { m.render($0.baseAddress!, channelCount: 16, frames: 512) }
+        }
+        let elapsed = Date().timeIntervalSince(t0)
+        XCTAssertLessThan(elapsed, 2.5, "64 voices: \(elapsed) s to render 5 s of audio")
+        m.collectGarbage()
+    }
 }

@@ -86,6 +86,7 @@ public final class ShowEngine {
         var stopping = false
         var map = PlayMap(regionStart: 0, length: 1, plays: 1)
         var rate = 1.0
+        var clip: AudioClip?
         var playlist: [UUID] = []
         var playlistIndex = 0
         var stopTargetsAtEnd: [UUID] = []
@@ -232,6 +233,22 @@ public final class ShowEngine {
             case .action: beginAction(id, at: t)
             case .postWait: postWaitElapsed(id, at: t)
             case .end: actionFinished(id, at: t)
+            }
+        }
+    }
+
+    /// Reads the next `seconds` of every playing file into memory (mapped files), so the audio
+    /// thread never waits for the disk. Call from the control queue a few times per second.
+    public func prefetch(now: Int64, seconds: Double = 4) {
+        for inst in instances.values where inst.hasVoice && !inst.actionEnded {
+            guard let clip = inst.clip, clip.isMapped else { continue }
+            let played = Double(max(0, now - inst.actionAt - inst.pausedTotal)) * inst.rate
+            let step = sampleRate * 0.5 * inst.rate
+            var p = played
+            while p < played + seconds * sampleRate * inst.rate {
+                if let total = inst.map.total, p >= total { break }
+                clip.prefetch(from: Int(inst.map.position(p)), count: Int(step) + 1)
+                p += step
             }
         }
     }
@@ -406,6 +423,7 @@ public final class ShowEngine {
         send(.start(cue.id, clip: clip, setup: setup, at: t))
         instances[cue.id]?.hasVoice = true
         instances[cue.id]?.map = setup.map
+        instances[cue.id]?.clip = clip
         instances[cue.id]?.rate = setup.rate
         instances[cue.id]?.actionEnd = setup.outputFrames.map { t + $0 }
     }

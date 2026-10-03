@@ -46,7 +46,9 @@ final class ShowStore: ObservableObject {
     @Published private(set) var waveforms: [String: [Float]] = [:]
     @Published var collapsed = Set<Cue.ID>()
     /// Show mode: editing locked, big transport, keyboard GO.
-    @Published var showMode = false
+    @Published var showMode = false {
+        didSet { updateActivity() }
+    }
     @Published var showSettings = false
     /// OSC devices window; `oscWizardKind` opens it straight on a device's setup.
     @Published var showOSC = false
@@ -58,13 +60,36 @@ final class ShowStore: ObservableObject {
     @Published private(set) var outputError: String?
     @Published private(set) var sampleRate: Double = 48000
     @Published private(set) var memoryBytes = 0
+    /// Times the audio output was interrupted and recovered during this session.
+    @Published private(set) var interruptions = 0
+    /// Files still being prepared (decoded into the cache) and files that cannot be read.
+    @Published private(set) var loadingFiles = 0
+    @Published private(set) var unreadableFiles: [String: String] = [:]
+    /// Device I/O buffer: larger is safer on slow Macs, smaller has less delay.
+    @Published var bufferFrames = UserDefaults.standard.object(forKey: "ssmt.qtrl.buffer") as? Int ?? 512 {
+        didSet { UserDefaults.standard.set(bufferFrames, forKey: "ssmt.qtrl.buffer") }
+    }
+    private var activity: NSObjectProtocol?
     /// Clip lengths (seconds) and channel counts by resolved path, for the list and inspector.
     @Published private(set) var clipInfo: [String: (duration: Double, channels: Int)] = [:]
     @Published private(set) var missingFiles = Set<String>()
     @Published var lastError: String?
     /// The section is visible (keyboard shortcuts active).
     var isActive = false {
-        didSet { if isActive && !outputStarted { outputStarted = true; restartOutput() } }
+        didSet {
+            if isActive && !outputStarted { outputStarted = true; restartOutput() }
+            updateActivity()
+        }
+    }
+
+    /// While Qtrl is open the Mac must not sleep, nap or throttle audio; in show mode the display stays on too.
+    private func updateActivity() {
+        if let activity { ProcessInfo.processInfo.endActivity(activity) }
+        activity = nil
+        guard isActive || showMode, outputStarted, outputName != "Preview" else { return }
+        var options: ProcessInfo.ActivityOptions = [.userInitiated, .latencyCritical, .idleSystemSleepDisabled]
+        if showMode { options.insert(.idleDisplaySleepDisabled) }
+        activity = ProcessInfo.processInfo.beginActivity(options: options, reason: "Qtrl show playback")
     }
     private var outputStarted = false
 
@@ -76,7 +101,21 @@ final class ShowStore: ObservableObject {
     private var keyMonitor: Any?
 
     static let fileType = UTType(filenameExtension: "ssmtshow", conformingTo: .json) ?? .json
-    static let audioTypes: [UTType] = [.audio, .mp3, .wav, .aiff, .mpeg4Audio]
+    /// Any audio, plus video files (their sound is used).
+    static let audioTypes: [UTType] = [.audio, .mp3, .wav, .aiff, .mpeg4Audio, .audiovisualContent, .movie, .mpeg4Movie, .quickTimeMovie]
+
+    nonisolated static func isPlayable(_ url: URL) -> Bool {
+        guard let t = UTType(filenameExtension: url.pathExtension) else { return false }
+        return t.conforms(to: .audio) || t.conforms(to: .audiovisualContent)
+    }
+
+    /// Decoding runs two files at a time so the Mac stays responsive.
+    nonisolated private static let loader: OperationQueue = {
+        let q = OperationQueue()
+        q.maxConcurrentOperationCount = 2
+        q.qualityOfService = .userInitiated
+        return q
+    }()
 
     private static var autosaveURL: URL {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -92,6 +131,7 @@ final class ShowStore: ObservableObject {
             doc = ShowDocument(name: "")
         }
         listID = doc.cueLists.first?.id
+        DispatchQueue.global(qos: .background).async { ClipCache.prune() }
         if startAudio { outputStarted = true; restartOutput() }
     }
 
@@ -301,7 +341,8 @@ final class ShowStore: ObservableObject {
             guard let clip = core.clips.cached(path, sampleRate: sr) ?? core.clips.load(path, sampleRate: sr) else { return }
             let threshold: Float = 0.00316
             var first = clip.frames, last = 0
-            for ch in clip.channels {
+            for c in 0..<clip.channelCount {
+                let ch = clip.channel(c)
                 if let i = ch.firstIndex(where: { abs($0) > threshold }) { first = min(first, i) }
                 if let i = ch.lastIndex(where: { abs($0) > threshold }) { last = max(last, i) }
             }
@@ -330,8 +371,9 @@ final class ShowStore: ObservableObject {
             let per = Double(b - a) / Double(buckets)
             let stride = max(1, Int(per / 64)) // at most ~64 reads per column
             var out = [Float](repeating: 0, count: buckets)
-            for ch in clip.channels {
-                ch.withUnsafeBufferPointer { p in
+            for c in 0..<clip.channelCount {
+                let p = clip.channel(c)
+                do {
                     for k in 0..<buckets {
                         let s = a + Int(Double(k) * per), e = min(b, a + Int(Double(k + 1) * per) + 1)
                         var peak: Float = 0
@@ -485,6 +527,7 @@ final class ShowStore: ObservableObject {
     func restartOutput() {
         let d = doc
         let core = self.core
+        let buffer = bufferFrames
         let transport = osc.transport
         core.queue.async {
             core.timer?.cancel()
@@ -492,7 +535,14 @@ final class ShowStore: ObservableObject {
             core.output = nil
             var errorText: String?
             do {
-                core.output = try ShowAudioOutput(deviceUID: d.deviceUID, maxOutputs: 64)
+                let out = try ShowAudioOutput(deviceUID: d.deviceUID, maxOutputs: 64, bufferFrames: buffer)
+                out.onInterruption = { [weak self] problem in
+                    MainActor.assumeIsolated {
+                        self?.outputError = problem
+                        if problem == nil { self?.interruptions += 1 }
+                    }
+                }
+                core.output = out
             } catch {
                 errorText = "\(error)"
             }
@@ -500,15 +550,21 @@ final class ShowStore: ObservableObject {
             let mixer = core.output?.mixer
             mixer?.send(.patch(d.outputs.map { $0.deviceChannel ?? -1 }))
             let clips = core.clips
-            let engine = ShowEngine(document: d, sampleRate: sr, lookahead: Int64(sr * 0.03),
+            let ioBuffer = Double(core.output?.bufferFrames ?? buffer)
+            let engine = ShowEngine(document: d, sampleRate: sr, lookahead: Int64(max(sr * 0.03, ioBuffer * 3)),
                                     send: { op in mixer?.send(op) },
                                     clipProvider: { cue in
                                         guard let path = cue.audio.map({ ShowStore.resolve($0.file, showURL: core.showURL) }) else { return nil }
-                                        return clips.cached(path, sampleRate: sr) ?? clips.load(path, sampleRate: sr)
+                                        // Never decode on the playback queue: a file not ready yet is reported, and loaded meanwhile.
+                                        if let c = clips.cached(path, sampleRate: sr) { return c }
+                                        DispatchQueue.global(qos: .userInitiated).async { clips.load(path, sampleRate: sr) }
+                                        return nil
                                     })
             engine.oscSend = { device, message in transport.send(message, to: device) }
             engine.preload = { cue in
-                if let f = cue.audio?.file { clips.load(ShowStore.resolve(f, showURL: core.showURL), sampleRate: sr) }
+                guard let f = cue.audio?.file else { return }
+                let path = ShowStore.resolve(f, showURL: core.showURL)
+                DispatchQueue.global(qos: .userInitiated).async { clips.load(path, sampleRate: sr)?.prefetch(from: 0, count: Int(sr * 10)) }
             }
             engine.documentChanged = { [weak self] newDoc in
                 Task { @MainActor in self?.doc = newDoc }
@@ -522,6 +578,7 @@ final class ShowStore: ObservableObject {
                 e.advance(to: core.now)
                 core.output?.mixer.collectGarbage()
                 core.ticks += 1
+                if core.ticks % 20 == 0 { e.prefetch(now: core.now) }
                 if core.ticks % 8 == 0 {
                     let snap = e.snapshot(now: core.now)
                     let peaks = core.output?.mixer.takePeaks() ?? []
@@ -572,29 +629,41 @@ final class ShowStore: ObservableObject {
     private func refreshFiles(load: Bool = true) {
         let paths = Set(doc.allCues.compactMap { resolvedPath($0) })
         missingFiles = Set(paths.filter { !FileManager.default.fileExists(atPath: $0) })
+        unreadableFiles = unreadableFiles.filter { paths.contains($0.key) }
         guard load else { return }
         let sr = sampleRate
         let core = self.core
         let todo = paths.subtracting(missingFiles).filter { clipInfo[$0] == nil || core.clips.cached($0, sampleRate: sr) == nil }
         guard !todo.isEmpty else { return }
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            var info: [String: (Double, Int)] = [:]
-            var waves: [String: [Float]] = [:]
-            for p in todo {
-                if let c = core.clips.load(p, sampleRate: sr) {
-                    info[p] = (c.duration, c.channelCount)
-                    waves[p] = Self.overview(c)
+        // Where each file starts playing: read those seconds in advance so GO is instant.
+        var starts: [String: [Double]] = [:]
+        for c in doc.allCues where c.kind == .audio {
+            if let p = resolvedPath(c), let a = c.audio { starts[p, default: []].append(a.start) }
+        }
+        loadingFiles += todo.count
+        for p in todo {
+            let preroll = starts[p] ?? [0]
+            Self.loader.addOperation { [weak self] in
+                let clip = core.clips.load(p, sampleRate: sr)
+                for s in preroll { clip?.prefetch(from: Int(s * sr), count: Int(sr * 10)) }
+                let wave = clip.map { Self.overview($0) }
+                let failure = clip == nil ? core.clips.failure(p) : nil
+                let bytes = core.clips.totalBytes
+                Task { @MainActor in
+                    guard let self else { return }
+                    self.loadingFiles = max(0, self.loadingFiles - 1)
+                    if let clip {
+                        self.clipInfo[p] = (duration: clip.duration, channels: clip.channelCount)
+                        self.waveforms[p] = wave
+                        self.unreadableFiles[p] = nil
+                    } else if let failure {
+                        self.unreadableFiles[p] = failure
+                    }
+                    self.memoryBytes = bytes
                 }
             }
-            core.clips.forget(except: paths)
-            let bytes = core.clips.totalBytes
-            Task { @MainActor in
-                guard let self else { return }
-                for (k, v) in info { self.clipInfo[k] = (duration: v.0, channels: v.1) }
-                for (k, v) in waves { self.waveforms[k] = v }
-                self.memoryBytes = bytes
-            }
         }
+        DispatchQueue.global(qos: .utility).async { core.clips.forget(except: paths) }
     }
 
     /// Peak overview of a clip (all channels), `buckets` values in 0…1.
@@ -603,8 +672,9 @@ final class ShowStore: ObservableObject {
         guard n > 0 else { return [] }
         let size = max(1, n / buckets)
         var out = [Float](repeating: 0, count: min(buckets, n))
-        for ch in clip.channels {
-            ch.withUnsafeBufferPointer { p in
+        for c in 0..<clip.channelCount {
+            let p = clip.channel(c)
+            do {
                 for b in 0..<out.count {
                     var peak: Float = 0
                     let start = b * size, end = min(n, start + size)
