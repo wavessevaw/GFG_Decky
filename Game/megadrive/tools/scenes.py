@@ -890,7 +890,8 @@ def cover(seed=91):
     zl.rgb = zl.rgb[:, ::-1].copy()
     zl.alpha = zl.alpha[:, ::-1].copy()
     paste(zl, 214, 120)
-    paste(chars.Puppet(80, 96, chars.HERO_PAL, chars.HERO_LOOK).draw(chars.hero_pose('jab1')), 96, 118)
+    import hero
+    paste(hero.Hero().draw('jab1'), 84, 122)
     return s.finish()
 
 
@@ -905,10 +906,11 @@ def ending(seed=93):
     s.c.put(s.yy < 224, toon((0.3 + 0.3 * rays) * s.light, R['purple'], 0.5))
     logo(s, 'КОНЕЦ', 14, 5, R['yellow'], R['warm'], 6)
     s.desk(80, 170, 160, 30)
-    hero_img = chars.Puppet(80, 96, chars.HERO_PAL, chars.HERO_LOOK).draw(chars.hero_pose('cheer'))
+    import hero
+    hero_img = hero.Hero().draw('cheer')
     a = np.asarray(hero_img.image())
     m = a[..., 3] > 0
-    y0, x0 = 170 - 92, 120
-    sub = s.c.rgb[y0:y0 + 96, x0:x0 + 80]
+    y0, x0 = 170 - 92, 112
+    sub = s.c.rgb[y0:y0 + 96, x0:x0 + 96]
     sub[m] = a[..., :3][m]
     return s.finish()

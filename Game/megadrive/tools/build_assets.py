@@ -163,9 +163,10 @@ def write_sheet(rows, fw, fh, name, res_dir, forced):
 def build_sprites(res_dir):
     res = []
     ink = [key(to9(md('#000000')))]
-    # Hero: 80x96 frames (10x12 tiles), feet at y 92, x 40.
-    pup = chars.Puppet(80, 96, chars.HERO_PAL, chars.HERO_LOOK)
-    H = lambda n: frame_image(pup, chars.hero_pose(n))  # noqa: E731
+    # Hero: 96x96 frames (12x12 tiles), feet at y 92, x 48.
+    import hero
+    hz = hero.Hero()
+    H = lambda n: hz.draw(n).image()  # noqa: E731
     rows = [
         [H('guard')],
         [H('step1'), H('step2'), H('step3'), H('step4')],
@@ -178,8 +179,8 @@ def build_sprites(res_dir):
         [lying(H('hurt'), 92)],
         [H('cheer')],
     ]
-    write_sheet(rows, 80, 96, 'hero', res_dir, ink)
-    res.append('SPRITE spr_hero "hero.png" 10 12 FAST 0 NONE BALANCED')
+    write_sheet(rows, 96, 96, 'hero', res_dir, ink)
+    res.append('SPRITE spr_hero "hero.png" 12 12 FAST 0 NONE BALANCED')
     # Zombies share one palette: write them in one sheet set with the same forced colour order.
     zpal = None
     for name, look in (('loader', chars.LOADER), ('fan', chars.FAN), ('singer', chars.SINGER), ('boss', chars.BOSS)):

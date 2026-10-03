@@ -171,7 +171,7 @@ static void setFrame(Actor *a, s16 anim, s16 fr)
 static void place(Actor *a)
 {
     if (!a->spr) return;
-    const s16 ax = a->kind == K_BOSS ? 56 : 40, ay = a->kind == K_BOSS ? 116 : 92;
+    const s16 ax = a->kind == K_BOSS ? 56 : a->kind == K_HERO ? 48 : 40, ay = a->kind == K_BOSS ? 116 : 92;
     s16 sx = cellX() + UNFIX(a->x) - BG_camX() - ax;
     s16 sy = cellY() + UNFIX(a->y) - BG_camY() - ay;
     SPR_setPosition(a->spr, sx, sy);
@@ -824,7 +824,7 @@ static void stepPan(void)
     hero.y = FIX(FLOOR_Y - arc);
     setFrame(&hero, A_JUMP, done < total / 2 ? 0 : 1);
     if (hero.spr)
-        SPR_setPosition(hero.spr, cellX() + UNFIX(hero.x) + wx - BG_camX() - 40, cellY() + UNFIX(hero.y) + wy - BG_camY() - 92);
+        SPR_setPosition(hero.spr, cellX() + UNFIX(hero.x) + wx - BG_camX() - 48, cellY() + UNFIX(hero.y) + wy - BG_camY() - 92);
     if (panSteps == 0)
     {
         hero.y = FIX(FLOOR_Y);

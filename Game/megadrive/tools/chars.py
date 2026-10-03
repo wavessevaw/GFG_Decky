@@ -210,7 +210,8 @@ def fk(spec, look, cx=34.0, ground=88.0):
     fsho, bsho = rot(sw * 0.8, 2), rot(-sw, 1)
     neck = rot(1.2, -3)
     tilt = r(spec.get('head', 0))
-    head = (neck[0] + 7.5 * S(lean + tilt) + look.get('headfwd', 1), neck[1] - 7.5 * C(lean + tilt))
+    hl = look.get('headlen', 7.5)
+    head = (neck[0] + hl * S(lean + tilt) + look.get('headfwd', 1), neck[1] - hl * C(lean + tilt))
 
     def arm(sho, a):
         u, f = r(a[0]), r(a[1])
@@ -220,7 +221,7 @@ def fk(spec, look, cx=34.0, ground=88.0):
 
     fe, fh = arm(fsho, spec['fa'])
     be, bh = arm(bsho, spec['ba'])
-    return dict(face=1, head=head, neck=neck, fsho=fsho, bsho=bsho,
+    return dict(face=1, head=head, neck=neck, fsho=fsho, bsho=bsho, lean=spec.get('lean', 0), chest=chest, hip=(hx, hy),
                 fhip=(hx + 3, hy), bhip=(hx - 3, hy),
                 fkne=(hx + 3 + fk_[0], hy + fk_[1]), fank=(hx + 3 + fa_[0], hy + fa_[1]),
                 bkne=(hx - 3 + bk_[0], hy + bk_[1]), bank=(hx - 3 + ba_[0], hy + ba_[1]),
