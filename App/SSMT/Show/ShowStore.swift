@@ -16,7 +16,16 @@ private final class PlaybackCore: @unchecked Sendable {
     /// Folder for relative file paths (the show file's URL).
     var showURL: URL?
 
-    var now: Int64 { Int64(output?.mixer.framesRendered.value ?? 0) }
+    /// Sample rate of the backup clock (used while no audio output runs).
+    var clockRate: Double = 48000
+    private let clockStart = DispatchTime.now().uptimeNanoseconds
+
+    /// Show clock: the output's sample counter; without an output (interface missing) the system
+    /// clock keeps OSC cues, waits and auto-continue running.
+    var now: Int64 {
+        if let out = output { return Int64(out.mixer.framesRendered.value) }
+        return Int64(Double(DispatchTime.now().uptimeNanoseconds - clockStart) / 1e9 * clockRate)
+    }
 }
 
 /// Player layout: "Simple" (list + one side column) or "Expert" (library, pads, timeline).
@@ -547,6 +556,7 @@ final class ShowStore: ObservableObject {
                 errorText = "\(error)"
             }
             let sr = core.output?.sampleRate ?? 48000
+            core.clockRate = sr
             let mixer = core.output?.mixer
             mixer?.send(.patch(d.outputs.map { $0.deviceChannel ?? -1 }))
             let clips = core.clips
