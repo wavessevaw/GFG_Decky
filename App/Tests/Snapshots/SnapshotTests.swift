@@ -236,6 +236,25 @@ final class SnapshotTests: XCTestCase {
         show.layout = .simple
     }
 
+    func testWaveformEditor() throws {
+        prepareShow()
+        let show = Self.model.show
+        var doc = show.doc
+        doc.updateCue(show.selection.first!) { c in
+            c.audio?.start = 1.2
+            c.audio?.end = 38
+            c.audio?.fadeIn = 2
+            c.audio?.fadeOut = 4
+            c.audio?.loopStart = 10
+            c.audio?.loopEnd = 22
+            c.audio?.plays = 0
+        }
+        show.doc = doc
+        let cue = show.doc.cue(show.selection.first!)!
+        try snapshot(WaveformEditor(cue: cue, compact: false).padding(20).frame(width: 1000).background(Backdrop()),
+                     size: CGSize(width: 1000, height: 520), name: "show-waveform", loc: Self.ru)
+    }
+
     func testInputListPrintSheets() throws {
         let doc = Self.sampleInputList
         try snapshot(ChannelSheet(doc: doc, rows: doc.channelPages(rowsPerPage: InputListPrint.rowsPerPage)[0], page: "1 / 3"),

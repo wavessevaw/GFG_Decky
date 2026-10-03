@@ -35,9 +35,7 @@ public enum ShowTimeline {
     /// Length of an audio cue's action (nil = loops forever) from the file length in seconds.
     public static func audioDuration(_ cue: Cue, fileLength: Double?) -> Double? {
         guard let a = cue.audio, let length = fileLength else { return nil }
-        if a.plays == 0 { return nil }
-        let region = max(0, min(length, a.end ?? length) - a.start)
-        return region * Double(a.plays) / max(a.rate, 0.05)
+        return a.playMap(fileLength: length).total.map { $0 / max(a.rate, 0.05) }
     }
 
     /// Everything one GO on `cueID` starts: the cue, its continue chain and group contents.

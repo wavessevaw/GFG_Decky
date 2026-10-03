@@ -265,10 +265,8 @@ struct CueRow: View {
     private var actionText: String {
         switch cue.kind {
         case .audio:
-            guard let a = cue.audio, let p = show.resolvedPath(cue), let info = show.clipInfo[p] else { return "" }
-            if a.plays == 0 { return "∞" }
-            let region = max(0, (a.end ?? info.duration) - a.start)
-            return showTime(region * Double(a.plays) / max(a.rate, 0.05))
+            guard cue.audio != nil, let length = show.fileLength(cue) else { return "" }
+            return showTime(ShowTimeline.audioDuration(cue, fileLength: length))
         case .wait: return showTime(cue.duration)
         case .fade: return showTime(cue.fade?.duration)
         case .stop: return cue.stopFade > 0 ? showTime(cue.stopFade) : ""

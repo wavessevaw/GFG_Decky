@@ -404,4 +404,60 @@ final class ShowTests: XCTestCase {
         let inGroup = ShowTimeline.planGroup(doc, group: g.id) { lengths[$0.audio?.file ?? ""] }
         XCTAssertEqual(inGroup.first { $0.cueID == k1.id }?.start, 1)
     }
+
+    // MARK: Inner loop (intro → loop → outro)
+
+    func testInnerLoopPlaysIntroLoopOutro() {
+        let m = ShowMixer(sampleRate: 48000, maxOutputs: 2, maxVoices: 4)
+        let ramp = (0..<1000).map { Float($0) / 1000 }
+        let clip = AudioClip(sampleRate: 48000, channels: [ramp])
+        var a = AudioCueParams(file: "x")
+        a.loopStart = 200.0 / 48000
+        a.loopEnd = 400.0 / 48000
+        a.plays = 2
+        let map = a.playMap(fileLength: clip.duration, scale: 48000)
+        XCTAssertEqual(map.total ?? 0, 1200, accuracy: 0.5)
+        m.send(.start(UUID(), clip: clip, setup: VoiceSetup(map: map, rate: 1, levelDB: 0, outputLevelsDB: [0],
+                                                             crosspointsDB: [[0]]), at: 0))
+        let buf = UnsafeMutablePointer<Float>.allocate(capacity: 1400)
+        defer { buf.deallocate() }
+        var ptrs = [buf]
+        ptrs.withUnsafeMutableBufferPointer { p in
+            p.withMemoryRebound(to: UnsafeMutablePointer<Float>.self) { m.render(UnsafePointer($0.baseAddress!), channelCount: 1, frames: 1400) }
+        }
+        _ = ptrs
+        XCTAssertEqual(buf[150], 0.150, accuracy: 1e-4, "intro")
+        XCTAssertEqual(buf[450], 0.250, accuracy: 1e-4, "second pass of the loop")
+        XCTAssertEqual(buf[650], 0.450, accuracy: 1e-4, "outro")
+        XCTAssertEqual(buf[1250], 0, "ended")
+    }
+
+    func testDevampLeavesInnerLoopIntoOutro() {
+        var doc = ShowDocument()
+        var a = audioCue("a", "1", plays: 0)
+        a.audio?.loopStart = 1000.0 / 48000
+        a.audio?.loopEnd = 2000.0 / 48000
+        var d = Cue(kind: .devamp, number: "2"); d.target = a.id
+        doc.lists[0].cues = [a, d]
+        let rig = ShowRig(doc)
+        rig.clips["a"] = AudioClip(sampleRate: 48000, channels: [(0..<3000).map { $0 < 2000 ? 1 : 0.5 }])
+        rig.engine.go(now: 0)
+        rig.run(20000)                       // still looping
+        XCTAssertTrue(rig.engine.isActive)
+        rig.engine.go(now: rig.now)
+        rig.run(4000)
+        XCTAssertFalse(rig.engine.isActive, "outro played, cue ended")
+        XCTAssertTrue(rig.out[0].contains { abs($0 - 0.5) < 1e-6 }, "outro (after the loop) was heard")
+        let snapEnd = rig.out[0].lastIndex { abs($0 - 0.5) < 1e-6 }!
+        XCTAssertEqual(rig.out[0][snapEnd + 1], 0)
+    }
+
+    func testTimelineDurationWithInnerLoop() {
+        var c = audioCue("a", "1", plays: 3)
+        c.audio?.loopStart = 2
+        c.audio?.loopEnd = 4
+        XCTAssertEqual(ShowTimeline.audioDuration(c, fileLength: 10) ?? 0, 2 + 2 * 3 + 6, accuracy: 1e-9)
+        c.audio?.plays = 0
+        XCTAssertNil(ShowTimeline.audioDuration(c, fileLength: 10))
+    }
 }

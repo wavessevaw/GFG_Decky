@@ -238,8 +238,7 @@ struct ShowTimelineView: View {
     private func drawWave(_ ctx: inout GraphicsContext, cue: Cue, clip: TimelineClip, rect r: CGRect, pps: Double, alpha: Double) {
         guard let a = cue.audio, let path = show.resolvedPath(cue), let wave = show.waveforms[path], !wave.isEmpty,
               let length = show.clipInfo[path]?.duration, length > 0 else { return }
-        let regionStart = a.start
-        let regionLength = max(0.01, min(length, a.end ?? length) - a.start)
+        let map = a.playMap(fileLength: length)
         let rate = max(a.rate, 0.05)
         var p = Path()
         let mid = r.midY
@@ -248,7 +247,7 @@ struct ShowTimelineView: View {
         let xEnd = min(r.maxX, 4000)
         while x < xEnd {
             let tau = Double(x - r.minX) / pps * rate
-            let fileT = regionStart + tau.truncatingRemainder(dividingBy: regionLength)
+            let fileT = map.position(tau)
             let i = min(wave.count - 1, max(0, Int(fileT / length * Double(wave.count))))
             let h = CGFloat(wave[i]) * half
             p.move(to: CGPoint(x: x, y: mid - h))

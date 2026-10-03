@@ -190,6 +190,105 @@ final class ShowStore: ObservableObject {
         selection = Set(cues.map(\.id))
     }
 
+    // MARK: Audition (waveform editor)
+
+    /// What the editor is playing: cue, file position it started from, when, and how long (seconds).
+    struct Audition: Equatable {
+        var cue: UUID
+        var from: Double
+        var startedAt: Date
+        var length: Double
+        var rate: Double
+    }
+    @Published private(set) var audition: Audition?
+    private static let auditionVoice = UUID()
+
+    /// Plays a cue's file from `from` (file seconds) for `length` seconds (nil = to the region end).
+    func audition(_ cue: Cue, from: Double, length: Double? = nil) {
+        guard let path = resolvedPath(cue), let a = cue.audio, let fileLen = fileLength(cue) else { return }
+        let end = min(fileLen, length.map { from + $0 } ?? (a.end ?? fileLen))
+        guard end > from else { return }
+        let outs = doc.outputs.count
+        let voice = Self.auditionVoice
+        let core = self.core
+        core.queue.async {
+            guard let mixer = core.output?.mixer else { return }
+            let sr = mixer.sampleRate
+            guard let clip = core.clips.cached(path, sampleRate: sr) ?? core.clips.load(path, sampleRate: sr),
+                  let setup = ShowEngine.voiceSetup(cue, clip: clip, outputs: outs, from: from, length: end - from) else { return }
+            mixer.send(.start(voice, clip: clip, setup: setup, at: core.now + Int64(sr * 0.03)))
+        }
+        audition = Audition(cue: cue.id, from: from, startedAt: Date().addingTimeInterval(0.03), length: end - from,
+                            rate: max(0.05, a.rate))
+        let token = audition
+        DispatchQueue.main.asyncAfter(deadline: .now() + (end - from) / max(0.05, a.rate) + 0.1) { [weak self] in
+            if self?.audition == token { self?.audition = nil }
+        }
+    }
+
+    func stopAudition() {
+        let voice = Self.auditionVoice
+        let core = self.core
+        core.queue.async {
+            guard let mixer = core.output?.mixer else { return }
+            mixer.send(.stop(voice, at: core.now, fadeFrames: Int64(mixer.sampleRate * 0.01)))
+        }
+        audition = nil
+    }
+
+    /// Sets start and end at the first and last sound above −50 dBFS.
+    func trimSilence(_ cueID: UUID) {
+        guard let cue = doc.cue(cueID), let path = resolvedPath(cue) else { return }
+        let sr = sampleRate
+        let core = self.core
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let clip = core.clips.cached(path, sampleRate: sr) ?? core.clips.load(path, sampleRate: sr) else { return }
+            let threshold: Float = 0.00316
+            var first = clip.frames, last = 0
+            for ch in clip.channels {
+                if let i = ch.firstIndex(where: { abs($0) > threshold }) { first = min(first, i) }
+                if let i = ch.lastIndex(where: { abs($0) > threshold }) { last = max(last, i) }
+            }
+            guard first < last else { return }
+            let start = max(0, Double(first) / sr - 0.01)
+            let end = min(clip.duration, Double(last) / sr + 0.05)
+            Task { @MainActor in
+                self?.edit(self?.loc("show.wave.trim") ?? "") { d in
+                    d.updateCue(cueID) { c in
+                        c.audio?.start = (start * 1000).rounded() / 1000
+                        c.audio?.end = end >= clip.duration - 0.001 ? nil : (end * 1000).rounded() / 1000
+                    }
+                }
+            }
+        }
+    }
+
+    /// Peaks of a file section (file seconds) in `buckets` columns, from the decoded audio; nil if not loaded.
+    func waveSlice(path: String, from: Double, to: Double, buckets: Int) async -> [Float]? {
+        let sr = sampleRate
+        let core = self.core
+        return await Task.detached(priority: .userInitiated) { () -> [Float]? in
+            guard let clip = core.clips.cached(path, sampleRate: sr), buckets > 0, to > from else { return nil }
+            let a = max(0, Int(from * sr)), b = min(clip.frames, Int(to * sr))
+            guard b > a else { return nil }
+            let per = Double(b - a) / Double(buckets)
+            let stride = max(1, Int(per / 64)) // at most ~64 reads per column
+            var out = [Float](repeating: 0, count: buckets)
+            for ch in clip.channels {
+                ch.withUnsafeBufferPointer { p in
+                    for k in 0..<buckets {
+                        let s = a + Int(Double(k) * per), e = min(b, a + Int(Double(k + 1) * per) + 1)
+                        var peak: Float = 0
+                        var i = s
+                        while i < e { peak = max(peak, abs(p[i])); i += stride }
+                        out[k] = max(out[k], min(1, peak))
+                    }
+                }
+            }
+            return out
+        }.value
+    }
+
     // MARK: One-shot pads
 
     var currentBank: CueList? { doc.banks.first { $0.id == bankID } ?? doc.banks.first }

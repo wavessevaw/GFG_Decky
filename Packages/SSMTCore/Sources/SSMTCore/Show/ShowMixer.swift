@@ -16,12 +16,73 @@ public final class AudioClip: @unchecked Sendable {
     }
 }
 
+/// How a region plays: intro, a loop played `plays` times (0 = until devamp / stop), outro.
+/// Without an inner loop the whole region is the loop (intro and outro are empty).
+/// Units are free (frames in the mixer, seconds in the UI); `p` is the distance played.
+public struct PlayMap: Equatable, Sendable {
+    public var regionStart: Double
+    public var intro: Double
+    public var loop: Double
+    public var outro: Double
+    public var plays: Int
+
+    public init(regionStart: Double, intro: Double, loop: Double, outro: Double, plays: Int) {
+        self.regionStart = regionStart
+        self.intro = max(0, intro)
+        self.loop = max(1e-9, loop)
+        self.outro = max(0, outro)
+        self.plays = max(0, plays)
+    }
+
+    /// The whole region repeated `plays` times.
+    public init(regionStart: Double, length: Double, plays: Int) {
+        self.init(regionStart: regionStart, intro: 0, loop: length, outro: 0, plays: plays)
+    }
+
+    /// Total distance (nil = endless).
+    public var total: Double? { plays == 0 ? nil : intro + loop * Double(plays) + outro }
+
+    /// Position in the file for a played distance.
+    @inline(__always) public func position(_ p: Double) -> Double {
+        if p < intro { return regionStart + p }
+        let q = p - intro
+        if plays == 0 || q < loop * Double(plays) {
+            return regionStart + intro + q.truncatingRemainder(dividingBy: loop)
+        }
+        return regionStart + intro + loop + (q - loop * Double(plays))
+    }
+
+    /// Loop pass (0-based) at a played distance; 0 during the intro.
+    public func iteration(_ p: Double) -> Int { p < intro ? 0 : Int((p - intro) / loop) }
+
+    /// Devamp at distance `p`: finish the current pass, then play the outro.
+    public func devamped(at p: Double) -> PlayMap {
+        var m = self
+        let n = iteration(p) + 1
+        if plays == 0 || plays > n { m.plays = n }
+        return m
+    }
+}
+
+extension AudioCueParams {
+    /// Play map in seconds × `scale` (pass the sample rate for frames), for a file of `length` seconds.
+    public func playMap(fileLength length: Double, scale: Double = 1) -> PlayMap {
+        let s = min(max(0, start), max(0, length))
+        let e = max(s, min(length, end ?? length))
+        if let ls = loopStart, let le = loopEnd {
+            let a = min(max(ls, s), e), b = min(max(le, a), e)
+            if b - a > 0.001 {
+                return PlayMap(regionStart: s * scale, intro: (a - s) * scale, loop: (b - a) * scale,
+                               outro: (e - b) * scale, plays: plays)
+            }
+        }
+        return PlayMap(regionStart: s * scale, length: max(1e-6, e - s) * scale, plays: plays)
+    }
+}
+
 /// Everything a voice needs to start: region, loops, rate and levels.
 public struct VoiceSetup: Sendable {
-    public var regionStart: Int
-    public var regionLength: Int
-    /// 0 = loop until stopped / devamped.
-    public var plays: Int
+    public var map: PlayMap
     public var rate: Double
     public var levelDB: Double
     public var outputLevelsDB: [Double]
@@ -30,11 +91,9 @@ public struct VoiceSetup: Sendable {
     public var fadeInFrames: Int
     public var fadeOutFrames: Int
 
-    public init(regionStart: Int, regionLength: Int, plays: Int, rate: Double, levelDB: Double,
+    public init(map: PlayMap, rate: Double, levelDB: Double,
                 outputLevelsDB: [Double], crosspointsDB: [[Double]], fadeInFrames: Int = 0, fadeOutFrames: Int = 0) {
-        self.regionStart = regionStart
-        self.regionLength = regionLength
-        self.plays = plays
+        self.map = map
         self.rate = rate
         self.levelDB = levelDB
         self.outputLevelsDB = outputLevelsDB
@@ -43,10 +102,17 @@ public struct VoiceSetup: Sendable {
         self.fadeOutFrames = fadeOutFrames
     }
 
+    /// Whole region played `plays` times.
+    public init(regionStart: Int, regionLength: Int, plays: Int, rate: Double, levelDB: Double,
+                outputLevelsDB: [Double], crosspointsDB: [[Double]], fadeInFrames: Int = 0, fadeOutFrames: Int = 0) {
+        self.init(map: PlayMap(regionStart: Double(regionStart), length: Double(regionLength), plays: plays), rate: rate,
+                  levelDB: levelDB, outputLevelsDB: outputLevelsDB, crosspointsDB: crosspointsDB,
+                  fadeInFrames: fadeInFrames, fadeOutFrames: fadeOutFrames)
+    }
+
     /// Frames of output until a finite voice ends (nil = loops forever).
     public var outputFrames: Int64? {
-        guard plays > 0 else { return nil }
-        return Int64((Double(regionLength) * Double(plays) / max(rate, 1e-6)).rounded(.up))
+        map.total.map { Int64(($0 / max(rate, 1e-6)).rounded(.up)) }
     }
 }
 
@@ -146,7 +212,7 @@ final class Voice {
     var startFrame: Int64 = 0
     /// Source frames advanced since start (over all loop iterations).
     var played: Double = 0
-    var plays = 1
+    var map = PlayMap(regionStart: 0, length: 1, plays: 1)
     var paused = false
     var pauseAt: Int64 = .max
     var resumeAt: Int64 = .max
@@ -263,7 +329,7 @@ public final class ShowMixer: @unchecked Sendable {
             v.setup = setup
             v.startFrame = at
             v.played = 0
-            v.plays = setup.plays
+            v.map = setup.map
             v.paused = false
             v.pauseAt = .max; v.resumeAt = .max; v.devampAt = .max; v.stopAt = .max
             v.main = LevelRamp(setup.levelDB)
@@ -352,9 +418,7 @@ public final class ShowMixer: @unchecked Sendable {
             if v.devampAt > f && v.devampAt < next { next = v.devampAt }
             if v.stopAt > f && v.stopAt < next { next = v.stopAt }
             if v.devampAt <= f {
-                if v.plays == 0 || v.plays > Int(v.played / Double(setup.regionLength)) + 1 {
-                    v.plays = Int(v.played / Double(setup.regionLength)) + 1
-                }
+                v.map = v.map.devamped(at: v.played)
                 v.devampAt = .max
             }
             if v.pauseAt <= f { v.paused = true; v.pauseAt = .max }
@@ -380,9 +444,8 @@ public final class ShowMixer: @unchecked Sendable {
                      from f0: Int64, to f1: Int64, blockStart: Int64) -> Bool {
         let n = Int(f1 - f0)
         guard n > 0 else { return true }
-        let L = Double(setup.regionLength)
-        guard L >= 1 else { return false }
-        let total = v.plays > 0 ? L * Double(v.plays) : .infinity
+        let map = v.map
+        let total = map.total ?? .infinity
         let rate = setup.rate
         let fadeIn = Double(setup.fadeInFrames), fadeOut = Double(setup.fadeOutFrames)
         // Block-rate gains, linearly interpolated per sample.
@@ -406,16 +469,11 @@ public final class ShowMixer: @unchecked Sendable {
                     var pos = v.played
                     for i in 0..<n {
                         if pos >= total { break }
-                        let inRegion = pos.truncatingRemainder(dividingBy: L)
-                        let idx = Double(setup.regionStart) + inRegion
+                        let idx = map.position(pos)
                         let i0 = Int(idx)
                         let frac = Float(idx - Double(i0))
                         var s = src[min(i0, src.count - 1)]
-                        if frac > 0 {
-                            var i1 = i0 + 1
-                            if i1 >= setup.regionStart + setup.regionLength { i1 = v.plays == 1 ? i0 : setup.regionStart }
-                            s += (src[min(i1, src.count - 1)] - s) * frac
-                        }
+                        if frac > 0 { s += (src[min(i0 + 1, src.count - 1)] - s) * frac }
                         var env = 1.0
                         if fadeIn > 0 && pos < fadeIn { env = pos / fadeIn }
                         if fadeOut > 0 && total.isFinite && pos > total - fadeOut { env = min(env, max(0, (total - pos) / fadeOut)) }

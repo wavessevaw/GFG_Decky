@@ -165,40 +165,14 @@ private struct CueInspectorContent: View {
                 Spacer()
                 Button(loc.t("show.chooseFile")) { show.chooseFile(for: cue.id) }.buttonStyle(SSMTButtonStyle())
             }
-            HStack(spacing: 8) {
-                seconds(loc.t("show.start"), audio(\.start, 0))
-                VStack(alignment: .leading, spacing: 4) {
-                    caption(loc.t("show.end"))
-                    TextField(info.map { showTime($0.duration) } ?? "—", value: Binding(
-                        get: { cue.audio?.end }, set: { v in show.updateCue(cue.id) { $0.audio?.end = v.map { max(0, $0) } } }),
-                              format: .number.precision(.fractionLength(0...2)))
-                        .textFieldStyle(.roundedBorder)
-                }
+            VStack(alignment: .leading, spacing: 4) {
+                caption(loc.t("show.rate"))
+                TextField("", value: audio(\.rate, 1), format: .number.precision(.fractionLength(0...3)))
+                    .textFieldStyle(.roundedBorder).frame(width: 70)
             }
-            HStack(spacing: 8) {
-                VStack(alignment: .leading, spacing: 4) {
-                    caption(loc.t("show.plays"))
-                    HStack(spacing: 6) {
-                        Toggle("∞", isOn: Binding(get: { cue.audio?.plays == 0 }, set: { v in
-                            show.updateCue(cue.id) { $0.audio?.plays = v ? 0 : 1 }
-                        }))
-                        .toggleStyle(.button)
-                        if cue.audio?.plays != 0 {
-                            Stepper("\(cue.audio?.plays ?? 1)", value: audio(\.plays, 1), in: 1...999)
-                        }
-                    }
-                }
-                Spacer()
-                VStack(alignment: .leading, spacing: 4) {
-                    caption(loc.t("show.rate"))
-                    TextField("", value: audio(\.rate, 1), format: .number.precision(.fractionLength(0...3)))
-                        .textFieldStyle(.roundedBorder).frame(width: 70)
-                }
-            }
-            HStack(spacing: 8) {
-                seconds(loc.t("show.fadeIn"), audio(\.fadeIn, 0))
-                seconds(loc.t("show.fadeOut"), audio(\.fadeOut, 0))
-            }
+        }
+        section(loc.t("show.wave.title"), icon: "waveform") {
+            WaveformEditor(cue: cue, compact: true)
         }
     }
 

@@ -82,9 +82,8 @@ public final class ShowEngine {
         var pausedTotal: Int64 = 0
         var hasVoice = false
         var stopping = false
-        var regionLength = 1
+        var map = PlayMap(regionStart: 0, length: 1, plays: 1)
         var rate = 1.0
-        var plays = 1
         var playlist: [UUID] = []
         var playlistIndex = 0
         var stopTargetsAtEnd: [UUID] = []
@@ -250,8 +249,8 @@ public final class ShowEngine {
                 let elapsedFrames = max(0, clock - inst.actionAt - inst.pausedTotal)
                 let dur = inst.actionEnd.map { Double($0 - inst.actionAt - inst.pausedTotal) / sampleRate }
                 var iteration: Int?
-                if inst.hasVoice && inst.plays != 1 {
-                    iteration = Int(Double(elapsedFrames) * inst.rate / Double(max(1, inst.regionLength))) + 1
+                if inst.hasVoice && inst.map.plays != 1 {
+                    iteration = inst.map.iteration(Double(elapsedFrames) * inst.rate) + 1
                 }
                 running.append(RunningCue(id: inst.cueID, phase: inst.stopping ? .stopping : .running,
                                           elapsed: Double(elapsedFrames) / sampleRate, duration: dur,
@@ -392,29 +391,38 @@ public final class ShowEngine {
     }
 
     private func startAudio(_ cue: Cue, at t: Int64) {
-        guard let p = cue.audio, let clip = clipProvider(cue) else {
+        guard let clip = clipProvider(cue), let setup = Self.voiceSetup(cue, clip: clip, outputs: document.outputs.count) else {
             problems[cue.id] = "error.show.missingFile"
             return
         }
+        send(.start(cue.id, clip: clip, setup: setup, at: t))
+        instances[cue.id]?.hasVoice = true
+        instances[cue.id]?.map = setup.map
+        instances[cue.id]?.rate = setup.rate
+        instances[cue.id]?.actionEnd = setup.outputFrames.map { t + $0 }
+    }
+
+    /// Voice settings of an audio cue for a decoded clip (also used to audition from the editor).
+    public static func voiceSetup(_ cue: Cue, clip: AudioClip, outputs: Int, from: Double? = nil, length: Double? = nil) -> VoiceSetup? {
+        guard var p = cue.audio, clip.frames > 0 else { return nil }
         let sr = clip.sampleRate
-        let start = min(max(0, Int(p.start * sr)), max(0, clip.frames - 1))
-        let end = min(clip.frames, p.end.map { Int($0 * sr) } ?? clip.frames)
-        let length = max(1, end - start)
-        let outs = max(1, document.outputs.count)
-        let setup = VoiceSetup(
-            regionStart: start, regionLength: length, plays: max(0, p.plays), rate: max(0.05, p.rate),
+        if let from {
+            // Audition: play from `from` (optionally for `length` seconds), once, without fades.
+            p.start = from
+            p.end = length.map { min(clip.duration, from + $0) } ?? p.end
+            p.loopStart = nil; p.loopEnd = nil
+            p.plays = 1
+            p.fadeIn = 0; p.fadeOut = 0
+        }
+        let outs = max(1, outputs)
+        return VoiceSetup(
+            map: p.playMap(fileLength: clip.duration, scale: sr), rate: max(0.05, p.rate),
             levelDB: p.level,
             outputLevelsDB: (0..<outs).map { p.outputLevel($0) },
             crosspointsDB: (0..<clip.channelCount).map { c in
                 (0..<outs).map { p.crosspoint(channel: c, output: $0, fileChannels: clip.channelCount) }
             },
             fadeInFrames: Int(p.fadeIn * sr), fadeOutFrames: Int(p.fadeOut * sr))
-        send(.start(cue.id, clip: clip, setup: setup, at: t))
-        instances[cue.id]?.hasVoice = true
-        instances[cue.id]?.regionLength = length
-        instances[cue.id]?.rate = setup.rate
-        instances[cue.id]?.plays = setup.plays
-        instances[cue.id]?.actionEnd = setup.outputFrames.map { t + $0 }
     }
 
     /// Audio cues with a voice under `id` (itself or the children of a group).
@@ -474,11 +482,9 @@ public final class ShowEngine {
     private func devamp(_ target: UUID, by cue: Cue, at t: Int64) {
         guard var inst = instances[target], inst.hasVoice, !inst.actionEnded, inst.phase == .running else { return }
         let played = Double(max(0, t - inst.actionAt - inst.pausedTotal)) * inst.rate
-        let newPlays = Int(played / Double(inst.regionLength)) + 1
-        if inst.plays == 0 || inst.plays > newPlays {
-            inst.plays = newPlays
-            inst.actionEnd = inst.actionAt + inst.pausedTotal
-                + Int64((Double(inst.regionLength) * Double(newPlays) / inst.rate).rounded(.up))
+        inst.map = inst.map.devamped(at: played)
+        if let total = inst.map.total {
+            inst.actionEnd = inst.actionAt + inst.pausedTotal + Int64((total / inst.rate).rounded(.up))
         }
         if cue.devampStartsNext, let (lid, parent) = location(of: cue.id), let n = next(after: cue.id, list: lid, parent: parent) {
             inst.onEnd = (n.id, lid, parent)

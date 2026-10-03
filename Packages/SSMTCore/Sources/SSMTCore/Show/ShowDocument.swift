@@ -93,6 +93,10 @@ public struct AudioCueParams: Codable, Equatable, Sendable {
     /// Crosspoints: `routing[fileChannel][output]` in dB; `showSilenceDB` or below = not routed.
     /// Empty = default routing (mono → outputs 1+2, stereo → 1/2, more channels → 1:1).
     public var routing: [[Double]] = []
+    /// Optional loop inside the region (file seconds): the intro plays once, this part `plays`
+    /// times (0 = until devamp / stop), then the rest. nil = the whole region loops.
+    public var loopStart: Double?
+    public var loopEnd: Double?
     /// Built-in fade-in at start and fade-out at the end of the region (seconds).
     public var fadeIn: Double = 0
     public var fadeOut: Double = 0
