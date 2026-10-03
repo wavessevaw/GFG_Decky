@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<title>SSMT · ретрофутуристичный прибор</title>
+<style>
+  body { margin:0; background:#0A0A0B; color:#F2F2F2; font-family:"DejaVu Sans Condensed","DejaVu Sans",sans-serif; }
+  h1 { font-size:15px; letter-spacing:2px; margin:22px 24px 0; color:#A3A6AD; font-weight:600; }
+  .wrap { display:flex; gap:20px; padding:20px 24px; }
+  .card { background:#121316; padding:14px; border:1px solid rgba(255,255,255,.12);
+          clip-path: polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px); }
+  .cap { font-size:12px; letter-spacing:1px; color:#A3A6AD; text-transform:uppercase; margin:8px 2px 0; max-width:440px; }
+  .cap b { color:#FF6B1A; margin-right:6px; }
+  .rows { padding:0 24px 24px; display:flex; flex-direction:column; gap:8px; width:900px; }
+</style></head>
+<body>
+<h1>SSMT · РЕТРОФУТУРИСТИЧНЫЙ ПРИБОР — ТРИ СОСТОЯНИЯ + МИНИ-ИНДИКАТОР ДЛЯ СПИСКОВ</h1>
+<div class="wrap" id="wrap"></div>
+<div class="rows" id="rows"></div>
+<script>
+function closeness(c){
+  const s=[[0,[255,45,61]],[0.4,[255,107,26]],[0.75,[255,194,26]],[1,[75,224,138]]];
+  c=Math.max(0,Math.min(1,c));
+  for(let i=1;i<s.length;i++) if(c<=s[i][0]){const[a0,a]=s[i-1],[a1,b]=s[i];const t=(c-a0)/(a1-a0);
+    return `rgb(${a.map((v,k)=>Math.round(v+(b[k]-v)*t)).join(',')})`;}
+  return 'rgb(75,224,138)';
+}
+function meter(o){
+  const W=440,H=330,cx=220,cy=350,R=290,SPAN=34,id=o.id;
+  const ang=p=>(-90+p*SPAN)*Math.PI/180, pt=(p,r)=>[cx+r*Math.cos(ang(p)),cy+r*Math.sin(ang(p))];
+  const TOL=o.tol;
+  const clAt=p=> o.mode==='c' ? (Math.abs(p)<=TOL?1:Math.max(0,1-(Math.abs(p)-TOL)/(1-TOL)))
+                              : (((p+1)/2)>=TOL?1:((p+1)/2)/TOL);
+  const needle=o.mode==='c'?o.v:o.v*2-1, c=clAt(needle), col=closeness(c), inTune=c>=1;
+  const faceH=H-112;
+  let s=`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+   <linearGradient id="bk${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a2622"/><stop offset=".5" stop-color="#16130f"/><stop offset="1" stop-color="#0b0a08"/></linearGradient>
+   <radialGradient id="fc${id}" cx=".5" cy=".9" r=".9"><stop offset="0" stop-color="#1e2023"/><stop offset="1" stop-color="#0c0d0e"/></radialGradient>
+   <linearGradient id="gl${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".13"/><stop offset=".42" stop-color="#fff" stop-opacity=".02"/><stop offset=".43" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <filter id="glow${id}" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="soft${id}" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2"/></filter>
+   <filter id="grain${id}"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2"/><feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .07 0"/></filter>
+   <clipPath id="win${id}"><rect x="22" y="20" width="${W-44}" height="${faceH}" rx="6"/></clipPath>
+   <pattern id="scan${id}" width="4" height="3" patternUnits="userSpaceOnUse"><rect width="4" height="1" fill="#fff" opacity=".035"/></pattern>
+  </defs>
+  <rect x="2" y="2" width="${W-4}" height="${H-4}" rx="14" fill="url(#bk${id})" stroke="#000" stroke-width="2"/>
+  <rect x="2" y="2" width="${W-4}" height="${H-4}" rx="14" filter="url(#grain${id})"/>
+  <rect x="22" y="20" width="${W-44}" height="${faceH}" rx="6" fill="url(#fc${id})" stroke="#000" stroke-width="2"/>
+  <g clip-path="url(#win${id})">`;
+  // blueprint grid
+  for(let x=22;x<W-22;x+=20) s+=`<line x1="${x}" y1="20" x2="${x}" y2="${20+faceH}" stroke="#fff" stroke-opacity=".025"/>`;
+  for(let y=20;y<20+faceH;y+=20) s+=`<line x1="22" y1="${y}" x2="${W-22}" y2="${y}" stroke="#fff" stroke-opacity=".025"/>`;
+  // LED segment arc (futuristic layer): segments lit between target and needle
+  const SEG=33;
+  for(let i=0;i<SEG;i++){
+    const p=-1+2*(i+.5)/SEG, a=ang(p);
+    const r0=R-12, r1=R-2, w=7;
+    const [x0,y0]=pt(p,r0),[x1,y1]=pt(p,r1);
+    let lit;
+    if(o.mode==='c') lit = (needle>=0 ? (p>=-0.03 && p<=needle) : (p<=0.03 && p>=needle)) || (inTune && Math.abs(p)<=TOL+0.04);
+    else lit = p<=needle;
+    const segCol = lit ? closeness(clAt(p)) : '#2a2c30';
+    s+=`<line x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}" stroke="${segCol}" stroke-width="${w}" stroke-linecap="butt" ${lit?`filter="url(#glow${id})"`:''} opacity="${lit?1:.9}"/>`;
+  }
+  // printed retro scale: thin coloured print line + ticks + numbers
+  const N=60;
+  for(let i=0;i<N;i++){const p0=-1+2*i/N,p1=-1+2*(i+1)/N;const[x0,y0]=pt(p0,R-20),[x1,y1]=pt(p1,R-20);
+    s+=`<path d="M${x0} ${y0} A${R-20} ${R-20} 0 0 1 ${x1} ${y1}" stroke="${closeness(clAt((p0+p1)/2))}" stroke-opacity=".45" stroke-width="2.5" fill="none"/>`;}
+  for(let i=-20;i<=20;i++){const p=i/20,major=i%10===0,mid=i%5===0;
+    const[x0,y0]=pt(p,R-(major?50:mid?44:38)),[x1,y1]=pt(p,R-24);
+    s+=`<line x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}" stroke="#ECE6D6" stroke-width="${major?2.2:mid?1.5:.9}"/>`;}
+  o.labels.forEach(([p,t])=>{const[x,y]=pt(p,R-66);s+=`<text x="${x}" y="${y+5}" fill="#ECE6D6" font-size="16" font-weight="700" text-anchor="middle" font-family="DejaVu Sans Condensed">${t}</text>`;});
+  s+=`<text x="48" y="${20+faceH-30}" fill="#ECE6D6" font-size="17" font-weight="700" font-family="DejaVu Serif">${o.unit}</text>`;
+  // HUD layer: corner brackets + telemetry
+  const B=14, bx0=30,by0=28,bx1=W-30,by1=20+faceH-8;
+  [[bx0,by0,1,1],[bx1,by0,-1,1],[bx0,by1,1,-1],[bx1,by1,-1,-1]].forEach(([x,y,dx,dy])=>{
+    s+=`<path d="M${x} ${y+dy*B} L${x} ${y} L${x+dx*B} ${y}" stroke="${col}" stroke-opacity=".75" stroke-width="1.5" fill="none"/>`;});
+  s+=`<text x="${bx0+20}" y="${by0+10}" fill="#FF6B1A" fill-opacity=".75" font-size="9" font-family="DejaVu Sans Mono" letter-spacing="1">${o.tl}</text>
+  <text x="${bx1-20}" y="${by0+10}" fill="#FF6B1A" fill-opacity=".75" font-size="9" text-anchor="end" font-family="DejaVu Sans Mono" letter-spacing="1">${o.tr}</text>
+  <text x="${bx0+20}" y="${by1-4}" fill="#ECE6D6" fill-opacity=".55" font-size="9" font-family="DejaVu Sans Mono">КЛ.1,5 ⊓ ⊥</text>
+  <text x="${bx1-20}" y="${by1-4}" fill="#ECE6D6" fill-opacity=".55" font-size="9" text-anchor="end" font-family="DejaVu Sans Mono">SSMT № 0471</text>
+  <text x="${cx}" y="${by0+28}" fill="#ECE6D6" fill-opacity=".7" font-size="10" text-anchor="middle" letter-spacing="3" font-family="DejaVu Sans Condensed">${o.title}</text>`;
+  // needle: afterglow ghosts + physical needle
+  const prev=o.trail||[];
+  prev.forEach((pp,k)=>{const[tx,ty]=pt(pp,R-14),[bx,by]=pt(pp,0);
+    s+=`<line x1="${bx}" y1="${by}" x2="${tx}" y2="${ty}" stroke="${col}" stroke-width="3" opacity="${0.10*(k+1)}" filter="url(#soft${id})"/>`;});
+  const[tx,ty]=pt(needle,R-6),[bx,by]=pt(needle,0),[mx,my]=pt(needle,R-56);
+  s+=`<g filter="drop-shadow(2px 3px 2px rgba(0,0,0,.5))"><line x1="${bx}" y1="${by}" x2="${tx}" y2="${ty}" stroke="#ECE6D6" stroke-width="2.3" stroke-linecap="round"/>
+  <line x1="${mx}" y1="${my}" x2="${tx}" y2="${ty}" stroke="#FF6B1A" stroke-width="3" stroke-linecap="round"/></g>`;
+  s+=`<rect x="22" y="20" width="${W-44}" height="${faceH}" fill="url(#scan${id})"/></g>
+  <rect x="22" y="20" width="${W-44}" height="${faceH}" rx="6" fill="url(#gl${id})"/>`;
+  // bottom deck: nixie window, VFD status strip, lamp
+  const y0=20+faceH+12;
+  s+=`<rect x="30" y="${y0}" width="176" height="46" rx="4" fill="#070605" stroke="#2c2620"/>
+  <text x="118" y="${y0+34}" fill="#3a1d0a" font-size="31" text-anchor="middle" font-family="DejaVu Sans Mono" letter-spacing="2">${o.ghost}</text>
+  <text x="118" y="${y0+34}" fill="#FF8A3D" font-size="31" text-anchor="middle" font-family="DejaVu Sans Mono" letter-spacing="2" filter="url(#glow${id})">${o.readout}</text>
+  <rect x="216" y="${y0}" width="148" height="46" rx="4" fill="#050807" stroke="#1d2a26"/>`;
+  o.vfd.forEach((line,k)=>{s+=`<text x="226" y="${y0+19+k*17}" fill="${col}" font-size="11.5" font-family="DejaVu Sans Mono" letter-spacing="1.5" filter="url(#glow${id})">${line}</text>`;});
+  s+=`<circle cx="${W-46}" cy="${y0+23}" r="15" fill="${col}" filter="url(#glow${id})"/>
+  <circle cx="${W-46}" cy="${y0+23}" r="15" fill="none" stroke="#000" stroke-width="3"/>
+  <circle cx="${W-51}" cy="${y0+18}" r="4" fill="#fff" opacity=".35"/>`;
+  [[16,16],[W-16,16],[16,H-16],[W-16,H-16]].forEach(([x,y],k)=>{const a=[20,75,130,160][k]*Math.PI/180;
+    s+=`<circle cx="${x}" cy="${y}" r="6.5" fill="#3b352e" stroke="#000"/><line x1="${x-5*Math.cos(a)}" y1="${y-5*Math.sin(a)}" x2="${x+5*Math.cos(a)}" y2="${y+5*Math.sin(a)}" stroke="#0d0b09" stroke-width="2"/>`;});
+  return s+'</svg>';
+}
+const ms=[[-1,'−2'],[-0.5,'−1'],[0,'0'],[0.5,'+1'],[1,'+2']];
+const items=[
+  {id:'A',cap:'<b>1</b>Задержка: стрелка справа — «добавьте задержку»',mode:'c',tol:.12,v:.45,trail:[.62,.55,.5],
+   labels:ms,unit:'мс',title:'ЗАДЕРЖКА САБВУФЕРА',tl:'CH·SUB  Δφ +37°',tr:'XO 90 Hz',readout:'+1.25',ghost:'88.88',vfd:['ДОБАВЬТЕ','ЗАДЕРЖКУ ▶']},
+  {id:'B',cap:'<b>2</b>Задержка в цели: зелёные сегменты, LOCK',mode:'c',tol:.12,v:.04,trail:[.12,.08,.06],
+   labels:ms,unit:'мс',title:'ЗАДЕРЖКА САБВУФЕРА',tl:'CH·SUB  Δφ +3°',tr:'XO 90 Hz',readout:'+0.09',ghost:'88.88',vfd:['В СТРОЮ','◆ LOCK ◆']},
+  {id:'C',cap:'<b>3</b>Односторонний: «Качество сигнала»',mode:'o',tol:.91,v:.62,trail:[.5,.55,.59],
+   labels:[[-1,'0'],[-0.5,'25'],[0,'50'],[0.5,'75'],[1,'100']],unit:'%',title:'КАЧЕСТВО СИГНАЛА',tl:'BAND 40–16k',tr:'AVG 24',readout:'064%',ghost:'888%',vfd:['СЛАБО:','ТИШЕ В ЗАЛЕ']},
+];
+const wrap=document.getElementById('wrap');
+items.forEach(v=>{const d=document.createElement('div');d.className='card';d.innerHTML=meter(v)+`<div class="cap">${v.cap}</div>`;wrap.appendChild(d);});
+
+// Mini indicator for list rows: LED bar + small needle + nixie value
+function mini(name,f,g,err){
+  const W=880,H=34,x0=330,bw=360,segs=31,TOL=.5/6;
+  const v=Math.max(-1,Math.min(1,err/6)), c=Math.abs(v)<=TOL?1:Math.max(0,1-(Math.abs(v)-TOL)/(1-TOL)), col=closeness(c);
+  let s=`<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg"><defs><filter id="g${name}"><feGaussianBlur stdDeviation="1.6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+  <rect x="0" y="0" width="${W}" height="${H}" fill="#121316" stroke="rgba(255,255,255,.1)"/>
+  <circle cx="16" cy="17" r="6" fill="${col}" filter="url(#g${name})"/>
+  <text x="32" y="22" fill="#F2F2F2" font-size="13" font-family="DejaVu Sans Mono">${name}</text>
+  <text x="110" y="22" fill="#A3A6AD" font-size="13" font-family="DejaVu Sans Mono">${f}</text>
+  <text x="210" y="22" fill="#F2F2F2" font-size="13" font-weight="700" font-family="DejaVu Sans Mono">${g}</text>`;
+  for(let i=0;i<segs;i++){const p=-1+2*(i+.5)/segs, x=x0+i*(bw/segs);
+    const lit = (v>=0 ? (p>=-0.04 && p<=v) : (p<=0.04 && p>=v)) || (c>=1 && Math.abs(p)<=TOL+.05);
+    const pc = Math.abs(p)<=TOL?1:Math.max(0,1-(Math.abs(p)-TOL)/(1-TOL));
+    s+=`<rect x="${x}" y="9" width="${bw/segs-3}" height="16" fill="${lit?closeness(pc):'#2a2c30'}" ${lit?`filter="url(#g${name})"`:''}/>`;}
+  const nx=x0+(v+1)/2*bw;
+  s+=`<line x1="${x0+bw/2}" y1="4" x2="${x0+bw/2}" y2="30" stroke="#ECE6D6" stroke-opacity=".5"/>
+  <path d="M${nx-5} 3 L${nx+5} 3 L${nx} 11 Z" fill="#ECE6D6"/>
+  <text x="${x0+bw+20}" y="23" fill="#FF8A3D" font-size="16" font-family="DejaVu Sans Mono" filter="url(#g${name})">${(err>0?'+':'')+err.toFixed(1)} dB</text>
+  <text x="${W-12}" y="22" fill="${col}" font-size="12" text-anchor="end" font-family="DejaVu Sans Mono" letter-spacing="1">${c>=1?'В СТРОЮ':(err<0?'УБАВЬТЕ':'ПРИБАВЬТЕ')}</text></svg>`;
+  return s;
+}
+const rows=document.getElementById('rows');
+rows.innerHTML='<div class="cap" style="margin-bottom:4px"><b>4</b>Мини-индикатор в списке полос EQ</div>'+
+ mini('1','  63 Hz','−6.5 dB',-4.2)+mini('2',' 125 Hz','−3.0 dB',-1.4)+mini('3','1850 Hz','−3.6 dB',-0.3)+mini('4','9000 Hz','−2.0 dB',0.9);
+</script>
+</body></html>

@@ -1,0 +1,342 @@
+import Foundation
+
+/// Immutable state published to the UI and the mini window.
+public struct LiveSnapshot: Sendable {
+    public var timestamp: Date
+    public var transfer: TransferFunction?
+    public var microphone: ChannelMeter
+    public var referenceInput: ChannelMeter
+    public var generatorLevelDBFS: Double
+    public var referenceMode: ReferenceMode
+    public var referenceDelaySeconds: Double
+    public var overflowCount: UInt64
+    public var discontinuities: UInt64
+    public var capture: CaptureProgress?
+    public var soundLevel: SoundLevelReading
+    public var autoLevelRunning: Bool
+    /// Seconds since audio last arrived from the device. Grows when the interface was unplugged or
+    /// its driver stopped delivering buffers; the app stops the measurement instead of waiting forever.
+    public var secondsSinceAudio: Double = 0
+}
+
+public struct CaptureProgress: Equatable, Sendable {
+    public var label: String
+    public var elapsed: Double
+    public var duration: Double
+    public var fraction: Double { duration > 0 ? min(1, elapsed / duration) : 0 }
+}
+
+/// Result of a fixed-length cumulative measurement ("capture").
+public struct Capture: Identifiable, Codable, Sendable {
+    public var id: UUID
+    public var label: String
+    public var date: Date
+    public var duration: Double
+    public var transfer: TransferFunction
+    public var assessment: CaptureAssessment
+    public var referenceMode: ReferenceMode
+    /// Backend discontinuity counter at the end of the capture. Captures compared against each
+    /// other (sub vs mains) must share the same value, i.e. the same stream and delay lock.
+    public var streamEpoch: UInt64
+
+    public init(id: UUID = UUID(), label: String, date: Date = Date(), duration: Double,
+                transfer: TransferFunction, assessment: CaptureAssessment, referenceMode: ReferenceMode,
+                streamEpoch: UInt64 = 0) {
+        self.id = id
+        self.label = label
+        self.date = date
+        self.duration = duration
+        self.transfer = transfer
+        self.assessment = assessment
+        self.referenceMode = referenceMode
+        self.streamEpoch = streamEpoch
+    }
+}
+
+/// Consumer side of the measurement chain. Runs on its own serial queue, independent of any window:
+/// minimizing or closing UI never interrupts averaging.
+public final class MeasurementEngine: @unchecked Sendable {
+    public struct Configuration: Sendable {
+        public var referenceMode: ReferenceMode = .internalSignal
+        public var liveAveragingSeconds: Double = 1.5
+        public var clipThresholdDBFS: Double = -0.1
+        public var snapshotInterval: Double = 0.1
+        public var qualityBand: ClosedRange<Double> = 40...16000
+        public init() {}
+    }
+
+    public let backend: AudioIOBackend
+    public private(set) var configuration: Configuration
+
+    private let queue = DispatchQueue(label: "SSMT.MeasurementEngine", qos: .userInitiated)
+    private var timer: DispatchSourceTimer?
+    private var live: MultiWindowAnalyzer
+    private var captureAnalyzer: MultiWindowAnalyzer?
+    private var captureState: (label: String, duration: Double, elapsed: Double, clipped: Bool,
+                               discontinuitiesAtStart: UInt64, qualityBand: ClosedRange<Double>,
+                               completion: (Capture) -> Void)?
+    private var micMeter: MeterAccumulator
+    private var refMeter: MeterAccumulator
+    private var referenceDelay = 0
+    private var rawCollection: (frames: Int, reference: [Float], measurement: [Float],
+                                completion: ([Float], [Float]) -> Void)?
+    private var lastSnapshotTime = Date.distantPast
+    private var lastAudioTime = Date()
+    private var snapshotHandler: (@Sendable (LiveSnapshot) -> Void)?
+    private var splMeter: SoundLevelMeter
+    private var autoLevel: (controller: AutoLevelController, start: Date, clippedAtStart: Int,
+                            completion: (Double, AutoLevelController.Outcome) -> Void)?
+
+    public init(backend: AudioIOBackend, configuration: Configuration = Configuration()) {
+        self.backend = backend
+        self.configuration = configuration
+        live = MultiWindowAnalyzer(config: .standard(sampleRate: backend.sampleRate,
+                                                     averaging: .exponential(timeConstant: configuration.liveAveragingSeconds)))
+        micMeter = MeterAccumulator(clipThresholdDBFS: configuration.clipThresholdDBFS, sampleRate: backend.sampleRate)
+        refMeter = MeterAccumulator(clipThresholdDBFS: configuration.clipThresholdDBFS, sampleRate: backend.sampleRate)
+        splMeter = SoundLevelMeter(sampleRate: backend.sampleRate)
+    }
+
+    /// Snapshot callback, invoked on the engine queue. Hop to the main actor in the UI layer.
+    public func setSnapshotHandler(_ handler: (@Sendable (LiveSnapshot) -> Void)?) {
+        queue.async { self.snapshotHandler = handler }
+    }
+
+    public func start() throws {
+        try backend.start()
+        queue.async {
+            self.lastAudioTime = Date()
+            self.startTimer()
+        }
+    }
+
+    public func stop() {
+        queue.async {
+            self.timer?.cancel()
+            self.timer = nil
+        }
+        backend.generatorControl.emergencyStop()
+        backend.stop()
+    }
+
+    /// STOP from any state: silences the output on the next audio buffer.
+    public func emergencyStop() {
+        backend.generatorControl.emergencyStop()
+    }
+
+    public func setReferenceMode(_ mode: ReferenceMode) {
+        queue.async {
+            self.configuration.referenceMode = mode
+            self.live.reset()
+        }
+    }
+
+    /// Locks the reference delay (samples) used for every subsequent analysis.
+    public func setReferenceDelay(samples: Int) {
+        queue.async {
+            self.referenceDelay = max(0, samples)
+            self.live.setReferenceDelay(samples: self.referenceDelay)
+        }
+    }
+
+    /// Live averaging time constant. Short (≈1 s) for the tuner so the needle follows the knob,
+    /// longer for steady display. The analyzer layout stays identical to captures, so live data
+    /// can be compared with captured responses bin for bin.
+    public func setLiveAveraging(seconds: Double) {
+        queue.async {
+            guard self.configuration.liveAveragingSeconds != seconds else { return }
+            self.configuration.liveAveragingSeconds = seconds
+            let a = MultiWindowAnalyzer(config: .standard(sampleRate: self.backend.sampleRate,
+                                                          averaging: .exponential(timeConstant: seconds)))
+            a.setReferenceDelay(samples: self.referenceDelay)
+            self.live = a
+        }
+    }
+
+    public func resetLiveAverages() { queue.async { self.live.reset() } }
+    public func resetClipIndicators() {
+        queue.async {
+            self.micMeter.resetClip()
+            self.refMeter.resetClip()
+        }
+    }
+
+    /// Starts a cumulative capture of `duration` seconds. The completion runs on the engine queue.
+    /// `qualityBand` is where coherence is judged (e.g. only the sub's range for a sub-only capture).
+    public func capture(label: String, duration: Double, qualityBand: ClosedRange<Double>? = nil,
+                        completion: @escaping (Capture) -> Void) {
+        queue.async {
+            let a = MultiWindowAnalyzer(config: .standard(sampleRate: self.backend.sampleRate))
+            a.setReferenceDelay(samples: self.referenceDelay)
+            self.captureAnalyzer = a
+            self.captureState = (label, duration, 0, false, self.backend.discontinuities.value,
+                                 qualityBand ?? self.configuration.qualityBand, completion)
+        }
+    }
+
+    /// Collects `seconds` of raw (reference, measurement) samples, runs GCC-PHAT and,
+    /// if reliable and `lock` is true, locks the reference delay. Completion on the engine queue.
+    public func findDelay(seconds: Double = 3, maxLagSeconds: Double = 0.5, lock: Bool = true,
+                          completion: @escaping (DelayEstimate?) -> Void) {
+        queue.async {
+            let frames = Int(seconds * self.backend.sampleRate)
+            self.rawCollection = (frames, [], [], { ref, mic in
+                let e = DelayFinder.estimate(reference: ref, measurement: mic, sampleRate: self.backend.sampleRate,
+                                             maxLagSeconds: maxLagSeconds)
+                if lock, let e, e.isReliable {
+                    self.referenceDelay = Int(e.samples.rounded())
+                    self.live.setReferenceDelay(samples: self.referenceDelay)
+                }
+                completion(e)
+            })
+        }
+    }
+
+    public func setSPLCalibration(_ c: SPLCalibration?) {
+        queue.async { self.splMeter.calibration = c }
+    }
+
+    public func resetSoundLevel() { queue.async { self.splMeter.reset() } }
+
+    /// Measures the room noise with the generator silent: returns the measurement auto-spectrum
+    /// on the analysis grid (density, same scale as `TransferFunction.measurementPower`).
+    public func measureNoiseFloor(seconds: Double = 5, completion: @escaping ([Double]) -> Void) {
+        backend.generatorControl.run.value = false
+        capture(label: "noise-floor", duration: seconds) { c in
+            completion(c.transfer.measurementPower)
+        }
+    }
+
+    /// Runs the auto-level procedure on the live analysis. The generator must be running.
+    public func runAutoLevel(settings: AutoLevelController.Settings, noiseFloor: [Double],
+                             completion: @escaping (Double, AutoLevelController.Outcome) -> Void) {
+        queue.async {
+            let controller = AutoLevelController(settings: settings, noiseFloor: noiseFloor,
+                                                 frequencies: self.live.grid.frequencies)
+            self.backend.generatorControl.targetLevelDBFS.value = Float(settings.startLevelDBFS)
+            self.backend.generatorControl.run.value = true
+            self.live.reset()
+            self.micMeter.resetClip()
+            self.autoLevel = (controller, Date(), 0, completion)
+        }
+    }
+
+    public func cancelAutoLevel() { queue.async { self.autoLevel = nil } }
+
+    public func cancelCapture() {
+        queue.async {
+            self.captureAnalyzer = nil
+            self.captureState = nil
+        }
+    }
+
+    /// Processes everything that is currently buffered (also used by tests to drive the engine synchronously).
+    public func drainNow() {
+        queue.sync { self.process() }
+    }
+
+    // MARK: - Processing
+
+    private func startTimer() {
+        let t = DispatchSource.makeTimerSource(queue: queue)
+        t.schedule(deadline: .now(), repeating: .milliseconds(20), leeway: .milliseconds(5))
+        t.setEventHandler { [weak self] in self?.process() }
+        t.resume()
+        timer = t
+    }
+
+    private func process() {
+        let chunk = 8192
+        while true {
+            let n = min(backend.inputRing.readable, backend.outputRing.readable, chunk)
+            if n <= 0 { break }
+            lastAudioTime = Date()
+            let input = backend.inputRing.read(maxFrames: n)
+            let output = backend.outputRing.read(maxFrames: n)
+            let mic = input[0]
+            let refIn = input[1]
+            let reference = configuration.referenceMode == .internalSignal ? output[0] : refIn
+            micMeter.process(mic)
+            splMeter.process(mic)
+            refMeter.process(refIn)
+            live.ingest(reference: reference, measurement: mic)
+            processedSeconds += Double(mic.count) / backend.sampleRate
+            if var raw = rawCollection {
+                raw.reference.append(contentsOf: reference)
+                raw.measurement.append(contentsOf: mic)
+                if raw.reference.count >= raw.frames {
+                    rawCollection = nil
+                    raw.completion(raw.reference, raw.measurement)
+                } else {
+                    rawCollection = raw
+                }
+            }
+            if let a = captureAnalyzer, var st = captureState {
+                a.ingest(reference: reference, measurement: mic)
+                st.elapsed += Double(mic.count) / backend.sampleRate
+                if mic.contains(where: { abs($0) >= micMeter.clipThreshold }) { st.clipped = true }
+                captureState = st
+                if st.elapsed >= st.duration { finishCapture() }
+            }
+        }
+        stepAutoLevel()
+        let now = Date()
+        if now.timeIntervalSince(lastSnapshotTime) >= configuration.snapshotInterval {
+            lastSnapshotTime = now
+            publishSnapshot(now)
+        }
+    }
+
+    /// Time base for auto-level: seconds of audio processed (works in real time and in tests).
+    private var processedSeconds = 0.0
+    private var lastAutoLevelEvaluation = -Double.infinity
+
+    private func stepAutoLevel() {
+        guard var al = autoLevel else { return }
+        // Evaluate twice per second of audio; clipping is checked every time.
+        let clipped = micMeter.isClipped
+        guard clipped || processedSeconds - lastAutoLevelEvaluation >= 0.5 else { return }
+        lastAutoLevelEvaluation = processedSeconds
+        let tf = live.snapshot()
+        switch al.controller.update(time: processedSeconds, measurementPower: tf.measurementPower, clipped: clipped) {
+        case .wait:
+            autoLevel = al
+        case .setLevel(let l):
+            backend.generatorControl.targetLevelDBFS.value = Float(l)
+            autoLevel = al
+        case .finished(let level, let outcome):
+            backend.generatorControl.targetLevelDBFS.value = Float(level)
+            autoLevel = nil
+            al.completion(level, outcome)
+        }
+    }
+
+    private func finishCapture() {
+        guard let a = captureAnalyzer, let st = captureState else { return }
+        let tf = a.snapshot()
+        let discontinuity = backend.discontinuities.value != st.discontinuitiesAtStart
+        let assessment = CaptureAssessment.assess(tf, band: st.qualityBand, clipped: st.clipped,
+                                                  discontinuity: discontinuity)
+        let capture = Capture(label: st.label, duration: st.elapsed, transfer: tf, assessment: assessment,
+                              referenceMode: configuration.referenceMode, streamEpoch: backend.discontinuities.value)
+        captureAnalyzer = nil
+        captureState = nil
+        st.completion(capture)
+    }
+
+    private func publishSnapshot(_ now: Date) {
+        guard let handler = snapshotHandler else { return }
+        let tf = live.averages > 0 ? live.snapshot() : nil
+        let progress = captureState.map { CaptureProgress(label: $0.label, elapsed: $0.elapsed, duration: $0.duration) }
+        let snap = LiveSnapshot(
+            timestamp: now, transfer: tf, microphone: micMeter.read(), referenceInput: refMeter.read(),
+            generatorLevelDBFS: Double(backend.generatorControl.currentLevelDBFS.value),
+            referenceMode: configuration.referenceMode,
+            referenceDelaySeconds: Double(referenceDelay) / backend.sampleRate,
+            overflowCount: backend.inputRing.overflowCount + backend.outputRing.overflowCount,
+            discontinuities: backend.discontinuities.value, capture: progress,
+            soundLevel: splMeter.reading(), autoLevelRunning: autoLevel != nil,
+            secondsSinceAudio: now.timeIntervalSince(lastAudioTime))
+        handler(snap)
+    }
+}

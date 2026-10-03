@@ -1,0 +1,836 @@
+import AppKit
+import Combine
+import Foundation
+import SSMTAudio
+import SSMTCore
+import UniformTypeIdentifiers
+
+/// The playback side, confined to one serial queue: engine, mixer clock and audio output.
+private final class PlaybackCore: @unchecked Sendable {
+    let queue = DispatchQueue(label: "ssmt.show.engine", qos: .userInteractive)
+    var engine: ShowEngine?
+    var output: ShowAudioOutput?
+    var timer: DispatchSourceTimer?
+    let clips = ClipCache()
+    var ticks = 0
+    /// Folder for relative file paths (the show file's URL).
+    var showURL: URL?
+
+    /// Sample rate of the backup clock (used while no audio output runs).
+    var clockRate: Double = 48000
+    private let clockStart = DispatchTime.now().uptimeNanoseconds
+
+    /// Show clock: the output's sample counter; without an output (interface missing) the system
+    /// clock keeps OSC cues, waits and auto-continue running.
+    var now: Int64 {
+        if let out = output { return Int64(out.mixer.framesRendered.value) }
+        return Int64(Double(DispatchTime.now().uptimeNanoseconds - clockStart) / 1e9 * clockRate)
+    }
+}
+
+/// Player layout: "Simple" (list + one side column) or "Expert" (library, pads, timeline).
+enum ShowLayout: String, CaseIterable {
+    case simple, expert
+}
+
+/// The open show: document with undo, file handling, selection, and the link to the playback engine.
+@MainActor
+final class ShowStore: ObservableObject {
+    @Published var doc: ShowDocument {
+        didSet { if doc != oldValue { documentEdited() } }
+    }
+    @Published private(set) var fileURL: URL? {
+        didSet { let u = fileURL; core.queue.async { [core] in core.showURL = u } }
+    }
+    @Published var selection = Set<Cue.ID>()
+    @Published var listID: UUID?
+    /// One-shot bank shown in the pad grid.
+    @Published var bankID: UUID?
+    @Published var layout: ShowLayout = ShowLayout(rawValue: UserDefaults.standard.string(forKey: "ssmt.show.layout") ?? "") ?? .simple {
+        didSet { UserDefaults.standard.set(layout.rawValue, forKey: "ssmt.show.layout") }
+    }
+    /// Timeline shows this group's contents for editing (nil = the live show).
+    @Published var timelineGroup: UUID?
+    /// File overview (peak per bucket, 0…1) by resolved path, for waveforms.
+    @Published private(set) var waveforms: [String: [Float]] = [:]
+    @Published var collapsed = Set<Cue.ID>()
+    /// Show mode: editing locked, big transport, keyboard GO.
+    @Published var showMode = false {
+        didSet { updateActivity() }
+    }
+    @Published var showSettings = false
+    /// OSC devices window; `oscWizardKind` opens it straight on a device's setup.
+    @Published var showOSC = false
+    var oscWizardKind: OSCDeviceKind?
+    let osc = OSCHub()
+    @Published private(set) var snapshot = ShowSnapshot.empty
+    @Published private(set) var meters: [Float] = []
+    @Published private(set) var outputName = ""
+    @Published private(set) var outputError: String?
+    @Published private(set) var sampleRate: Double = 48000
+    @Published private(set) var memoryBytes = 0
+    /// Times the audio output was interrupted and recovered during this session.
+    @Published private(set) var interruptions = 0
+    /// Files still being prepared (decoded into the cache) and files that cannot be read.
+    @Published private(set) var loadingFiles = 0
+    @Published private(set) var unreadableFiles: [String: String] = [:]
+    /// Device I/O buffer: larger is safer on slow Macs, smaller has less delay.
+    @Published var bufferFrames = UserDefaults.standard.object(forKey: "ssmt.qtrl.buffer") as? Int ?? 512 {
+        didSet { UserDefaults.standard.set(bufferFrames, forKey: "ssmt.qtrl.buffer") }
+    }
+    private var activity: NSObjectProtocol?
+    /// Clip lengths (seconds) and channel counts by resolved path, for the list and inspector.
+    @Published private(set) var clipInfo: [String: (duration: Double, channels: Int)] = [:]
+    @Published private(set) var missingFiles = Set<String>()
+    @Published var lastError: String?
+    /// The section is visible (keyboard shortcuts active).
+    var isActive = false {
+        didSet {
+            if isActive && !outputStarted { outputStarted = true; restartOutput() }
+            updateActivity()
+        }
+    }
+
+    /// While Qtrl is open the Mac must not sleep, nap or throttle audio; in show mode the display stays on too.
+    private func updateActivity() {
+        if let activity { ProcessInfo.processInfo.endActivity(activity) }
+        activity = nil
+        guard isActive || showMode, outputStarted, outputName != "Preview" else { return }
+        var options: ProcessInfo.ActivityOptions = [.userInitiated, .latencyCritical, .idleSystemSleepDisabled]
+        if showMode { options.insert(.idleDisplaySleepDisabled) }
+        activity = ProcessInfo.processInfo.beginActivity(options: options, reason: "Qtrl show playback")
+    }
+    private var outputStarted = false
+
+    weak var undo: UndoManager?
+    /// Set by the workspace; used for undo action names and messages.
+    weak var localizer: Localizer?
+    private let core = PlaybackCore()
+    private var autosaveWork: DispatchWorkItem?
+    private var keyMonitor: Any?
+
+    static let fileType = UTType(filenameExtension: "ssmtshow", conformingTo: .json) ?? .json
+    /// Any audio, plus video files (their sound is used).
+    static let audioTypes: [UTType] = [.audio, .mp3, .wav, .aiff, .mpeg4Audio, .audiovisualContent, .movie, .mpeg4Movie, .quickTimeMovie]
+
+    nonisolated static func isPlayable(_ url: URL) -> Bool {
+        guard let t = UTType(filenameExtension: url.pathExtension) else { return false }
+        return t.conforms(to: .audio) || t.conforms(to: .audiovisualContent)
+    }
+
+    /// Decoding runs two files at a time so the Mac stays responsive.
+    nonisolated private static let loader: OperationQueue = {
+        let q = OperationQueue()
+        q.maxConcurrentOperationCount = 2
+        q.qualityOfService = .userInitiated
+        return q
+    }()
+
+    private static var autosaveURL: URL {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("SSMT", isDirectory: true)
+        try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+        return base.appendingPathComponent("show-autosave.json")
+    }
+
+    init(startAudio: Bool = true) {
+        if let data = try? Data(contentsOf: Self.autosaveURL), let d = try? ShowDocument.decode(data) {
+            doc = d
+        } else {
+            doc = ShowDocument(name: "")
+        }
+        listID = doc.cueLists.first?.id
+        DispatchQueue.global(qos: .background).async { ClipCache.prune() }
+        if startAudio { outputStarted = true; restartOutput() }
+    }
+
+    /// For previews and snapshot tests: a document without audio output.
+    init(document: ShowDocument) {
+        doc = document
+        listID = document.cueLists.first?.id
+        outputStarted = true // never opens an audio device
+    }
+
+    var currentList: CueList? { doc.list(listID) }
+
+    /// Snapshot tests: no audio device, and a fixed playback state to render.
+    func preview(snapshot: ShowSnapshot, clips: [String: (duration: Double, channels: Int)], meters: [Float],
+                 waveforms: [String: [Float]] = [:]) {
+        self.waveforms = waveforms
+        outputStarted = true
+        self.snapshot = snapshot
+        clipInfo = clips
+        self.meters = meters
+        missingFiles = []
+        outputName = "Preview"
+    }
+
+    // MARK: Editing with undo
+
+    func edit(_ name: String = "", _ change: (inout ShowDocument) -> Void) {
+        guard !showMode else { return }
+        let before = doc
+        change(&doc)
+        guard doc != before, let undo else { return }
+        undo.registerUndo(withTarget: self) { store in
+            MainActor.assumeIsolated { store.restore(before) }
+        }
+        undo.setActionName(name)
+    }
+
+    private func restore(_ state: ShowDocument) {
+        let current = doc
+        doc = state
+        undo?.registerUndo(withTarget: self) { store in
+            MainActor.assumeIsolated { store.restore(current) }
+        }
+    }
+
+    private func documentEdited() {
+        let d = doc
+        core.queue.async { [core] in core.engine?.document = d }
+        if listID == nil || !doc.cueLists.contains(where: { $0.id == listID }) { listID = doc.cueLists.first?.id }
+        if bankID == nil || !doc.banks.contains(where: { $0.id == bankID }) { bankID = doc.banks.first?.id }
+        if let g = timelineGroup, doc.cue(g) == nil { timelineGroup = nil }
+        scheduleAutosave()
+        refreshFiles()
+    }
+
+    // MARK: Cue creation
+
+    /// Adds a cue after the selection (targeting the selected cue when the kind needs a target).
+    func add(_ kind: CueKind) {
+        guard let lid = listID else { return }
+        var c = Cue(kind: kind, number: kind == .memo || kind == .group ? "" : doc.nextCueNumber)
+        let anchor = lastSelected
+        if kind.needsTarget, let a = anchor, let target = doc.cue(a) {
+            if doc.targetCandidates(for: kind, excluding: c.id).contains(where: { $0.id == target.id }) {
+                c.target = target.id
+            }
+        }
+        if kind == .group, selection.count > 1 {
+            var newID: UUID?
+            edit { newID = $0.group(Array(selection), list: lid) }
+            selection = newID.map { [$0] } ?? []
+            return
+        }
+        edit { $0.insert([c], after: anchor, list: lid) }
+        selection = [c.id]
+    }
+
+    /// The last selected cue in show order.
+    var lastSelected: UUID? {
+        guard let list = currentList else { return nil }
+        return list.cues.flattened().map(\.cue.id).last { selection.contains($0) }
+    }
+
+    /// Selected cues in show order.
+    var orderedSelection: [UUID] {
+        guard let list = currentList else { return [] }
+        return list.cues.flattened().map(\.cue.id).filter { selection.contains($0) }
+    }
+
+    func addAudioFiles(_ urls: [URL], after: UUID? = nil, intoGroup: UUID? = nil) {
+        guard let lid = listID, !urls.isEmpty else { return }
+        var number = Double(doc.nextCueNumber) ?? 1
+        let cues: [Cue] = urls.sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }.map {
+            defer { number += 1 }
+            return Cue.audio(file: storedPath(for: $0), number: String(Int(number)))
+        }
+        edit {
+            if let g = intoGroup { $0.append(cues, toGroup: g) } else { $0.insert(cues, after: after ?? lastSelected, list: lid) }
+        }
+        selection = Set(cues.map(\.id))
+    }
+
+    // MARK: QLab import
+
+    @Published var showQLabImport = false
+    /// A QLab file chosen with Open: the import window reads it when it appears.
+    var pendingQLabFile: URL?
+    /// QLab import is hidden until it is checked on real QLab files (the code and tests stay).
+    static let qlabImportEnabled = false
+    static let qlabTypes: [UTType] = ["qlab5", "qlab4", "qlab3"].compactMap { UTType(filenameExtension: $0) }
+
+    /// Replaces the show with an imported QLab workspace (one undo step). Keeps this Mac's audio
+    /// interface, outputs and OSC devices. Relative file paths are resolved against `baseFolder`.
+    func adoptImported(_ lists: [QLabImport.Item], name: String, baseFolder: URL?) -> QLabImport.Report {
+        var (imported, report) = QLabImport.makeShow(name: name, lists: lists)
+        imported.outputs = doc.outputs
+        imported.deviceUID = doc.deviceUID
+        imported.devices = doc.devices
+        if let base = baseFolder {
+            for c in imported.allCues where c.kind == .audio {
+                guard let f = c.audio?.file, !f.isEmpty, !f.hasPrefix("/") else { continue }
+                imported.updateCue(c.id) { $0.audio?.file = base.appendingPathComponent(f).path }
+            }
+        }
+        run { e, now in e.panic(now: now, hard: true) }
+        edit(loc("qlab.title")) { $0 = imported }
+        fileURL = nil
+        selection = []
+        listID = imported.cueLists.first?.id
+        bankID = imported.banks.first?.id
+        return report
+    }
+
+    // MARK: OSC
+
+    /// Sends a Network cue's message now (inspector "Send now").
+    func sendNow(_ cue: Cue) {
+        guard let p = cue.osc, let id = p.device, let d = doc.devices.first(where: { $0.id == id }) else { return }
+        osc.send(p.message, to: d)
+    }
+
+    /// Creates a Network cue from a message seen in the monitor (device chosen by sender address).
+    func addNetworkCue(from entry: OSCLogEntry) {
+        guard let lid = listID else { return }
+        var c = Cue(kind: .network, number: doc.nextCueNumber)
+        c.osc?.address = entry.message.address
+        c.osc?.arguments = entry.message.arguments
+        c.osc?.device = doc.devices.first { $0.host == entry.from }?.id ?? doc.devices.first?.id
+        c.name = entry.message.address
+        let anchor = lastSelected
+        edit { $0.insert([c], after: anchor, list: lid) }
+        selection = [c.id]
+    }
+
+    // MARK: Audition (waveform editor)
+
+    /// What the editor is playing: cue, file position it started from, when, and how long (seconds).
+    struct Audition: Equatable {
+        var cue: UUID
+        var from: Double
+        var startedAt: Date
+        var length: Double
+        var rate: Double
+    }
+    @Published private(set) var audition: Audition?
+    private static let auditionVoice = UUID()
+
+    /// Plays a cue's file from `from` (file seconds) for `length` seconds (nil = to the region end).
+    func audition(_ cue: Cue, from: Double, length: Double? = nil) {
+        guard let path = resolvedPath(cue), let a = cue.audio, let fileLen = fileLength(cue) else { return }
+        let end = min(fileLen, length.map { from + $0 } ?? (a.end ?? fileLen))
+        guard end > from else { return }
+        let outs = doc.outputs.count
+        let voice = Self.auditionVoice
+        let core = self.core
+        core.queue.async {
+            guard let mixer = core.output?.mixer else { return }
+            let sr = mixer.sampleRate
+            guard let clip = core.clips.cached(path, sampleRate: sr) ?? core.clips.load(path, sampleRate: sr),
+                  let setup = ShowEngine.voiceSetup(cue, clip: clip, outputs: outs, from: from, length: end - from) else { return }
+            mixer.send(.start(voice, clip: clip, setup: setup, at: core.now + Int64(sr * 0.03)))
+        }
+        audition = Audition(cue: cue.id, from: from, startedAt: Date().addingTimeInterval(0.03), length: end - from,
+                            rate: max(0.05, a.rate))
+        let token = audition
+        DispatchQueue.main.asyncAfter(deadline: .now() + (end - from) / max(0.05, a.rate) + 0.1) { [weak self] in
+            if self?.audition == token { self?.audition = nil }
+        }
+    }
+
+    func stopAudition() {
+        let voice = Self.auditionVoice
+        let core = self.core
+        core.queue.async {
+            guard let mixer = core.output?.mixer else { return }
+            mixer.send(.stop(voice, at: core.now, fadeFrames: Int64(mixer.sampleRate * 0.01)))
+        }
+        audition = nil
+    }
+
+    /// Sets start and end at the first and last sound above −50 dBFS.
+    func trimSilence(_ cueID: UUID) {
+        guard let cue = doc.cue(cueID), let path = resolvedPath(cue) else { return }
+        let sr = sampleRate
+        let core = self.core
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let clip = core.clips.cached(path, sampleRate: sr) ?? core.clips.load(path, sampleRate: sr) else { return }
+            let threshold: Float = 0.00316
+            var first = clip.frames, last = 0
+            for c in 0..<clip.channelCount {
+                let ch = clip.channel(c)
+                if let i = ch.firstIndex(where: { abs($0) > threshold }) { first = min(first, i) }
+                if let i = ch.lastIndex(where: { abs($0) > threshold }) { last = max(last, i) }
+            }
+            guard first < last else { return }
+            let start = max(0, Double(first) / sr - 0.01)
+            let end = min(clip.duration, Double(last) / sr + 0.05)
+            Task { @MainActor in
+                self?.edit(self?.loc("show.wave.trim") ?? "") { d in
+                    d.updateCue(cueID) { c in
+                        c.audio?.start = (start * 1000).rounded() / 1000
+                        c.audio?.end = end >= clip.duration - 0.001 ? nil : (end * 1000).rounded() / 1000
+                    }
+                }
+            }
+        }
+    }
+
+    /// Peaks of a file section (file seconds) in `buckets` columns, from the decoded audio; nil if not loaded.
+    func waveSlice(path: String, from: Double, to: Double, buckets: Int) async -> [Float]? {
+        let sr = sampleRate
+        let core = self.core
+        return await Task.detached(priority: .userInitiated) { () -> [Float]? in
+            guard let clip = core.clips.cached(path, sampleRate: sr), buckets > 0, to > from else { return nil }
+            let a = max(0, Int(from * sr)), b = min(clip.frames, Int(to * sr))
+            guard b > a else { return nil }
+            let per = Double(b - a) / Double(buckets)
+            let stride = max(1, Int(per / 64)) // at most ~64 reads per column
+            var out = [Float](repeating: 0, count: buckets)
+            for c in 0..<clip.channelCount {
+                let p = clip.channel(c)
+                do {
+                    for k in 0..<buckets {
+                        let s = a + Int(Double(k) * per), e = min(b, a + Int(Double(k + 1) * per) + 1)
+                        var peak: Float = 0
+                        var i = s
+                        while i < e { peak = max(peak, abs(p[i])); i += stride }
+                        out[k] = max(out[k], min(1, peak))
+                    }
+                }
+            }
+            return out
+        }.value
+    }
+
+    // MARK: One-shot pads
+
+    var currentBank: CueList? { doc.banks.first { $0.id == bankID } ?? doc.banks.first }
+
+    /// Adds audio files as pads of the current bank, each on the next free F-key.
+    func addPads(_ urls: [URL]) {
+        if doc.banks.isEmpty { edit { $0.lists.append(CueList(name: "\(self.loc("show.bank")) 1", isBank: true)) } }
+        guard let bank = currentBank, !urls.isEmpty else { return }
+        var used = Set(doc.allCues.compactMap(\.hotkey))
+        let pads: [Cue] = urls.map { url in
+            var c = Cue.audio(file: storedPath(for: url))
+            if let key = ShowDocument.functionKeys.first(where: { !used.contains($0) }) {
+                c.hotkey = key
+                used.insert(key)
+            }
+            return c
+        }
+        edit { $0.insert(pads, after: nil, list: bank.id) }
+        selection = Set(pads.map(\.id))
+    }
+
+    func choosePads() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = Self.audioTypes
+        panel.allowsMultipleSelection = true
+        guard panel.runModal() == .OK else { return }
+        addPads(panel.urls)
+    }
+
+    func addBank() {
+        let b = CueList(name: "\(loc("show.bank")) \(doc.banks.count + 1)", isBank: true)
+        edit { $0.lists.append(b) }
+        bankID = b.id
+    }
+
+    func pad(_ id: UUID, pressed: Bool) { run { e, now in e.pad(id, pressed: pressed, now: now) } }
+
+    /// File length of an audio cue in seconds, when loaded.
+    func fileLength(_ cue: Cue) -> Double? {
+        resolvedPath(cue).flatMap { clipInfo[$0]?.duration }
+    }
+
+    func chooseAudioFiles() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = Self.audioTypes
+        panel.allowsMultipleSelection = true
+        guard panel.runModal() == .OK else { return }
+        addAudioFiles(panel.urls)
+    }
+
+    func chooseFile(for cueID: UUID) {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = Self.audioTypes
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        let path = storedPath(for: url)
+        edit { d in
+            d.updateCue(cueID) { c in
+                c.audio?.file = path
+                if c.name.isEmpty { c.name = url.deletingPathExtension().lastPathComponent }
+            }
+        }
+    }
+
+    func deleteSelection() {
+        let ids = selection
+        edit(loc("action.delete")) { $0.delete(ids) }
+        selection = []
+    }
+
+    func duplicateSelection() {
+        guard let lid = listID else { return }
+        var copies: [UUID] = []
+        let ids = orderedSelection
+        edit { copies = $0.duplicate(ids, list: lid) }
+        selection = Set(copies)
+    }
+
+    func moveSelection(by delta: Int) {
+        guard let lid = listID else { return }
+        let ids = delta < 0 ? orderedSelection : orderedSelection.reversed()
+        edit { d in ids.forEach { d.move($0, by: delta, list: lid) } }
+    }
+
+    func ungroupSelection() {
+        guard let lid = listID else { return }
+        let groups = orderedSelection.filter { doc.cue($0)?.kind == .group }
+        edit { d in groups.forEach { d.ungroup($0, list: lid) } }
+    }
+
+    func renumberSelection() {
+        guard let lid = listID else { return }
+        let ids = selection.isEmpty ? nil : orderedSelection
+        edit { $0.renumber(ids, list: lid) }
+    }
+
+    func addList() {
+        let l = CueList(name: "\(loc("show.list")) \(doc.lists.count + 1)")
+        edit { $0.lists.append(l) }
+        selectList(l.id)
+    }
+
+    func selectList(_ id: UUID) {
+        listID = id
+        selection = []
+        core.queue.async { [core] in core.engine?.selectList(id) }
+    }
+
+    func updateCue(_ id: UUID, _ change: @escaping (inout Cue) -> Void) {
+        edit { $0.updateCue(id, change) }
+    }
+
+    // MARK: Transport
+
+    func go() { run { e, now in e.go(now: now) } }
+    func panic() { run { e, now in e.panic(now: now) } }
+    func pauseAll() { run { e, now in e.pauseAll(now: now) } }
+    func resumeAll() { run { e, now in e.resumeAll(now: now) } }
+    func start(_ id: UUID) { run { e, now in e.start(id, now: now) } }
+    func stop(_ id: UUID) { run { e, now in e.stop(id, now: now) } }
+    func togglePause(_ id: UUID) {
+        let paused = snapshot.running.first { $0.id == id }?.paused ?? false
+        run { e, now in paused ? e.resume(id, now: now) : e.pause(id, now: now) }
+    }
+    func setPlayhead(_ id: UUID?) { run { e, _ in e.setPlayhead(id) } }
+
+    var anyPaused: Bool { snapshot.running.contains { $0.paused } }
+
+    private func run(_ action: @escaping (ShowEngine, Int64) -> Void) {
+        core.queue.async { [core] in
+            guard let e = core.engine else { return }
+            action(e, core.now)
+        }
+    }
+
+    // MARK: Audio output
+
+    /// (Re)creates the output on the show's interface and a new engine at its sample rate.
+    func restartOutput() {
+        let d = doc
+        let core = self.core
+        let buffer = bufferFrames
+        let transport = osc.transport
+        core.queue.async {
+            core.timer?.cancel()
+            core.output?.stop()
+            core.output = nil
+            var errorText: String?
+            do {
+                let out = try ShowAudioOutput(deviceUID: d.deviceUID, maxOutputs: 64, bufferFrames: buffer)
+                out.onInterruption = { [weak self] problem in
+                    MainActor.assumeIsolated {
+                        self?.outputError = problem
+                        if problem == nil { self?.interruptions += 1 }
+                    }
+                }
+                core.output = out
+            } catch {
+                errorText = "\(error)"
+            }
+            let sr = core.output?.sampleRate ?? 48000
+            core.clockRate = sr
+            let mixer = core.output?.mixer
+            mixer?.send(.patch(d.outputs.map { $0.deviceChannel ?? -1 }))
+            let clips = core.clips
+            let ioBuffer = Double(core.output?.bufferFrames ?? buffer)
+            let engine = ShowEngine(document: d, sampleRate: sr, lookahead: Int64(max(sr * 0.03, ioBuffer * 3)),
+                                    send: { op in mixer?.send(op) },
+                                    clipProvider: { cue in
+                                        guard let path = cue.audio.map({ ShowStore.resolve($0.file, showURL: core.showURL) }) else { return nil }
+                                        // Never decode on the playback queue: a file not ready yet is reported, and loaded meanwhile.
+                                        if let c = clips.cached(path, sampleRate: sr) { return c }
+                                        DispatchQueue.global(qos: .userInitiated).async { clips.load(path, sampleRate: sr) }
+                                        return nil
+                                    })
+            engine.oscSend = { device, message in transport.send(message, to: device) }
+            engine.preload = { cue in
+                guard let f = cue.audio?.file else { return }
+                let path = ShowStore.resolve(f, showURL: core.showURL)
+                DispatchQueue.global(qos: .userInitiated).async { clips.load(path, sampleRate: sr)?.prefetch(from: 0, count: Int(sr * 10)) }
+            }
+            engine.documentChanged = { [weak self] newDoc in
+                Task { @MainActor in self?.doc = newDoc }
+            }
+            core.engine = engine
+            let name = core.output?.deviceName ?? ""
+            let timer = DispatchSource.makeTimerSource(queue: core.queue)
+            timer.schedule(deadline: .now(), repeating: .milliseconds(5), leeway: .milliseconds(1))
+            timer.setEventHandler { [weak self] in
+                guard let e = core.engine else { return }
+                e.advance(to: core.now)
+                core.output?.mixer.collectGarbage()
+                core.ticks += 1
+                if core.ticks % 20 == 0 { e.prefetch(now: core.now) }
+                if core.ticks % 8 == 0 {
+                    let snap = e.snapshot(now: core.now)
+                    let peaks = core.output?.mixer.takePeaks() ?? []
+                    Task { @MainActor in self?.apply(snap, peaks: peaks) }
+                }
+            }
+            timer.resume()
+            core.timer = timer
+            Task { @MainActor [weak self] in
+                self?.outputName = name
+                self?.outputError = errorText
+                self?.sampleRate = sr
+                self?.refreshFiles(load: true)
+            }
+        }
+    }
+
+    private func apply(_ snap: ShowSnapshot, peaks: [Float]) {
+        if snap != snapshot { snapshot = snap }
+        let used = Array(peaks.prefix(doc.outputs.count))
+        if used != meters { meters = used }
+        if let lid = snap.listID, lid != listID, doc.lists.contains(where: { $0.id == lid }) { listID = lid }
+    }
+
+    // MARK: Files
+
+    /// Absolute path of a cue's file (relative paths are resolved against the show file's folder).
+    nonisolated static func resolve(_ path: String, showURL: URL?) -> String {
+        if path.hasPrefix("/") { return path }
+        if let base = showURL?.deletingLastPathComponent() { return base.appendingPathComponent(path).path }
+        return path
+    }
+
+    func resolvedPath(_ cue: Cue) -> String? {
+        guard let f = cue.audio?.file, !f.isEmpty else { return nil }
+        return Self.resolve(f, showURL: fileURL)
+    }
+
+    /// Paths are stored absolute; files next to the show file are stored relative to it.
+    private func storedPath(for url: URL) -> String {
+        if let base = fileURL?.deletingLastPathComponent().path, url.path.hasPrefix(base + "/") {
+            return String(url.path.dropFirst(base.count + 1))
+        }
+        return url.path
+    }
+
+    /// Checks files and (optionally) decodes them in the background so GO never waits for disk.
+    private func refreshFiles(load: Bool = true) {
+        let paths = Set(doc.allCues.compactMap { resolvedPath($0) })
+        missingFiles = Set(paths.filter { !FileManager.default.fileExists(atPath: $0) })
+        unreadableFiles = unreadableFiles.filter { paths.contains($0.key) }
+        guard load else { return }
+        let sr = sampleRate
+        let core = self.core
+        let todo = paths.subtracting(missingFiles).filter { clipInfo[$0] == nil || core.clips.cached($0, sampleRate: sr) == nil }
+        guard !todo.isEmpty else { return }
+        // Where each file starts playing: read those seconds in advance so GO is instant.
+        var starts: [String: [Double]] = [:]
+        for c in doc.allCues where c.kind == .audio {
+            if let p = resolvedPath(c), let a = c.audio { starts[p, default: []].append(a.start) }
+        }
+        loadingFiles += todo.count
+        for p in todo {
+            let preroll = starts[p] ?? [0]
+            Self.loader.addOperation { [weak self] in
+                let clip = core.clips.load(p, sampleRate: sr)
+                for s in preroll { clip?.prefetch(from: Int(s * sr), count: Int(sr * 10)) }
+                let wave = clip.map { Self.overview($0) }
+                let failure = clip == nil ? core.clips.failure(p) : nil
+                let bytes = core.clips.totalBytes
+                Task { @MainActor in
+                    guard let self else { return }
+                    self.loadingFiles = max(0, self.loadingFiles - 1)
+                    if let clip {
+                        self.clipInfo[p] = (duration: clip.duration, channels: clip.channelCount)
+                        self.waveforms[p] = wave
+                        self.unreadableFiles[p] = nil
+                    } else if let failure {
+                        self.unreadableFiles[p] = failure
+                    }
+                    self.memoryBytes = bytes
+                }
+            }
+        }
+        DispatchQueue.global(qos: .utility).async { core.clips.forget(except: paths) }
+    }
+
+    /// Peak overview of a clip (all channels), `buckets` values in 0…1.
+    nonisolated static func overview(_ clip: AudioClip, buckets: Int = 1200) -> [Float] {
+        let n = clip.frames
+        guard n > 0 else { return [] }
+        let size = max(1, n / buckets)
+        var out = [Float](repeating: 0, count: min(buckets, n))
+        for c in 0..<clip.channelCount {
+            let p = clip.channel(c)
+            do {
+                for b in 0..<out.count {
+                    var peak: Float = 0
+                    let start = b * size, end = min(n, start + size)
+                    var i = start
+                    while i < end { peak = max(peak, abs(p[i])); i += 4 } // every 4th sample is plenty for display
+                    out[b] = max(out[b], min(1, peak))
+                }
+            }
+        }
+        return out
+    }
+
+    /// Looks for missing files by name inside a folder (recursively) and relinks them.
+    func relinkMissing() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        guard panel.runModal() == .OK, let folder = panel.url else { return }
+        var found: [String: URL] = [:]
+        if let e = FileManager.default.enumerator(at: folder, includingPropertiesForKeys: nil) {
+            for case let url as URL in e { found[url.lastPathComponent.lowercased()] = url }
+        }
+        var relinked = 0
+        let missing = missingFiles
+        edit(loc("show.relink")) { d in
+            for c in d.allCues {
+                guard let f = c.audio?.file, missing.contains(Self.resolve(f, showURL: self.fileURL)),
+                      let url = found[(f as NSString).lastPathComponent.lowercased()] else { continue }
+                let path = self.storedPath(for: url)
+                d.updateCue(c.id) { $0.audio?.file = path }
+                relinked += 1
+            }
+        }
+        lastError = String(format: loc("show.relink.done"), relinked)
+    }
+
+    /// Pre-show check: problems as readable lines.
+    func checkShow() -> [ShowIssue] {
+        doc.issues { cue in
+            guard let p = resolvedPath(cue) else { return false }
+            return FileManager.default.fileExists(atPath: p)
+        }
+    }
+
+    // MARK: Documents
+
+    func newDocument() {
+        guard !showMode else { return }
+        run { e, now in e.panic(now: now, hard: true) }
+        edit { $0 = ShowDocument(name: "") }
+        fileURL = nil
+        selection = []
+        listID = doc.cueLists.first?.id
+    }
+
+    func open() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [Self.fileType, .json] + (Self.qlabImportEnabled ? Self.qlabTypes : [])
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        if url.pathExtension.lowercased().hasPrefix("qlab") {
+            pendingQLabFile = url
+            showQLabImport = true
+            return
+        }
+        do {
+            let d = try ShowDocument.decode(Data(contentsOf: url))
+            run { e, now in e.panic(now: now, hard: true) }
+            fileURL = url
+            edit { $0 = d }
+            listID = d.cueLists.first?.id
+            selection = []
+            restartOutput()
+        } catch {
+            lastError = "\(url.lastPathComponent): \(error)"
+        }
+    }
+
+    func save(as: Bool = false) {
+        var url = fileURL
+        if url == nil || `as` {
+            let panel = NSSavePanel()
+            panel.allowedContentTypes = [Self.fileType]
+            panel.nameFieldStringValue = (doc.name.isEmpty ? "Show" : doc.name) + ".ssmtshow"
+            guard panel.runModal() == .OK, let u = panel.url else { return }
+            url = u
+        }
+        guard let url else { return }
+        do {
+            try doc.encoded().write(to: url, options: .atomic)
+            fileURL = url
+        } catch {
+            lastError = "\(url.lastPathComponent): \(error)"
+        }
+    }
+
+    private func scheduleAutosave() {
+        autosaveWork?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            guard let self, let data = try? self.doc.encoded() else { return }
+            try? data.write(to: Self.autosaveURL, options: .atomic)
+        }
+        autosaveWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1, execute: work)
+    }
+
+    // MARK: Keyboard
+
+    /// Space = GO, Esc = panic (twice = cut), cue hotkeys; ignored while typing in a text field.
+    func installKeyMonitor() {
+        guard keyMonitor == nil else { return }
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .keyUp]) { [weak self] event in
+            guard let self else { return event }
+            return MainActor.assumeIsolated { self.handleKey(event) ? nil : event }
+        }
+    }
+
+    private static let functionKeyCodes: [UInt16: String] = [
+        122: "F1", 120: "F2", 99: "F3", 118: "F4", 96: "F5", 97: "F6",
+        98: "F7", 100: "F8", 101: "F9", 109: "F10", 103: "F11", 111: "F12",
+    ]
+
+    private func handleKey(_ event: NSEvent) -> Bool {
+        guard isActive else { return false }
+        if let responder = NSApp.keyWindow?.firstResponder, responder is NSText || responder is NSTextView { return false }
+        let mods = event.modifierFlags.intersection([.command, .control, .option])
+        guard mods.isEmpty else { return false }
+        // One-shot pads on F-keys: press and release (for "hold" pads).
+        if let fkey = Self.functionKeyCodes[event.keyCode] {
+            guard let cue = doc.allCues.first(where: { $0.hotkey == fkey }) else { return false }
+            if event.isARepeat { return true }
+            pad(cue.id, pressed: event.type == .keyDown)
+            return true
+        }
+        guard event.type == .keyDown else { return false }
+        switch event.keyCode {
+        case 49: go(); return true            // space
+        case 53: panic(); return true         // esc
+        default: break
+        }
+        guard let ch = event.charactersIgnoringModifiers?.lowercased(), !ch.isEmpty else { return false }
+        if let cue = doc.allCues.first(where: { ($0.hotkey ?? "").lowercased() == ch }) {
+            if doc.banks.contains(where: { $0.cues.findCue(cue.id) != nil }) { pad(cue.id, pressed: true) } else { start(cue.id) }
+            return true
+        }
+        return false
+    }
+
+    private func loc(_ key: String) -> String { localizer?.t(key) ?? key }
+}

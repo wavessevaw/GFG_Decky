@@ -1,0 +1,92 @@
+name: SSMT
+options:
+  bundleIdPrefix: com.soundsolutions
+  deploymentTarget:
+    macOS: "13.0"
+  developmentLanguage: en
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MACOSX_DEPLOYMENT_TARGET: "13.0"
+    MARKETING_VERSION: "1.2.0"
+    CURRENT_PROJECT_VERSION: "6"
+packages:
+  SSMTCore:
+    path: Packages/SSMTCore
+  SSMTAudio:
+    path: Packages/SSMTAudio
+targets:
+  SSMT:
+    type: application
+    platform: macOS
+    sources:
+      - path: App/SSMT
+        excludes:
+          - "Resources/Brand/README.md"
+    dependencies:
+      - package: SSMTCore
+        product: SSMTCore
+      - package: SSMTAudio
+        product: SSMTAudio
+    info:
+      path: App/SSMT/Info.plist
+      properties:
+        CFBundleName: SSMT
+        CFBundleDisplayName: SSMT
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleLocalizations: [en, ru]
+        CFBundleDevelopmentRegion: en
+        LSApplicationCategoryType: public.app-category.music
+        LSMinimumSystemVersion: "13.0"
+        NSHighResolutionCapable: true
+        NSLocalNetworkUsageDescription: "SSMT sends OSC commands to video servers, lighting and sound consoles on your network. / SSMT отправляет OSC-команды видеосерверам, световым и звуковым пультам в вашей сети."
+        NSMicrophoneUsageDescription: "SSMT measures your sound system with a measurement microphone. / SSMT измеряет акустическую систему через измерительный микрофон."
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.soundsolutions.ssmt
+        PRODUCT_NAME: SSMT
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "-"
+        ENABLE_HARDENED_RUNTIME: NO
+        COMBINE_HIDPI_IMAGES: YES
+        LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+        SWIFT_EMIT_LOC_STRINGS: NO
+  SSMTSnapshotTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: App/Tests/Snapshots
+        excludes:
+          - "References/**"
+    dependencies:
+      - target: SSMT
+      # Module visible for `import`, code comes from the host app (BUNDLE_LOADER): one copy only.
+      - package: SSMTCore
+        product: SSMTCore
+        link: false
+    settings:
+      base:
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/SSMT.app/Contents/MacOS/SSMT"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.soundsolutions.ssmt.snapshots
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_STYLE: Manual
+schemes:
+  SSMT:
+    build:
+      targets:
+        SSMT: all
+        SSMTSnapshotTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - SSMTSnapshotTests
+    archive:
+      config: Release
