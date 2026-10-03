@@ -17,6 +17,8 @@
 **Qtrl:** трек, добавленный перетаскиванием, сразу запускается по GO. Раньше, если файл ещё готовился к
 воспроизведению, кью показывала «Файл не найден» и не играла; теперь она дожидается готовности файла (до 15 с),
 а в списке пишется «Файл ещё готовится». Отсутствующий файл по-прежнему сообщается сразу.
+Кнопка GO и пробел больше не «засыпают» после добавления кью: курсор GO переходит на первую добавленную кью
+(и с конца списка), при удалении кью под курсором — на следующую; щелчок по кью ставит на неё курсор GO, как в QLab.
 
 Функции №1 и №2 — без изменений.
 
@@ -29,7 +31,9 @@ restore countdown, active corrections that can be cancelled one by one, and one 
 engineer; the console test report as steps.
 
 **Qtrl fix:** a track dropped into the cue list now plays on GO: if its file is still being prepared, the cue waits
-for it (up to 15 s) instead of reporting "File not found"; a genuinely missing file is still reported at once.
+for it (up to 15 s) instead of reporting "File not found"; a genuinely missing file is still reported at once. GO and Space no longer stay disabled after adding cues: the
+playhead moves to the first added cue (also from the end of the list) and off a deleted cue; clicking a cue puts the
+playhead on it, as in QLab.
 
 ---
 

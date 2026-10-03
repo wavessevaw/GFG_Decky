@@ -304,6 +304,30 @@ final class ShowTests: XCTestCase {
         XCTAssertEqual(rig.ops.count, 1)
     }
 
+    func testPlayheadFollowsAddedAndDeletedCues() {
+        var doc = ShowDocument()
+        doc.lists[0].cues = []
+        let rig = ShowRig(doc)
+        XCTAssertNil(rig.engine.playhead, "empty list: end of list")
+        let a = audioCue("a", "1"), b = audioCue("b", "2"), c = audioCue("c", "3")
+        doc.lists[0].cues = [a]
+        rig.engine.document = doc
+        XCTAssertEqual(rig.engine.playhead, a.id, "a cue added to an empty list is ready for GO")
+        rig.clips["a"] = constClip(0.1, frames: 480)
+        XCTAssertTrue(rig.engine.go(now: 0))
+        XCTAssertNil(rig.engine.playhead, "after the last cue: end of list")
+        doc.lists[0].cues = [a, b, c]
+        rig.engine.document = doc
+        XCTAssertEqual(rig.engine.playhead, b.id, "cues added after the end: the first new one is next")
+        doc.lists[0].cues = [a, c]
+        rig.engine.document = doc
+        XCTAssertEqual(rig.engine.playhead, c.id, "the cue on the playhead deleted: the next one")
+        rig.engine.setPlayhead(a.id)
+        doc.lists[0].cues = [a, b, c]
+        rig.engine.document = doc
+        XCTAssertEqual(rig.engine.playhead, a.id, "an existing playhead stays")
+    }
+
     func testFileStillBeingPreparedPlaysWhenReady() {
         var doc = ShowDocument()
         var a = audioCue("a", "1"); a.continueMode = .autoFollow

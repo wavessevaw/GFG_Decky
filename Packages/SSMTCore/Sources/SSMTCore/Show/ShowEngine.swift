@@ -46,7 +46,7 @@ public struct ShowSnapshot: Equatable, Sendable {
 /// scheduled `lookahead` frames ahead of the clock and sent to the mixer as `MixerOp`s.
 /// Not thread-safe: confine to one serial queue.
 public final class ShowEngine {
-    public var document: ShowDocument
+    public var document: ShowDocument { didSet { keepPlayhead(after: oldValue) } }
     public let sampleRate: Double
     public var lookahead: Int64
     /// Receives mixer operations.
@@ -126,6 +126,29 @@ public final class ShowEngine {
         guard let l = document.lists.first(where: { $0.id == id }), !l.isBank else { return }
         listID = id
         if !l.cues.contains(where: { $0.id == playhead }) { playhead = l.cues.first?.id }
+    }
+
+    /// After an edit: a playhead at the end of the list moves to the first cue added; a playhead on a deleted
+    /// cue moves to the next remaining one. Otherwise GO would stay greyed out after adding cues.
+    private func keepPlayhead(after old: ShowDocument) {
+        guard let lid = listID, let list = document.lists.first(where: { $0.id == lid }), !list.isBank else {
+            // The list itself is gone: start over on the first cue list.
+            listID = document.cueLists.first?.id
+            playhead = document.cueLists.first?.cues.first?.id
+            return
+        }
+        let ids = list.cues.map(\.id)
+        let before = old.lists.first { $0.id == lid }?.cues.map(\.id) ?? []
+        if let ph = playhead {
+            if ids.contains(ph) { return }
+            if let i = before.firstIndex(of: ph) {
+                playhead = before[(i + 1)...].first(where: ids.contains) ?? ids.first { !before.contains($0) }
+            } else {
+                playhead = ids.first
+            }
+        } else {
+            playhead = ids.first { !before.contains($0) }
+        }
     }
 
     /// Puts the playhead on a top-level cue of the current list (nil = end of list).

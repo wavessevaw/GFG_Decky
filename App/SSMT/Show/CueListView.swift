@@ -102,6 +102,8 @@ struct CueListView: View {
         } else {
             show.selection = [id]
             anchor = id
+            // As in QLab: the clicked cue is the next one for GO / Space (top-level cues only).
+            if rows.first(where: { $0.cue.id == id })?.depth == 0 { show.setPlayhead(id) }
         }
     }
 
