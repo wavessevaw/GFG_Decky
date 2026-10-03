@@ -402,4 +402,60 @@ public final class ShowGuard {
     }
 
     public var activeCorrections: Int { notches.count + unmasks.count + tonal.count + dips.count }
+
+    /// One correction the guard is holding right now (for the "active corrections" list).
+    public struct Correction: Equatable, Sendable, Identifiable {
+        public enum Kind: String, Sendable { case notch, unmask, tonal, monitorDip }
+        public var kind: Kind
+        /// Channel (EQ corrections) or bus (monitor dips).
+        public var target: Int
+        public var frequency: Double?
+        /// Size of the correction (dB, negative = cut / lower).
+        public var amountDB: Double
+        /// For a monitor dip: seconds left before it starts coming back (nil while the loop is still there).
+        public var restoreInSeconds: Double?
+        public var id: String { "\(kind.rawValue)-\(target)" }
+    }
+
+    /// What the guard holds at time `t`, monitor dips first.
+    public func corrections(at t: Double) -> [Correction] {
+        var out: [Correction] = []
+        for (id, d) in dips.sorted(by: { $0.key < $1.key }) {
+            let left = d.quietSince.map { max(0, settings.holdSeconds - (t - $0)) }
+            out.append(Correction(kind: .monitorDip, target: id, frequency: nil, amountDB: -d.dipDB, restoreInSeconds: left))
+        }
+        for (ch, n) in notches.sorted(by: { $0.key < $1.key }) {
+            out.append(Correction(kind: .notch, target: ch, frequency: n.frequency, amountDB: n.offset.gainDB, restoreInSeconds: nil))
+        }
+        for (ch, o) in unmasks.sorted(by: { $0.key < $1.key }) {
+            out.append(Correction(kind: .unmask, target: ch, frequency: base[ch].map { $0.eq.indices.contains(o.band) ? $0.eq[o.band].frequency : 3000 }, amountDB: o.gainDB, restoreInSeconds: nil))
+        }
+        for (ch, o) in tonal.sorted(by: { $0.key < $1.key }) {
+            out.append(Correction(kind: .tonal, target: ch, frequency: o.retune ?? base[ch].map { $0.eq.indices.contains(o.band) ? $0.eq[o.band].frequency : 250 }, amountDB: o.gainDB, restoreInSeconds: nil))
+        }
+        return out
+    }
+
+    /// The engineer cancels one correction from the list: it is undone at once and the guard leaves that
+    /// channel or bus alone as if the engineer had touched it. Returns what to send to the console.
+    public func cancel(_ id: String, time: Double) -> (strips: [ChannelStrip], buses: [BusStrip]) {
+        let parts = id.split(separator: "-")
+        guard parts.count == 2, let kind = Correction.Kind(rawValue: String(parts[0])), let target = Int(parts[1]) else { return ([], []) }
+        switch kind {
+        case .monitorDip:
+            guard dips[target] != nil else { return ([], []) }
+            dips[target] = nil
+            safeMax[target] = nil
+            rangAt[target] = nil
+            busHands[target] = time
+            record(time, .yielded(channel: nil, bus: target))
+            return ([], bus(target).map { [$0] } ?? [])
+        case .notch: notches[target] = nil
+        case .unmask: unmasks[target] = nil
+        case .tonal: tonal[target] = nil
+        }
+        hands[target] = time
+        record(time, .yielded(channel: target, bus: nil))
+        return (strip(target).map { [$0] } ?? [], [])
+    }
 }

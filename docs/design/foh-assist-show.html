@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>FOH Assist — Шоу (макет)</title>
+<style>
+:root{--bg:#070908;--panel:#121513;--raised:#1B1F1C;--line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.16);--t1:#F3F6F4;--t2:#939C96;--t3:#5F6862;--acc:#2EE59D;--acc2:#10A86E;--y:#FFD60A;--r:#FF453A;--b:#64D2FF}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--t1);font:13px -apple-system,"SF Pro Text","Helvetica Neue",Arial,sans-serif;width:1500px;height:960px;overflow:hidden}
+.app{display:grid;grid-template-columns:230px 1fr;height:100%}
+.side{background:var(--panel);border-right:1px solid var(--line);padding:18px 12px}
+.brand{font-weight:700;font-size:15px;margin:4px 8px 18px}.brand small{display:block;color:var(--t3);font-weight:400;font-size:11px}
+.nav div{padding:9px 10px;border-radius:9px;color:var(--t2);margin-bottom:3px}.nav .on{background:rgba(46,229,157,.14);color:var(--t1);font-weight:600}.nav small{display:block;color:var(--t3);font-size:10px}
+.main{display:grid;grid-template-rows:auto auto auto 1fr;gap:12px;padding:16px 18px;min-width:0}
+.top{display:flex;align-items:center;gap:14px}.top h1{font-size:22px;margin:0 8px 0 0}
+.seg{display:flex;background:var(--raised);border-radius:9px;padding:3px}.seg div{padding:6px 16px;border-radius:7px;color:var(--t2)}.seg .on{background:#2a302c;color:var(--t1);font-weight:600}
+.chips{display:flex;gap:8px;margin-left:auto}.chip{display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--line2);border-radius:999px;color:var(--t2);font-size:12px;white-space:nowrap}.chip b{color:var(--t1)}.dot{width:7px;height:7px;border-radius:50%;background:var(--acc)}
+.hero{display:flex;align-items:center;gap:16px;background:linear-gradient(90deg,rgba(46,229,157,.16),rgba(46,229,157,.03));border:1px solid rgba(46,229,157,.35);border-radius:14px;padding:14px 16px}
+.shield{width:42px;height:42px;border-radius:12px;background:rgba(46,229,157,.2);display:grid;place-items:center;font-size:22px}
+.hero b{font-size:17px}.hero small{display:block;color:var(--t2);margin-top:2px}
+.stats{display:flex;gap:22px;margin-left:auto;text-align:right}.stats b{font-size:20px;display:block;font-variant-numeric:tabular-nums}.stats small{color:var(--t3);font-size:11px}
+.btn{padding:8px 14px;border-radius:9px;border:1px solid var(--line2);background:rgba(255,255,255,.06);white-space:nowrap}.btn.d{background:var(--r);border:none;font-weight:600}
+.mon{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+.m{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.m.alert{border-color:rgba(255,214,10,.55);background:linear-gradient(180deg,rgba(255,214,10,.08),var(--panel))}
+.m .h{display:flex;justify-content:space-between;font-size:12px;color:var(--t2)}.m .h b{color:var(--t1)}
+.lvl{height:46px;display:flex;align-items:flex-end;gap:3px;margin:8px 0 6px}.lvl i{flex:1;background:#2a302c;border-radius:2px}
+.lvl i.on{background:var(--acc)}.lvl i.hot{background:var(--y)}
+.m .f{font-size:11px;color:var(--t3);display:flex;justify-content:space-between}.m .f b{color:var(--y);font-weight:600}
+.work{display:grid;grid-template-columns:minmax(0,1fr) 430px;gap:12px;min-height:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;min-height:0}
+.card h3{margin:0;padding:12px 14px;font-size:13px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line)}.card h3 .mm{margin-left:auto;color:var(--t3);font-weight:400;font-size:12px}
+.corr{display:grid;grid-template-columns:34px 1fr auto auto;gap:12px;align-items:center;padding:11px 14px;border-bottom:1px solid var(--line)}
+.ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:15px}
+.ic.y{background:rgba(255,214,10,.14)}.ic.b{background:rgba(100,210,255,.14)}.ic.g{background:rgba(46,229,157,.14)}.ic.r{background:rgba(255,69,58,.14)}
+.corr b{display:block}.corr small{color:var(--t2)}
+.amt{font-variant-numeric:tabular-nums;font-weight:600;text-align:right}.amt small{display:block;color:var(--t3);font-weight:400;font-size:11px}
+.x{font-size:12px;padding:5px 10px;border-radius:8px;border:1px solid var(--line2);color:var(--t2)}
+.log{padding:10px 14px;display:grid;gap:7px;font-size:12px;color:var(--t2)}.log span{color:var(--t3);font-variant-numeric:tabular-nums;margin-right:8px}
+.log .e{color:var(--b)}
+.leads{padding:10px 14px;border-top:1px solid var(--line);font-size:12px;color:var(--t2)}.tag{display:inline-block;padding:4px 9px;border-radius:999px;background:rgba(46,229,157,.14);color:var(--acc);margin:4px 4px 0 0}
+</style></head><body>
+<div class="app">
+ <div class="side"><div class="brand">SSMT<small>SoundSolution Multi Tool</small></div>
+  <div class="nav"><div>Настройка системы</div><div>Input list и сцена</div><div>Qtrl<small>Show Control Center</small></div><div class="on">FOH Assist<small>ассистент микширования</small></div></div></div>
+ <div class="main">
+  <div class="top"><h1>FOH Assist</h1>
+   <div class="seg"><div>Саундчек</div><div class="on">Шоу</div><div>Тест пульта</div></div>
+   <div class="chips"><div class="chip"><span class="dot"></span><b>X32</b> 192.168.1.64</div><div class="chip">Зал <b>94 dB(A)</b></div><div class="chip">Профиль <b>Мюзикл</b></div><div class="chip">⚙</div></div>
+  </div>
+  <div class="hero"><div class="shield">🛡</div>
+   <div><b>Страховка включена</b><small>Фейдеры каналов — ваши. Коррекции до 3 дБ, мониторы до −9 дБ, всё возвращается автоматически.</small></div>
+   <div class="stats"><div><b>3</b><small>активно</small></div><div><b>14</b><small>за шоу</small></div><div><b>00:42:18</b><small>время</small></div></div>
+   <div class="btn">Симуляция шоу ▸</div><div class="btn d">Снять страховку</div>
+  </div>
+  <div class="mon">
+   <div class="m"><div class="h"><b>Mon 1</b><span>Вокал</span></div><div class="lvl"><i class="on" style="height:30%"></i><i class="on" style="height:44%"></i><i class="on" style="height:38%"></i><i class="on" style="height:50%"></i><i class="on" style="height:41%"></i><i class="on" style="height:47%"></i></div><div class="f"><span>−3.0 дБ</span><span>норма</span></div></div>
+   <div class="m alert"><div class="h"><b>Mon 2</b><span>Хор</span></div><div class="lvl"><i class="on" style="height:40%"></i><i class="on" style="height:55%"></i><i class="hot" style="height:88%"></i><i class="hot" style="height:90%"></i><i class="hot" style="height:89%"></i><i class="on" style="height:60%"></i></div><div class="f"><span>+1.0 → −2.0 дБ</span><b>возврат 6 с</b></div></div>
+   <div class="m"><div class="h"><b>Mon 3</b><span>Бэк</span></div><div class="lvl"><i class="on" style="height:22%"></i><i class="on" style="height:35%"></i><i class="on" style="height:28%"></i><i class="on" style="height:33%"></i><i class="on" style="height:30%"></i><i class="on" style="height:26%"></i></div><div class="f"><span>−6.0 дБ</span><span>норма</span></div></div>
+   <div class="m"><div class="h"><b>Mon 4</b><span>Барабаны</span></div><div class="lvl"><i class="on" style="height:60%"></i><i class="on" style="height:20%"></i><i class="on" style="height:64%"></i><i class="on" style="height:18%"></i><i class="on" style="height:62%"></i><i class="on" style="height:22%"></i></div><div class="f"><span>−2.0 дБ</span><span>норма</span></div></div>
+   <div class="m"><div class="h"><b>IEM 1</b><span>Солист</span></div><div class="lvl"><i class="on" style="height:36%"></i><i class="on" style="height:40%"></i><i class="on" style="height:37%"></i><i class="on" style="height:42%"></i><i class="on" style="height:39%"></i><i class="on" style="height:41%"></i></div><div class="f"><span>0.0 дБ</span><span>норма</span></div></div>
+   <div class="m"><div class="h"><b>+ линия</b><span></span></div><div class="lvl"></div><div class="f"><span>добавить мониторную шину</span></div></div>
+  </div>
+  <div class="work">
+   <div class="card"><h3>Активные коррекции <span class="mm">каждая снимается сама или кнопкой «Отменить»</span></h3>
+    <div class="corr"><div class="ic y">🔊</div><div><b>Mon 2 · самовозбуждение мониторной линии</b><small>Уровень снижен на 3 дБ. Звенело повторно — будет оставлен на 1 дБ ниже точки звона.</small></div><div class="amt">−3 дБ<small>возврат 6 с</small></div><div class="x">Отменить</div></div>
+    <div class="corr"><div class="ic r">⦿</div><div><b>Vox Lead · обратная связь 2.5 kHz</b><small>Режекция Q 8 в полосе 3 EQ канала. Снимается после 3 мин тишины.</small></div><div class="amt">−4 дБ<small>2:41</small></div><div class="x">Отменить</div></div>
+    <div class="corr"><div class="ic b">≋</div><div><b>Хор и струнные (8 каналов) · массовая сцена</b><small>Полоса присутствия 2–2.5 kHz приглушена, чтобы солист оставался разборчивым.</small></div><div class="amt">−2 дБ<small>до конца сцены</small></div><div class="x">Отменить</div></div>
+    <div class="leads">Держать разборчивыми:<br><span class="tag">Vox Lead</span><span class="tag">Vox Anna</span><span class="tag" style="background:rgba(255,255,255,.06);color:var(--t2)">+ добавить</span></div>
+   </div>
+   <div class="card"><h3>Журнал <span class="mm">ассистент · <span style="color:#64D2FF">вы</span></span></h3>
+    <div class="log">
+     <div><span>42:18</span>Mon 2: самовозбуждение — уровень снижен на 3 дБ</div>
+     <div class="e"><span>42:11</span>Вы: Mon 2 → +1.0 дБ</div>
+     <div><span>40:02</span>Vox Lead: обратная связь 2.5 kHz — режекция −4 дБ</div>
+     <div><span>38:30</span>Хор, струнные: массовая сцена — 2.5 kHz −2 дБ</div>
+     <div><span>35:12</span>Vox Lead: эффект близости — 250 Hz −2 дБ, снято через 40 с</div>
+     <div class="e"><span>33:47</span>Вы изменили EQ Choir A — коррекции ассистента сняты</div>
+    </div>
+   </div>
+  </div>
+ </div>
+</div>
+</body></html>

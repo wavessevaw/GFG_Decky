@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>FOH Assist — Саундчек (макет)</title>
+<style>
+:root{--bg:#070908;--panel:#121513;--raised:#1B1F1C;--line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.16);--t1:#F3F6F4;--t2:#939C96;--t3:#5F6862;--acc:#2EE59D;--acc2:#10A86E;--mint:#A7F3D0;--y:#FFD60A;--r:#FF453A;--b:#64D2FF}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--t1);font:13px -apple-system,"SF Pro Text","Helvetica Neue",Arial,sans-serif;width:1500px;height:960px;overflow:hidden}
+.app{display:grid;grid-template-columns:230px 1fr;height:100%}
+.side{background:var(--panel);border-right:1px solid var(--line);padding:18px 12px}
+.brand{font-weight:700;font-size:15px;margin:4px 8px 18px}.brand small{display:block;color:var(--t3);font-weight:400;font-size:11px}
+.nav div{padding:9px 10px;border-radius:9px;color:var(--t2);margin-bottom:3px}.nav .on{background:rgba(46,229,157,.14);color:var(--t1);font-weight:600}
+.nav small{display:block;color:var(--t3);font-size:10px}
+.main{display:grid;grid-template-rows:auto auto 1fr;gap:12px;padding:16px 18px;min-width:0}
+.top{display:flex;align-items:center;gap:14px}
+.top h1{font-size:22px;margin:0 8px 0 0}
+.seg{display:flex;background:var(--raised);border-radius:9px;padding:3px}.seg div{padding:6px 16px;border-radius:7px;color:var(--t2)}.seg .on{background:#2a302c;color:var(--t1);font-weight:600}
+.chips{display:flex;gap:8px;margin-left:auto}
+.chip{display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--line2);border-radius:999px;color:var(--t2);font-size:12px;white-space:nowrap}
+.chip b{color:var(--t1);font-weight:600}.dot{width:7px;height:7px;border-radius:50%;background:var(--acc)}
+.actions{display:flex;gap:8px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.btn{padding:7px 13px;border-radius:9px;border:1px solid var(--line2);background:rgba(255,255,255,.06);white-space:nowrap}
+.btn.p{background:linear-gradient(90deg,var(--acc),var(--acc2));color:#000;font-weight:600;border:none}.btn.d{background:var(--r);border:none;font-weight:600}
+.sep{width:1px;height:24px;background:var(--line2);margin:0 4px}.grow{flex:1}
+.progress{display:flex;align-items:center;gap:8px;color:var(--t2);font-size:12px;white-space:nowrap}
+.bar{width:160px;height:6px;border-radius:3px;background:#262b28;overflow:hidden}.bar i{display:block;height:100%;background:var(--acc)}
+.work{display:grid;grid-template-columns:minmax(0,1fr) 470px;gap:12px;min-height:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+.card h3{margin:0;padding:12px 14px;font-size:13px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line)}
+.card h3 .m{margin-left:auto;color:var(--t3);font-weight:400;font-size:12px}
+.group{padding:7px 14px;color:var(--t3);font-size:11px;letter-spacing:.06em;text-transform:uppercase;background:#0f1211}
+.row{display:grid;grid-template-columns:26px 1fr 92px 120px;align-items:center;gap:10px;padding:7px 14px;border-bottom:1px solid var(--line)}
+.row.sel{background:rgba(46,229,157,.08);box-shadow:inset 3px 0 var(--acc)}
+.num{color:var(--t3);font-variant-numeric:tabular-nums;text-align:right}
+.nm b{display:block;font-weight:600}.nm small{color:var(--t2);font-size:11px}
+.meter{height:8px;border-radius:4px;background:#222725;position:relative;overflow:hidden}
+.meter i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#1f8f63,var(--acc) 70%,var(--y) 88%,var(--r))}
+.st{justify-self:end;display:flex;gap:6px;align-items:center;font-size:11px;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.ok{color:#34D399;background:rgba(52,211,153,.13)}.run{color:var(--y);background:rgba(255,214,10,.13)}.wait{color:var(--t2);background:rgba(255,255,255,.06)}.idle{color:var(--t3)}
+.detail{padding:14px;display:grid;gap:12px;overflow:hidden}
+.dh{display:flex;align-items:baseline;gap:10px}.dh b{font-size:18px}.dh span{color:var(--t2)}
+.kv{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.kv div{background:var(--raised);border-radius:10px;padding:9px 10px}.kv small{display:block;color:var(--t3);font-size:11px}.kv b{font-size:16px;font-variant-numeric:tabular-nums}
+.kv em{font-style:normal;color:var(--acc);font-size:11px;margin-left:4px}
+.eq{background:var(--raised);border-radius:10px;padding:8px}
+.bands{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-top:6px}
+.bands div{font-size:11px;color:var(--t2);background:#151917;border-radius:7px;padding:5px 7px;font-variant-numeric:tabular-nums}.bands b{color:var(--t1)}
+.log{font-size:12px;color:var(--t2);display:grid;gap:5px}.log span{color:var(--t3);font-variant-numeric:tabular-nums;margin-right:8px}
+.note{font-size:11px;color:var(--t3)}
+</style></head><body>
+<div class="app">
+ <div class="side">
+  <div class="brand">SSMT<small>SoundSolution Multi Tool</small></div>
+  <div class="nav"><div>Настройка системы</div><div>Input list и сцена</div><div>Qtrl<small>Show Control Center</small></div><div class="on">FOH Assist<small>ассистент микширования</small></div></div>
+ </div>
+ <div class="main">
+  <div class="top">
+   <h1>FOH Assist</h1>
+   <div class="seg"><div class="on">Саундчек</div><div>Шоу</div><div>Тест пульта</div></div>
+   <div class="chips">
+    <div class="chip"><span class="dot"></span><b>X32</b> 192.168.1.64 · 32 кан.</div>
+    <div class="chip">Микрофон <b>Earthworks M30</b> · 78 dB(A)</div>
+    <div class="chip">Профиль <b>Мюзикл</b></div>
+    <div class="chip">⚙</div>
+   </div>
+  </div>
+  <div class="actions">
+   <div class="btn p">♪ Оркестр</div><div class="btn p">👥 Хор</div><div class="btn">Каналы 13–16 ▸</div>
+   <div class="sep"></div><div class="btn">± Проверить полярность</div>
+   <div class="grow"></div>
+   <div class="progress">Хор: контроль обратной связи <div class="bar"><i style="width:72%"></i></div> 3 из 4</div>
+   <div class="btn">Откатить</div><div class="btn d">Стоп</div>
+  </div>
+  <div class="work">
+   <div class="card">
+    <h3>Каналы <span class="m">18 · готово 3 · в работе 1</span></h3>
+    <div class="group">Ударные</div>
+    <div class="row"><div class="num">1</div><div class="nm"><b>Kick In</b><small>Бочка · гейн 20 · HPF выкл</small></div><div class="meter"><i style="width:35%"></i></div><div class="st idle">не настроен</div></div>
+    <div class="row"><div class="num">2</div><div class="nm"><b>Snare Top</b><small>Малый барабан · гейн 20</small></div><div class="meter"><i style="width:28%"></i></div><div class="st idle">не настроен</div></div>
+    <div class="row"><div class="num">18</div><div class="nm"><b>Snare Bottom</b><small>Малый барабан · полярность Ø</small></div><div class="meter"><i style="width:22%"></i></div><div class="st ok">✓ полярность</div></div>
+    <div class="group">Хор</div>
+    <div class="row"><div class="num">13</div><div class="nm"><b>Choir S</b><small>Хор · гейн 37 · HPF 115 · комп −20 дБ 2:1</small></div><div class="meter"><i style="width:62%"></i></div><div class="st ok">✓ Готово</div></div>
+    <div class="row"><div class="num">14</div><div class="nm"><b>Choir A</b><small>Хор · гейн 42 · HPF 115 · комп −20 дБ 2:1</small></div><div class="meter"><i style="width:58%"></i></div><div class="st ok">✓ Готово</div></div>
+    <div class="row"><div class="num">15</div><div class="nm"><b>Choir T</b><small>Хор · гейн 40.5 · HPF 115</small></div><div class="meter"><i style="width:60%"></i></div><div class="st ok">✓ Готово</div></div>
+    <div class="row sel"><div class="num">16</div><div class="nm"><b>Choir B</b><small>Хор · гейн 38 · HPF 90 · шаг 6</small></div><div class="meter"><i style="width:66%"></i></div><div class="st run">● Настраиваю</div></div>
+    <div class="group">Вокал</div>
+    <div class="row"><div class="num">7</div><div class="nm"><b>Vox Lead</b><small>Вокал (муж.) · гейн 20</small></div><div class="meter"><i style="width:0%"></i></div><div class="st wait">ждёт сигнал</div></div>
+    <div class="row"><div class="num">8</div><div class="nm"><b>BV 1</b><small>Бэк-вокал · гейн 20</small></div><div class="meter"><i style="width:0%"></i></div><div class="st idle">не настроен</div></div>
+   </div>
+   <div class="card">
+    <h3>Канал 16 · Choir B <span class="m">Настроить · Откатить</span></h3>
+    <div class="detail">
+     <div class="kv">
+      <div><small>Гейн</small><b>38.0</b><em>+18</em></div>
+      <div><small>HPF</small><b>90 Hz</b></div>
+      <div><small>Компрессор</small><b>−20 · 2:1</b></div>
+      <div><small>Остаток тембра</small><b>0.8 dB</b></div>
+     </div>
+     <div class="eq">
+      <svg width="100%" height="150" viewBox="0 0 488 150" preserveAspectRatio="none">
+       <g stroke="rgba(255,255,255,.07)">
+        <line x1="0" y1="75" x2="488" y2="75" stroke="rgba(255,255,255,.18)"/><line x1="0" y1="35" x2="488" y2="35"/><line x1="0" y1="115" x2="488" y2="115"/>
+        <line x1="49" y1="0" x2="49" y2="150"/><line x1="146" y1="0" x2="146" y2="150"/><line x1="244" y1="0" x2="244" y2="150"/><line x1="342" y1="0" x2="342" y2="150"/><line x1="439" y1="0" x2="439" y2="150"/>
+       </g>
+       <g fill="#5F6862" font-size="10"><text x="51" y="146">50</text><text x="148" y="146">200</text><text x="246" y="146">1k</text><text x="344" y="146">5k</text><text x="441" y="146">20k</text><text x="4" y="32">+6</text><text x="4" y="112">−6</text></g>
+       <path d="M0,150 C40,140 70,92 95,80 S150,72 170,70 S205,112 225,110 S260,76 300,74 S360,66 390,70 S460,74 488,75" fill="none" stroke="#64D2FF" stroke-width="1.5" stroke-dasharray="4 3" opacity=".7"/>
+       <path d="M0,150 C40,138 70,90 95,78 S150,70 172,68 S208,118 228,116 S262,76 302,74 S360,66 392,70 S460,74 488,75" fill="none" stroke="#2EE59D" stroke-width="2.2"/>
+      </svg>
+      <div class="bands"><div>1 · Bell <b>400 Hz −2.0</b> Q 2</div><div>2 · Bell <b>160 Hz −7.2</b> Q 0.7</div><div>3 · Bell <b>5 kHz +2.0</b> Q 0.7</div><div>4 · Shelf <b>8 kHz 0.0</b></div></div>
+     </div>
+     <div class="note">Зелёная кривая — EQ на пульте сейчас, пунктир — куда ведёт ассистент (≤ 2 дБ за шаг).</div>
+     <div class="log">
+      <div><span>00:12</span>Распознано: хор (85 %)</div>
+      <div><span>00:16</span>Гейн 20.0 → 38.0 дБ (три шага)</div>
+      <div><span>00:20</span>HPF 90 Hz · EQ 160 Hz −7.2 дБ (гул микрофона)</div>
+      <div><span>00:24</span>Компрессор: порог −20 дБ, 2:1, атака 15 мс</div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </div>
+</div>
+</body></html>

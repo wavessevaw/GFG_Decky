@@ -79,6 +79,28 @@ final class X32Link: @unchecked Sendable {
     }
 }
 
+/// Live levels for the meters (separate from the store so only the meters redraw ~10 times a second).
+@MainActor
+final class AssistMeters: ObservableObject {
+    /// Channel levels (dBFS).
+    @Published var channels: [Int: Double] = [:]
+    /// Mix bus levels (dBFS).
+    @Published var buses: [Int: Double] = [:]
+    private var lastPublish = Date.distantPast
+    private var pending: [Int: Double] = [:]
+
+    /// Collects a meter frame; publishes at most 10 times a second.
+    func feed(channels levels: [Double]) {
+        for (i, v) in levels.enumerated() { pending[i + 1] = v }
+        if Date().timeIntervalSince(lastPublish) >= 0.1 {
+            channels = pending
+            lastPublish = Date()
+        }
+    }
+
+    func set(channels levels: [Int: Double]) { channels.merge(levels) { $1 } }
+}
+
 /// Function #4: FOH Assist. Soundcheck: tunes channels and groups by itself. Show: backs up the engineer.
 @MainActor
 final class AssistStore: ObservableObject {
@@ -127,6 +149,15 @@ final class AssistStore: ObservableObject {
     @Published private(set) var guardLog: [(time: Double, action: GuardAction)] = []
     @Published private(set) var features: [Int: SignalFeatures] = [:]
     @Published private(set) var busLevels: [Int: Double] = [:]
+    /// Channel shown in the detail panel of the soundcheck screen.
+    @Published var selectedChannel: Int?
+    /// Console / audio settings sheet.
+    @Published var showSettings = false
+    /// What the show guard is holding right now.
+    @Published private(set) var corrections: [ShowGuard.Correction] = []
+    /// Show time since the guard (or the show simulation) started, seconds.
+    @Published private(set) var guardElapsed: Double = 0
+    let liveMeters = AssistMeters()
     @Published private(set) var job: AssistSession.Job = .none
     @Published private(set) var running = false
     @Published private(set) var guarding = false
@@ -261,10 +292,13 @@ final class AssistStore: ObservableObject {
         }
         if let (bank, values) = ConsoleMeters.decode(m, family: family) {
             switch bank {
-            case .channels: if running || guarding { meters.add(channelLevels: values) }
+            case .channels:
+                liveMeters.feed(channels: values)
+                if running || guarding { meters.add(channelLevels: values) }
             case .rta: if running || guarding { meters.add(rtaBands: values) }
             case .buses:
                 for (i, v) in values.prefix(X32Codec.busCount(family)).enumerated() { busLevels[i + 1] = v }
+                liveMeters.buses = busLevels
                 if values.count >= 24, running { mainFrames.append(Decibel.fromPower(pow(10, values[22] / 10) + pow(10, values[23] / 10))) }
             }
             return
@@ -399,6 +433,7 @@ final class AssistStore: ObservableObject {
         apply(changed)
         log = Array(session.log.suffix(200))
         features.merge(session.features) { $1 }
+        liveMeters.set(channels: feats.filter { $0.value.hasSignal }.mapValues(\.rmsDB))
         groupPhase = session.group?.phase
         // A channel that is ready becomes the show guard's tonal reference.
         for ch in session.listening where references[ch] == nil {
@@ -525,6 +560,9 @@ final class AssistStore: ObservableObject {
             let scene = r.scene
             let events = Array(r.events.suffix(80))
             let glog = Array(r.guardian.log.suffix(200))
+            let busLv = r.lastBusLevels
+            let chLv = r.lastChannelLevels
+            let now = r.time
             DispatchQueue.main.async {
                 guard let self, self.rehearsal === r else { return }
                 self.rehearsalBusy = false
@@ -542,6 +580,11 @@ final class AssistStore: ObservableObject {
                 self.rehearsalScene = scene
                 self.rehearsalLog = events.filter { if case .engineerFader = $0.event { return false }; return true }
                 self.guardLog = glog
+                self.corrections = r.guardian.corrections(at: r.time)
+                self.liveMeters.buses = busLv
+                self.busLevels = busLv
+                self.liveMeters.set(channels: chLv)
+                self.guardElapsed = now
             }
         }
     }
@@ -601,6 +644,8 @@ final class AssistStore: ObservableObject {
         g.references = references
         guardian = g
         guardStart = Date()
+        guardElapsed = 0
+        corrections = []
         guarding = true
         hallDetector.reset()
         stageDetector.reset()
@@ -640,6 +685,20 @@ final class AssistStore: ObservableObject {
 
     private var guardTime: Double = 0
 
+    /// The engineer cancels one correction of the guard from the list.
+    func cancelCorrection(_ id: String) {
+        guard let g = guardian else { return }
+        let t = rehearsal?.time ?? (sim != nil ? guardTime : Date().timeIntervalSince(guardStart))
+        let (s, b) = g.cancel(id, time: t)
+        apply(s)
+        apply(buses: b)
+        corrections = g.corrections(at: t)
+        guardLog = Array(g.log.suffix(200))
+    }
+
+    /// Log lines of one channel (soundcheck detail panel).
+    func log(of ch: Int) -> [AssistSession.LogEntry] { log.filter { $0.channel == ch } }
+
     private func guardStep() {
         guard let g = guardian else { return }
         let t = sim != nil ? guardTime : Date().timeIntervalSince(guardStart)
@@ -663,5 +722,9 @@ final class AssistStore: ObservableObject {
         apply(buses: r.buses)
         features.merge(feats) { $1 }
         guardLog = Array(g.log.suffix(200))
+        corrections = g.corrections(at: t)
+        guardElapsed = t
+        liveMeters.set(channels: feats.filter { $0.value.hasSignal }.mapValues(\.rmsDB))
+        liveMeters.buses = busLevels
     }
 }

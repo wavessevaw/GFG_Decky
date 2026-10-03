@@ -201,7 +201,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Похоже, задержка введена не той группе (сабы ↔ топы)."
+            "value": "Вероятно, задержка введена не в ту группу (сабвуферы ↔ сателлиты)."
           }
         }
       }
@@ -252,7 +252,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Подключите пульт к Mac по USB (X-USB / X-LIVE) или Dante: каждый канал пульта приходит отдельным входом. Измерительный микрофон в зале нужен для SPL и поиска фидбэка."
+            "value": "Подключите пульт к Mac по USB (X-USB / X-LIVE) или Dante: каждый канал пульта приходит отдельным входом. Измерительный микрофон в зале нужен для SPL и обнаружения обратной связи."
           }
         }
       }
@@ -270,6 +270,91 @@
           "stringUnit": {
             "state": "translated",
             "value": "Звук с пульта"
+          }
+        }
+      }
+    },
+    "assist.band": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Band %ld"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Полоса %ld"
+          }
+        }
+      }
+    },
+    "assist.banner.off": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The guard is off"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Страховка выключена"
+          }
+        }
+      }
+    },
+    "assist.banner.on": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The guard is on"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Страховка включена"
+          }
+        }
+      }
+    },
+    "assist.banner.text": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Channel faders are yours. Corrections up to 3 dB, monitors down to −9 dB; everything is restored automatically."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Фейдеры каналов — у звукорежиссёра. Коррекции до 3 дБ, мониторные линии до −9 дБ; всё восстанавливается автоматически."
+          }
+        }
+      }
+    },
+    "assist.banner.textoff": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn it on before the show: the assistant backs you up without moving channel faders."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Включите перед шоу: ассистент страхует звукорежиссёра, не изменяя фейдеры каналов."
           }
         }
       }
@@ -444,6 +529,57 @@
         }
       }
     },
+    "assist.chip.hall": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hall"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Зал"
+          }
+        }
+      }
+    },
+    "assist.chip.profile": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profile"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Профиль"
+          }
+        }
+      }
+    },
+    "assist.chip.sim": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Simulator"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Симулятор"
+          }
+        }
+      }
+    },
     "assist.choir": {
       "extractionState": "manual",
       "localizations": {
@@ -614,6 +750,346 @@
         }
       }
     },
+    "assist.corr.cancel": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Отменить"
+          }
+        }
+      }
+    },
+    "assist.corr.dip.text": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Level lowered; it comes back step by step once the line has been stable for 8 s."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Уровень снижен; восстанавливается по шагам после 8 с стабильной работы линии."
+          }
+        }
+      }
+    },
+    "assist.corr.dip.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · monitor line ringing"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · самовозбуждение мониторной линии"
+          }
+        }
+      }
+    },
+    "assist.corr.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No corrections — everything is in order."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Коррекций нет — всё в норме."
+          }
+        }
+      }
+    },
+    "assist.corr.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "each is released by itself or with Cancel"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "каждая снимается автоматически или кнопкой «Отменить»"
+          }
+        }
+      }
+    },
+    "assist.corr.notch.text": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Narrow notch in the channel EQ; released when the frequency stays quiet."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Узкая режекция в EQ канала; снимается, когда частота больше не возбуждается."
+          }
+        }
+      }
+    },
+    "assist.corr.notch.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · feedback at %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · обратная связь на %@"
+          }
+        }
+      }
+    },
+    "assist.corr.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Active corrections"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Активные коррекции"
+          }
+        }
+      }
+    },
+    "assist.corr.tonal.text": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ lowered while the singer is close to the mic."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ослаблено, пока исполнитель близко к микрофону."
+          }
+        }
+      }
+    },
+    "assist.corr.tonal.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · proximity effect"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · эффект близости"
+          }
+        }
+      }
+    },
+    "assist.corr.unmask.text": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Presence band at %@ lowered so the lead stays intelligible."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Полоса присутствия %@ ослаблена для разборчивости солиста."
+          }
+        }
+      }
+    },
+    "assist.corr.unmask.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · mass scene"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · массовая сцена"
+          }
+        }
+      }
+    },
+    "assist.corr.untilquiet": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "until stable"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "до стабилизации"
+          }
+        }
+      }
+    },
+    "assist.corr.untilscene": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "until the scene ends"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "до конца сцены"
+          }
+        }
+      }
+    },
+    "assist.detail.curve": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "console"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "пульт"
+          }
+        }
+      }
+    },
+    "assist.detail.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select a channel in the list."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выберите канал в списке."
+          }
+        }
+      }
+    },
+    "assist.detail.eq": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "EQ and low cut on the console"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "EQ и срез НЧ на пульте"
+          }
+        }
+      }
+    },
+    "assist.detail.log": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What the assistant did on this channel"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Что ассистент сделал на канале"
+          }
+        }
+      }
+    },
+    "assist.detail.nolog": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The assistant has not changed this channel yet."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ассистент ещё не изменял этот канал."
+          }
+        }
+      }
+    },
+    "assist.detail.spectrum": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "channel spectrum, relative"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "спектр канала, отн."
+          }
+        }
+      }
+    },
     "assist.disconnect": {
       "extractionState": "manual",
       "localizations": {
@@ -762,7 +1238,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@: петля — монитор ниже на %.0f дБ"
+            "value": "%@: самовозбуждение — уровень мониторной линии снижен на %.0f дБ"
           }
         }
       }
@@ -779,7 +1255,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@: звенел снова — оставлен на %.0f дБ ниже"
+            "value": "%@: повторное самовозбуждение — уровень оставлен на %.0f дБ ниже"
           }
         }
       }
@@ -796,7 +1272,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@: фидбэк на %@ — вырез %.0f дБ"
+            "value": "%@: обратная связь на %@ — режекция %.0f дБ"
           }
         }
       }
@@ -813,7 +1289,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@: вырез снят"
+            "value": "%@: режекция снята"
           }
         }
       }
@@ -830,7 +1306,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@: монитор возвращён"
+            "value": "%@: уровень мониторной линии восстановлен"
           }
         }
       }
@@ -847,7 +1323,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@: бубнит (близко к микрофону) — %@ %.0f дБ"
+            "value": "%@: эффект близости — %@ %.0f дБ"
           }
         }
       }
@@ -864,7 +1340,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@: тембр в норме — EQ возвращён"
+            "value": "%@: тембр в норме — коррекция снята"
           }
         }
       }
@@ -881,7 +1357,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@: массовая сцена — %@ %.0f дБ, чтобы солист читался"
+            "value": "%@: массовая сцена — %@ %.0f дБ для разборчивости солиста"
           }
         }
       }
@@ -898,7 +1374,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@: сцена закончилась — EQ возвращён"
+            "value": "%@: сцена завершена — коррекция EQ снята"
           }
         }
       }
@@ -915,7 +1391,143 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@: вы взяли управление — страховка отпустила"
+            "value": "%@: управление у звукорежиссёра — коррекции ассистента сняты"
+          }
+        }
+      }
+    },
+    "assist.group.band": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bass, guitars, keys"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Бас, гитары, клавишные"
+          }
+        }
+      }
+    },
+    "assist.group.brass": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brass"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Медные духовые"
+          }
+        }
+      }
+    },
+    "assist.group.choir": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choir"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Хор"
+          }
+        }
+      }
+    },
+    "assist.group.drums": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drums and percussion"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ударные и перкуссия"
+          }
+        }
+      }
+    },
+    "assist.group.other": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Other"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Прочие"
+          }
+        }
+      }
+    },
+    "assist.group.strings": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Strings"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Струнные"
+          }
+        }
+      }
+    },
+    "assist.group.vocals": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vocals"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вокал"
+          }
+        }
+      }
+    },
+    "assist.group.woodwinds": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Woodwinds"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Деревянные духовые"
           }
         }
       }
@@ -932,7 +1544,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "«Оркестр» и «Хор» находят каналы по названиям на пульте (Violin, Vc, Скрипка, Choir, Хор…). Все каналы настраиваются одновременно на небольшой громкости, балансируются и поднимаются, пока измерительный микрофон слушает фидбэк."
+            "value": "«Оркестр» и «Хор» находят каналы по названиям на пульте (Violin, Vc, Скрипка, Choir, Хор…). Все каналы настраиваются одновременно на небольшой громкости, балансируются и поднимаются, пока измерительный микрофон контролирует возникновение обратной связи."
           }
         }
       }
@@ -1000,7 +1612,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Микс ведёте вы. Ассистент не трогает фейдеры каналов: вырезает фидбэк в зале, прижимает зазвеневший монитор на шаг и возвращает, держит солиста разборчивым в массовых сценах и страхует тембр — максимум на несколько дБ, всё возвращается, когда не нужно. Что тронули вы — он не трогает."
+            "value": "Микс ведёт звукорежиссёр. Ассистент не изменяет фейдеры каналов: подавляет акустическую обратную связь в зале, временно снижает уровень мониторной линии при самовозбуждении и восстанавливает его, сохраняет разборчивость солиста в массовых сценах и компенсирует эффект близости — в пределах нескольких дБ; все коррекции снимаются, когда в них нет необходимости. Параметры, изменённые звукорежиссёром, ассистент не трогает."
           }
         }
       }
@@ -1103,6 +1715,57 @@
           "stringUnit": {
             "state": "translated",
             "value": "полка ВЧ"
+          }
+        }
+      }
+    },
+    "assist.journal": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Log"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Журнал"
+          }
+        }
+      }
+    },
+    "assist.journal.assistant": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "assistant"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ассистент"
+          }
+        }
+      }
+    },
+    "assist.journal.you": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "engineer"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "звукорежиссёр"
           }
         }
       }
@@ -1651,6 +2314,74 @@
         }
       }
     },
+    "assist.leads.add": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+ Add"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+ Добавить"
+          }
+        }
+      }
+    },
+    "assist.leads.off": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "available while the guard is on"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "доступно при включённой страховке"
+          }
+        }
+      }
+    },
+    "assist.list.count": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%ld of %ld ready"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "готово %ld из %ld"
+          }
+        }
+      }
+    },
+    "assist.list.hidden": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%ld unused channels hidden"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Скрыто неиспользуемых каналов: %ld"
+          }
+        }
+      }
+    },
     "assist.log": {
       "extractionState": "manual",
       "localizations": {
@@ -1821,6 +2552,142 @@
         }
       }
     },
+    "assist.mon.add": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+ Monitor line"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+ Мониторная линия"
+          }
+        }
+      }
+    },
+    "assist.mon.addhint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "add a monitor bus"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "добавить шину"
+          }
+        }
+      }
+    },
+    "assist.mon.holding": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "held down"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "удерживается"
+          }
+        }
+      }
+    },
+    "assist.mon.none": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No monitor buses found. Add the buses that feed wedges or in-ears."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Мониторные шины не найдены. Добавьте шины, которые питают сценические мониторы или системы ушного мониторинга."
+          }
+        }
+      }
+    },
+    "assist.mon.ok": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "normal"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "норма"
+          }
+        }
+      }
+    },
+    "assist.mon.restore": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "back in %ld s"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "возврат через %ld с"
+          }
+        }
+      }
+    },
+    "assist.nc.text": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Over the router's Wi-Fi, like Mixing Station. Or choose the simulator in the settings to try everything without a console."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Через Wi-Fi роутера, как Mixing Station. Или выберите в настройках симулятор, чтобы попробовать все функции без пульта."
+          }
+        }
+      }
+    },
+    "assist.nc.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connect the console"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Подключите пульт"
+          }
+        }
+      }
+    },
     "assist.networkHint": {
       "extractionState": "manual",
       "localizations": {
@@ -1986,7 +2853,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Фидбэк на %@: вырез %.0f дБ"
+            "value": "Обратная связь на %@: режекция %.0f дБ"
           }
         }
       }
@@ -2054,7 +2921,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Полярность против «%@»: щёлкаю и слушаю… (пусть источник играет)"
+            "value": "Полярность относительно «%@»: переключаю полярность и анализирую сумму… (источник должен звучать)"
           }
         }
       }
@@ -2178,6 +3045,23 @@
         }
       }
     },
+    "assist.off": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "off"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "выкл."
+          }
+        }
+      }
+    },
     "assist.offline": {
       "extractionState": "manual",
       "localizations": {
@@ -2292,7 +3176,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Подъём и проверка фидбэка"
+            "value": "Подъём уровня и контроль обратной связи"
           }
         }
       }
@@ -2412,6 +3296,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Рок-группа"
+          }
+        }
+      }
+    },
+    "assist.settings": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Console and audio settings"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Настройки пульта и звука"
           }
         }
       }
@@ -2683,7 +3584,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Названия, фейдеры и мониторы 1–4 задействованных каналов меняются во время симуляции и возвращаются при остановке. Сначала сохраните сцену; если порталы включены — заглушите главный выход."
+            "value": "Во время симуляции изменяются названия, фейдеры и мониторные линии 1–4 задействованных каналов; при остановке они восстанавливаются. Предварительно сохраните сцену; при включённой основной системе отключите главный выход."
           }
         }
       }
@@ -2773,6 +3674,57 @@
         }
       }
     },
+    "assist.stat.active": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "active"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "активно"
+          }
+        }
+      }
+    },
+    "assist.stat.time": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "time"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "время"
+          }
+        }
+      }
+    },
+    "assist.stat.total": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "this show"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "за шоу"
+          }
+        }
+      }
+    },
     "assist.state.done": {
       "extractionState": "manual",
       "localizations": {
@@ -2786,6 +3738,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Готово"
+          }
+        }
+      }
+    },
+    "assist.state.idle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not tuned"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не настроен"
           }
         }
       }
@@ -3313,6 +4282,91 @@
           "stringUnit": {
             "state": "translated",
             "value": "Тест перезаписывает названия и настройки этих каналов и мониторных шин 1–4, а в конце возвращает их. Сначала сохраните сцену на пульте; запускайте без музыкантов на сцене."
+          }
+        }
+      }
+    },
+    "assist.tile.comp": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compressor"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Компрессор"
+          }
+        }
+      }
+    },
+    "assist.tile.deviation": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deviation"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Отклонение"
+          }
+        }
+      }
+    },
+    "assist.tile.gain": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gain"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Усиление"
+          }
+        }
+      }
+    },
+    "assist.tile.hpf": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Low cut"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Срез НЧ"
+          }
+        }
+      }
+    },
+    "assist.tile.inverted": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "polarity inverted"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "полярность инвертирована"
           }
         }
       }
@@ -3907,7 +4961,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Включите ВСЕ громкоговорители: сабвуферы и топы. Это контрольный замер «до»."
+            "value": "Включите ВСЕ громкоговорители: сабвуферы и сателлиты. Это контрольное измерение «до»."
           }
         }
       }
@@ -3941,7 +4995,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Топы — мьют, сабы — включены"
+            "value": "Сателлиты — mute, сабвуферы — включены"
           }
         }
       }
@@ -3958,7 +5012,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Замьютьте сателлиты (топы) на процессоре. Оставьте включёнными только сабвуферы."
+            "value": "Отключите (mute) сателлиты на процессоре. Включёнными остаются только сабвуферы."
           }
         }
       }
@@ -3992,7 +5046,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Сабы — мьют, топы — включены"
+            "value": "Сабвуферы — mute, сателлиты — включены"
           }
         }
       }
@@ -4009,7 +5063,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Включите сателлиты и замьютьте сабвуферы."
+            "value": "Включите сателлиты и отключите (mute) сабвуферы."
           }
         }
       }
@@ -4026,7 +5080,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Только топы"
+            "value": "Только сателлиты"
           }
         }
       }
@@ -4247,7 +5301,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Задержка топов"
+            "value": "Задержка сателлитов"
           }
         }
       }
@@ -6780,7 +7834,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Сателлиты (топы)"
+            "value": "Сателлиты"
           }
         }
       }
@@ -6797,7 +7851,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "ТОП"
+            "value": "САТ"
           }
         }
       }
@@ -10452,7 +11506,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Быстрый режим вычисляет топы как «вся система − сабы». Менее точно около провалов; между замерами в системе ничего не должно меняться."
+            "value": "Быстрый режим вычисляет сателлиты как «вся система − сабвуферы». Точность ниже в зонах провалов; между измерениями конфигурация системы не должна меняться."
           }
         }
       }
@@ -10792,7 +11846,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Полос PEQ на выходе сабов: %ld"
+            "value": "Полос PEQ на выходе сабвуферов: %ld"
           }
         }
       }
@@ -11931,7 +12985,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Крутите ручки, пока всё не станет зелёным"
+            "value": "Изменяйте параметры, пока все значения не станут зелёными"
           }
         }
       }
@@ -11948,7 +13002,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Карточки — это цель. Крутите ручки процессора, глядя на стрелки, как в гитарном тюнере, пока всё не станет зелёным."
+            "value": "Карточки показывают целевые значения. Изменяйте параметры процессора, ориентируясь на индикаторы, как на шкалу тюнера, пока все значения не станут зелёными."
           }
         }
       }
@@ -15127,7 +16181,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Система, сабы, топы"
+            "value": "Система, сабвуферы, сателлиты"
           }
         }
       }
@@ -16470,7 +17524,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Уменьшите задержку топов"
+            "value": "Уменьшите задержку сателлитов"
           }
         }
       }
@@ -16487,7 +17541,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Добавьте задержку топам"
+            "value": "Увеличьте задержку сателлитов"
           }
         }
       }
@@ -16504,7 +17558,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Сабвуфер готов → задержка топов"
+            "value": "Сабвуфер настроен → задержка сателлитов"
           }
         }
       }
@@ -16708,7 +17762,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Сабвуферы и топы теперь складываются в зоне раздела."
+            "value": "Сабвуферы и сателлиты суммируются когерентно в полосе раздела."
           }
         }
       }
@@ -16844,7 +17898,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Задержка топов"
+            "value": "Задержка сателлитов"
           }
         }
       }
@@ -16861,7 +17915,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Задержка саба"
+            "value": "Задержка сабвуфера"
           }
         }
       }
@@ -16878,7 +17932,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Уровень саба"
+            "value": "Уровень сабвуфера"
           }
         }
       }
@@ -16895,7 +17949,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Полярность саба инвертирована"
+            "value": "Полярность сабвуфера инвертирована"
           }
         }
       }
@@ -17031,7 +18085,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Сабы"
+            "value": "Сабвуферы"
           }
         }
       }
@@ -17048,7 +18102,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Топы"
+            "value": "Сателлиты"
           }
         }
       }
