@@ -23,7 +23,8 @@ struct CueListView: View {
                                    isPlayhead: row.cue.id == playhead,
                                    isSelected: show.selection.contains(row.cue.id),
                                    running: running[row.cue.id],
-                                   problem: isMissing(row.cue) ? "show.fileMissing" : show.snapshot.problems[row.cue.id])
+                                   problem: isMissing(row.cue) ? "show.fileMissing"
+                                       : isUnreadable(row.cue) ? "show.fileUnreadable" : show.snapshot.problems[row.cue.id])
                                 .id(row.cue.id)
                                 .onTapGesture(count: 2) { show.setPlayhead(row.cue.id) }
                                 .simultaneousGesture(TapGesture().onEnded { select(row.cue.id, rows: rows) })
@@ -83,6 +84,11 @@ struct CueListView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 40)
+    }
+
+    private func isUnreadable(_ cue: Cue) -> Bool {
+        guard cue.kind == .audio, let p = show.resolvedPath(cue) else { return false }
+        return show.unreadableFiles[p] != nil
     }
 
     private func isMissing(_ cue: Cue) -> Bool {

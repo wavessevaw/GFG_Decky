@@ -14265,6 +14265,23 @@
         }
       }
     },
+    "show.fileUnreadable": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cannot read the file"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не удаётся прочитать файл"
+          }
+        }
+      }
+    },
     "show.go.help": {
       "extractionState": "manual",
       "localizations": {
@@ -14346,6 +14363,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Клавиша"
+          }
+        }
+      }
+    },
+    "show.import.failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not add to the show:"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не удалось добавить в шоу:"
           }
         }
       }

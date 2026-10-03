@@ -800,6 +800,8 @@ STRINGS = {
     "show.playNow": ("Play this cue now", "Запустить эту кью"),
     "show.stopCue": ("Stop this cue", "Остановить эту кью"),
     "show.fileMissing": ("File not found", "Файл не найден"),
+    "show.fileUnreadable": ("Cannot read the file", "Не удаётся прочитать файл"),
+    "show.import.failed": ("Could not add to the show:", "Не удалось добавить в шоу:"),
     "show.noTarget": ("No target", "Цель не выбрана"),
     "show.inspector.none": ("Select a cue to edit it", "Выберите кью, чтобы настроить её"),
     "show.inspector.many": ("%d cues selected", "Выбрано кью: %d"),

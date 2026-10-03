@@ -231,7 +231,13 @@ final class ShowStore: ObservableObject {
         return list.cues.flattened().map(\.cue.id).filter { selection.contains($0) }
     }
 
+    /// Adds audio files as cues. As in QLab, each file is first copied into the show's media folder, so the
+    /// show plays (and later saves) its own copy.
     func addAudioFiles(_ urls: [URL], after: UUID? = nil, intoGroup: UUID? = nil) {
+        importMedia(urls) { [weak self] copied in self?.insertAudioCues(copied, after: after, intoGroup: intoGroup) }
+    }
+
+    private func insertAudioCues(_ urls: [URL], after: UUID?, intoGroup: UUID?) {
         guard let lid = listID, !urls.isEmpty else { return }
         var number = Double(doc.nextCueNumber) ?? 1
         let cues: [Cue] = urls.sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }.map {
@@ -403,6 +409,10 @@ final class ShowStore: ObservableObject {
 
     /// Adds audio files as pads of the current bank, each on the next free F-key.
     func addPads(_ urls: [URL]) {
+        importMedia(urls) { [weak self] copied in self?.insertPads(copied) }
+    }
+
+    private func insertPads(_ urls: [URL]) {
         if doc.banks.isEmpty { edit { $0.lists.append(CueList(name: "\(self.loc("show.bank")) 1", isBank: true)) } }
         guard let bank = currentBank, !urls.isEmpty else { return }
         var used = Set(doc.allCues.compactMap(\.hotkey))
@@ -450,7 +460,14 @@ final class ShowStore: ObservableObject {
     func chooseFile(for cueID: UUID) {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = Self.audioTypes
-        guard panel.runModal() == .OK, let url = panel.url else { return }
+        guard panel.runModal() == .OK, let picked = panel.url else { return }
+        importMedia([picked]) { [weak self] copied in
+            guard let self, let url = copied.first else { return }
+            self.setFile(url, for: cueID)
+        }
+    }
+
+    private func setFile(_ url: URL, for cueID: UUID) {
         let path = storedPath(for: url)
         edit { d in
             d.updateCue(cueID) { c in
@@ -633,6 +650,87 @@ final class ShowStore: ObservableObject {
         return Self.resolve(f, showURL: fileURL)
     }
 
+    // MARK: Show media (QLab-style copies)
+
+    /// Where added audio is copied: "<show> Audio" next to a saved show; for a show not saved yet, a folder in
+    /// Application Support (moved next to the show on the first save).
+    var mediaFolder: URL {
+        if let f = fileURL {
+            return f.deletingLastPathComponent().appendingPathComponent(f.deletingPathExtension().lastPathComponent + " Audio", isDirectory: true)
+        }
+        return FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("SSMT/Show Media/Unsaved", isDirectory: true)
+    }
+
+    /// Copies files into the media folder (APFS clones them: instant on the same disk), then calls `done` on the
+    /// main thread with the copies. A file already in the folder is used as is; a file that cannot be copied is
+    /// reported with the system's reason and left out.
+    private func importMedia(_ urls: [URL], done: @escaping @MainActor ([URL]) -> Void) {
+        let folder = mediaFolder
+        let files = urls.map { ($0 as NSURL).filePathURL ?? $0 }
+        guard !files.isEmpty else { return }
+        DispatchQueue.global(qos: .userInitiated).async {
+            let (copied, errors) = Self.copyMedia(files, into: folder)
+            Task { @MainActor [weak self] in
+                if let self, !errors.isEmpty { self.lastError = self.loc("show.import.failed") + " " + errors.joined(separator: "; ") }
+                done(copied)
+            }
+        }
+    }
+
+    nonisolated static func copyMedia(_ urls: [URL], into folder: URL) -> (copied: [URL], errors: [String]) {
+        let fm = FileManager.default
+        var copied: [URL] = []
+        var errors: [String] = []
+        do { try fm.createDirectory(at: folder, withIntermediateDirectories: true) } catch {
+            return ([], ["\(folder.path): \(error.localizedDescription)"])
+        }
+        let base = folder.standardizedFileURL.path
+        for url in urls {
+            let src = url.standardizedFileURL
+            if src.deletingLastPathComponent().path == base { copied.append(src); continue }
+            do {
+                let size = (try fm.attributesOfItem(atPath: src.path)[.size] as? NSNumber)?.int64Value ?? -1
+                let name = src.deletingPathExtension().lastPathComponent, ext = src.pathExtension
+                var dest = folder.appendingPathComponent(src.lastPathComponent)
+                var n = 2
+                // Same name: reuse it if it is the same file (same size), else number the copy.
+                while fm.fileExists(atPath: dest.path) {
+                    let other = (try? fm.attributesOfItem(atPath: dest.path)[.size] as? NSNumber)?.int64Value
+                    if other == size { break }
+                    dest = folder.appendingPathComponent("\(name) \(n)" + (ext.isEmpty ? "" : ".\(ext)"))
+                    n += 1
+                }
+                if !fm.fileExists(atPath: dest.path) { try fm.copyItem(at: src, to: dest) }
+                copied.append(dest)
+            } catch {
+                errors.append("\(src.lastPathComponent): \(error.localizedDescription)")
+            }
+        }
+        return (copied, errors)
+    }
+
+    /// On save: every audio file outside the show's media folder is copied into it and stored relative to the
+    /// show, so the show folder carries everything it plays. `oldShowURL` resolves the current relative paths.
+    private func collectMedia(oldShowURL: URL?) {
+        let folder = mediaFolder
+        var moves: [UUID: URL] = [:]
+        var failed: [String] = []
+        for c in doc.allCues {
+            guard let f = c.audio?.file, !f.isEmpty else { continue }
+            let src = URL(fileURLWithPath: Self.resolve(f, showURL: oldShowURL))
+            guard FileManager.default.fileExists(atPath: src.path) else { continue }
+            let (copied, errors) = Self.copyMedia([src], into: folder)
+            if let u = copied.first { moves[c.id] = u }
+            failed += errors
+        }
+        let paths = moves.mapValues { storedPath(for: $0) }
+        if paths.contains(where: { doc.cue($0.key)?.audio?.file != $0.value }) {
+            edit { d in for (id, p) in paths { d.updateCue(id) { $0.audio?.file = p } } }
+        }
+        if !failed.isEmpty { lastError = loc("show.import.failed") + " " + failed.joined(separator: "; ") }
+    }
+
     /// Paths are stored absolute; files next to the show file are stored relative to it.
     private func storedPath(for url: URL) -> String {
         if let base = fileURL?.deletingLastPathComponent().path, url.path.hasPrefix(base + "/") {
@@ -778,10 +876,13 @@ final class ShowStore: ObservableObject {
             url = u
         }
         guard let url else { return }
+        let oldURL = fileURL
+        fileURL = url
+        collectMedia(oldShowURL: oldURL)
         do {
             try doc.encoded().write(to: url, options: .atomic)
-            fileURL = url
         } catch {
+            fileURL = oldURL
             lastError = "\(url.lastPathComponent): \(error)"
         }
     }

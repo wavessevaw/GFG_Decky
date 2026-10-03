@@ -161,6 +161,12 @@ private struct CueInspectorContent: View {
                         Text("\(showTime(info.duration)) · \(info.channels) ch").font(Theme.mono(11)).foregroundStyle(Theme.textSecondary)
                     } else if let p = path, show.missingFiles.contains(p) {
                         Text(loc.t("show.fileMissing")).font(.system(size: 11)).foregroundStyle(Theme.statusWarning)
+                        Text(p).font(.system(size: 10)).foregroundStyle(Theme.textMuted).lineLimit(3).textSelection(.enabled)
+                    } else if let p = path, let why = show.unreadableFiles[p] {
+                        Text(loc.t("show.fileUnreadable") + ": " + why).font(.system(size: 11)).foregroundStyle(Theme.statusWarning)
+                            .lineLimit(4).textSelection(.enabled)
+                    } else if show.loadingFiles > 0 {
+                        Text(loc.t("error.show.notReady")).font(.system(size: 11)).foregroundStyle(Theme.dataBlue)
                     }
                 }
                 Spacer()
