@@ -68,18 +68,23 @@ struct AppSidebar: View {
         VStack(spacing: 4) {
             sectionRow(.setup, icon: "dial.medium", title: loc.t("section.setup"))
             sectionRow(.inputList, icon: "list.bullet.rectangle", title: loc.t("section.inputList"))
-            sectionRow(.show, icon: "play.rectangle.on.rectangle", title: loc.t("section.show"))
+            sectionRow(.show, icon: "play.rectangle.on.rectangle", title: loc.t("section.show"), subtitle: "Show Control Center")
         }
         .padding(4)
         .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.black.opacity(0.18)))
     }
 
-    private func sectionRow(_ s: AppSection, icon: String, title: String) -> some View {
+    private func sectionRow(_ s: AppSection, icon: String, title: String, subtitle: String? = nil) -> some View {
         let on = model.section == s
         return Button { model.section = s } label: {
             HStack(spacing: 10) {
                 Image(systemName: icon).frame(width: 20)
-                Text(title).font(.system(size: 13, weight: on ? .semibold : .regular))
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(title).font(.system(size: 13, weight: on ? .semibold : .regular))
+                    if let subtitle {
+                        Text(subtitle).font(.system(size: 10)).foregroundStyle(Theme.textMuted)
+                    }
+                }
                 Spacer()
             }
             .foregroundStyle(on ? Theme.textPrimary : Theme.textSecondary)
