@@ -138,6 +138,7 @@ private struct CueInspectorContent: View {
         case .audio: audioSection
         case .fade: fadeSection
         case .group: groupSection
+        case .network: networkSection
         case .wait:
             section(loc.t("cue.kind.wait"), icon: "hourglass") { seconds(loc.t("show.duration"), bind(\.duration)) }
         case .memo: EmptyView()
@@ -278,6 +279,150 @@ private struct CueInspectorContent: View {
             }
             Toggle(loc.t("show.fade.stop"), isOn: fade(\.stopWhenDone, true))
         }
+    }
+
+    // MARK: Network (OSC)
+
+    @ViewBuilder private var networkSection: some View {
+        let p = cue.osc ?? OSCCueParams()
+        let device = show.doc.devices.first { $0.id == p.device }
+        section(loc.t("cue.kind.network"), icon: cue.kind.icon) {
+            if show.doc.devices.isEmpty {
+                Text(loc.t("osc.cue.noDevices")).font(.system(size: 12)).foregroundStyle(Theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button { show.showOSC = true } label: { Label(loc.t("osc.add"), systemImage: "plus") }
+                    .buttonStyle(SSMTButtonStyle(kind: .primary))
+            } else {
+                VStack(alignment: .leading, spacing: 4) {
+                    caption(loc.t("osc.cue.device"))
+                    Picker("", selection: Binding(get: { p.device ?? UUID() }, set: { v in
+                        show.updateCue(cue.id) { $0.osc?.device = v; $0.osc?.preset = nil }
+                    })) {
+                        ForEach(show.doc.devices) { d in Text("\(d.name) · \(d.host)").tag(d.id) }
+                    }
+                    .labelsHidden()
+                }
+                if let device {
+                    let presets = OSCPreset.presets(for: device.kind)
+                    VStack(alignment: .leading, spacing: 4) {
+                        caption(loc.t("osc.cue.action"))
+                        Picker("", selection: Binding(get: { p.preset ?? "" }, set: { v in apply(preset: v, device: device) })) {
+                            ForEach(presets, id: \.id) { Text(loc.t("osc.preset.\($0.id)")).tag($0.id) }
+                            Text(loc.t("osc.cue.custom")).tag("")
+                        }
+                        .labelsHidden()
+                    }
+                    if let preset = presets.first(where: { $0.id == p.preset }) {
+                        ForEach(preset.fields, id: \.key) { f in
+                            presetField(f, preset: preset, device: device, value: p.values[f.key] ?? f.defaultValue)
+                        }
+                    } else {
+                        rawFields(p)
+                    }
+                }
+                Text("→ " + p.message.display + (device.map { "   ·   \($0.host):\($0.port)" } ?? ""))
+                    .font(Theme.mono(11)).foregroundStyle(Theme.dataBlue).textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack {
+                    Button { show.sendNow(cue) } label: { Label(loc.t("osc.cue.sendNow"), systemImage: "paperplane") }
+                        .buttonStyle(SSMTButtonStyle())
+                        .disabled(device == nil)
+                    Spacer()
+                    Button(loc.t("osc.cue.devices")) { show.showOSC = true }.buttonStyle(.borderless).font(.system(size: 11))
+                }
+                if let device {
+                    Text(loc.t("osc.find.\(device.kind.rawValue)")).font(.system(size: 11)).foregroundStyle(Theme.textMuted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
+    private func apply(preset id: String, device: OSCDevice) {
+        show.updateCue(cue.id) { c in
+            guard var o = c.osc else { return }
+            o.preset = id.isEmpty ? nil : id
+            if let preset = OSCPreset.presets(for: device.kind).first(where: { $0.id == id }) {
+                let m = preset.message(o.values, device: device)
+                o.address = m.address
+                o.arguments = m.arguments
+                if c.name.isEmpty || c.name.hasPrefix("/") { c.name = "" }
+            }
+            c.osc = o
+        }
+    }
+
+    private func presetField(_ f: OSCPresetField, preset: OSCPreset, device: OSCDevice, value: String) -> some View {
+        let set = { (v: String) in
+            show.updateCue(cue.id) { c in
+                guard var o = c.osc else { return }
+                o.values[f.key] = v
+                let m = preset.message(o.values, device: device)
+                o.address = m.address
+                o.arguments = m.arguments
+                c.osc = o
+            }
+        }
+        return VStack(alignment: .leading, spacing: 4) {
+            caption(loc.t("osc.field.\(f.key)"))
+            switch f.kind {
+            case .level:
+                HStack {
+                    Slider(value: Binding(get: { Double(value) ?? 0 }, set: { set(String(format: "%.2f", $0)) }), in: 0...1)
+                    Text("\(Int(((Double(value) ?? 0) * 100).rounded())) %").font(Theme.mono(11)).frame(width: 44)
+                }
+            case .text:
+                TextField("", text: Binding(get: { value }, set: { set($0) })).textFieldStyle(.roundedBorder)
+            case .number, .twoDigits:
+                TextField("", value: Binding(get: { Int(value) ?? 1 }, set: { set(String(max(0, $0))) }), format: .number.grouping(.never))
+                    .textFieldStyle(.roundedBorder).frame(width: 90)
+            }
+        }
+    }
+
+    /// Free address and arguments ("1", "0.5", "text") for anything the templates do not cover.
+    private func rawFields(_ p: OSCCueParams) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            caption(loc.t("osc.cue.address"))
+            TextField("/composition/columns/1/connect", text: Binding(get: { p.address }, set: { v in
+                show.updateCue(cue.id) { $0.osc?.address = v.hasPrefix("/") ? v : "/" + v }
+            }))
+            .textFieldStyle(.roundedBorder)
+            .font(Theme.mono(12))
+            caption(loc.t("osc.cue.args"))
+            TextField("1", text: Binding(get: { p.arguments.map(\.display).joined(separator: " ") }, set: { v in
+                show.updateCue(cue.id) { $0.osc?.arguments = Self.parseArguments(v) }
+            }))
+            .textFieldStyle(.roundedBorder)
+            .font(Theme.mono(12))
+            Text(loc.t("osc.cue.args.hint")).font(.system(size: 11)).foregroundStyle(Theme.textMuted)
+        }
+    }
+
+    /// "1 0.5 \"Go+ Sequence 1\" true" → int, float, string, bool.
+    static func parseArguments(_ text: String) -> [OSCArgument] {
+        var out: [OSCArgument] = []
+        var rest = Substring(text)
+        while true {
+            rest = rest.drop { $0 == " " }
+            guard let c = rest.first else { break }
+            var token: String
+            if c == "\"" {
+                let body = rest.dropFirst()
+                let end = body.firstIndex(of: "\"") ?? body.endIndex
+                out.append(.string(String(body[..<end])))
+                rest = end < body.endIndex ? body[body.index(after: end)...] : ""
+                continue
+            }
+            let end = rest.firstIndex(of: " ") ?? rest.endIndex
+            token = String(rest[..<end])
+            rest = rest[end...]
+            if token == "true" || token == "false" { out.append(.bool(token == "true")) }
+            else if let i = Int32(token) { out.append(.int(i)) }
+            else if let f = Float(token) { out.append(.float(f)) }
+            else { out.append(.string(token)) }
+        }
+        return out
     }
 
     // MARK: Group

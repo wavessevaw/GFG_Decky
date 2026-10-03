@@ -206,6 +206,7 @@ public enum ShowIssue: Equatable, Sendable {
     case duplicateHotkey(String)
     case emptyGroup(UUID)
     case invalidRegion(UUID)
+    case missingDevice(UUID)
 }
 
 extension ShowDocument {
@@ -222,6 +223,9 @@ extension ShowDocument {
                 if let a = c.audio, let e = a.end, e <= a.start { out.append(.invalidRegion(c.id)) }
             }
             if c.kind == .group && c.children.isEmpty { out.append(.emptyGroup(c.id)) }
+            if c.kind == .network, c.osc?.device.flatMap({ id in devices.first { $0.id == id } }) == nil {
+                out.append(.missingDevice(c.id))
+            }
             if !c.number.isEmpty { numbers[c.number, default: 0] += 1 }
             if let k = c.hotkey, !k.isEmpty { keys[k.lowercased(), default: 0] += 1 }
         }

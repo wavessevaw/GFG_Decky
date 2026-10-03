@@ -53,6 +53,8 @@ public final class ShowEngine {
     public var send: (MixerOp) -> Void
     /// Returns the decoded clip of an audio cue (nil = not available).
     public var clipProvider: (Cue) -> AudioClip?
+    /// Sends an OSC message to a show device.
+    public var oscSend: (OSCDevice, OSCMessage) -> Void = { _, _ in }
     /// Called by Load cues.
     public var preload: (Cue) -> Void = { _ in }
     /// Called when a cue changes the document (Arm, Disarm, Target).
@@ -344,6 +346,12 @@ public final class ShowEngine {
             instances[id]?.actionEnd = t + frames(cue.duration)
         case .memo:
             break
+        case .network:
+            if let p = cue.osc, let id = p.device, let device = document.devices.first(where: { $0.id == id }) {
+                oscSend(device, p.message)
+            } else {
+                problems[cue.id] = "error.show.noDevice"
+            }
         case .fade:
             startFade(cue, at: t)
         case .group:

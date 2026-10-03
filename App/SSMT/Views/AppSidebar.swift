@@ -101,6 +101,7 @@ struct AppSidebar: View {
             UtilityRow(icon: "waveform.badge.plus", title: loc.t("show.addAudio")) { model.show.chooseAudioFiles() }
             UtilityRow(icon: "questionmark.folder", title: loc.t("show.relink")) { model.show.relinkMissing() }
             UtilityRow(icon: "hifispeaker.2", title: loc.t("show.settings")) { model.show.showSettings = true }
+            UtilityRow(icon: "antenna.radiowaves.left.and.right", title: loc.t("osc.title")) { model.show.showOSC = true }
         }
         .padding(.horizontal, 10)
     }

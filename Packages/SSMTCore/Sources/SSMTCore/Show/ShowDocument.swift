@@ -5,13 +5,15 @@ import Foundation
 
 public enum CueKind: String, Codable, CaseIterable, Sendable {
     case audio, fade, group, wait, memo
+    /// Sends an OSC message to a device (video server, lighting console, mixer…).
+    case network
     case start, stop, pause, load, reset, goTo, target, arm, disarm, devamp
 
     /// Cues that act on another cue.
     public var needsTarget: Bool {
         switch self {
         case .fade, .start, .stop, .pause, .load, .reset, .goTo, .target, .arm, .disarm, .devamp: return true
-        case .audio, .group, .wait, .memo: return false
+        case .audio, .group, .wait, .memo, .network: return false
         }
     }
 }
@@ -152,6 +154,7 @@ public struct Cue: Codable, Equatable, Identifiable, Sendable {
     public var duration: Double
     public var audio: AudioCueParams?
     public var fade: FadeCueParams?
+    public var osc: OSCCueParams?
     public var groupMode: GroupMode
     /// Playlist: loop forever / shuffle order.
     public var loopPlaylist: Bool
@@ -181,6 +184,7 @@ public struct Cue: Codable, Equatable, Identifiable, Sendable {
         duration = kind == .wait ? 5 : 0
         audio = kind == .audio ? AudioCueParams() : nil
         fade = kind == .fade ? FadeCueParams() : nil
+        osc = kind == .network ? OSCCueParams() : nil
         groupMode = .sequence
         loopPlaylist = false
         shuffle = false
@@ -208,6 +212,7 @@ public struct Cue: Codable, Equatable, Identifiable, Sendable {
         duration = try c.decodeIfPresent(Double.self, forKey: .duration) ?? 0
         audio = try c.decodeIfPresent(AudioCueParams.self, forKey: .audio)
         fade = try c.decodeIfPresent(FadeCueParams.self, forKey: .fade)
+        osc = try c.decodeIfPresent(OSCCueParams.self, forKey: .osc)
         groupMode = try c.decodeIfPresent(GroupMode.self, forKey: .groupMode) ?? .sequence
         loopPlaylist = try c.decodeIfPresent(Bool.self, forKey: .loopPlaylist) ?? false
         shuffle = try c.decodeIfPresent(Bool.self, forKey: .shuffle) ?? false
@@ -260,6 +265,8 @@ public struct ShowDocument: Codable, Equatable, Sendable {
     public var outputs: [ShowOutput]
     /// Audio interface UID (nil = system default output).
     public var deviceUID: String?
+    /// OSC devices the show talks to.
+    public var devices: [OSCDevice]
     /// Panic: first press fades everything out over this time; a second press cuts at once.
     public var panicFade: Double
     /// Minimum time between two GOs (protects against a double press).
@@ -271,6 +278,7 @@ public struct ShowDocument: Codable, Equatable, Sendable {
         lists = [CueList(name: "Main"), CueList(name: "Bank 1", isBank: true)]
         outputs = (0..<8).map { ShowOutput(name: "\($0 + 1)", deviceChannel: $0) }
         deviceUID = nil
+        devices = []
         panicFade = 1.5
         doubleGoGuard = 0.3
     }
@@ -283,6 +291,7 @@ public struct ShowDocument: Codable, Equatable, Sendable {
         if !lists.contains(where: { !$0.isBank }) { lists.insert(CueList(name: "Main"), at: 0) }
         outputs = try c.decodeIfPresent([ShowOutput].self, forKey: .outputs) ?? []
         deviceUID = try c.decodeIfPresent(String.self, forKey: .deviceUID)
+        devices = try c.decodeIfPresent([OSCDevice].self, forKey: .devices) ?? []
         panicFade = try c.decodeIfPresent(Double.self, forKey: .panicFade) ?? 1.5
         doubleGoGuard = try c.decodeIfPresent(Double.self, forKey: .doubleGoGuard) ?? 0.3
     }

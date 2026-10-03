@@ -19,11 +19,12 @@ extension CueKind {
         case .arm: return "checkmark.shield"
         case .disarm: return "xmark.shield"
         case .devamp: return "repeat.1"
+        case .network: return "antenna.radiowaves.left.and.right"
         }
     }
 
     /// Kinds offered in the "add" menu, grouped.
-    static let mediaKinds: [CueKind] = [.audio, .fade, .group, .wait, .memo]
+    static let mediaKinds: [CueKind] = [.audio, .fade, .group, .wait, .memo, .network]
     static let controlKinds: [CueKind] = [.start, .stop, .pause, .load, .reset, .goTo, .target, .arm, .disarm, .devamp]
 }
 
@@ -78,6 +79,12 @@ struct ShowWorkspace: View {
             show.installKeyMonitor()
         }
         .onDisappear { show.isActive = false }
+        .sheet(isPresented: $show.showOSC) {
+            OSCDevicesView()
+                .environmentObject(show)
+                .environmentObject(loc)
+                .preferredColorScheme(.dark)
+        }
         .sheet(isPresented: $show.showSettings) {
             ShowSettingsView()
                 .environmentObject(show)
@@ -332,6 +339,9 @@ struct ShowTopBar: View {
                 }
                 .pickerStyle(.segmented).labelsHidden().frame(width: 190)
                 .help(loc.t("show.mode.help"))
+                Button { show.showOSC = true } label: { Label("OSC", systemImage: "antenna.radiowaves.left.and.right").font(.system(size: 12)).fixedSize() }
+                    .buttonStyle(ToolButtonStyle())
+                    .help(loc.t("osc.title"))
                 Button { show.showSettings = true } label: { Image(systemName: "gearshape") }
                     .buttonStyle(ToolButtonStyle())
                     .help(loc.t("show.settings"))
@@ -374,7 +384,7 @@ struct ShowTopBar: View {
             Button { show.chooseAudioFiles() } label: { Label(loc.t("cue.kind.audio"), systemImage: "plus").fixedSize() }
                 .buttonStyle(SSMTButtonStyle(kind: .primary))
                 .help(loc.t("show.addAudio.help"))
-            ForEach([CueKind.fade, .group, .wait, .stop, .memo], id: \.self) { k in
+            ForEach([CueKind.fade, .group, .wait, .stop, .memo, .network], id: \.self) { k in
                 Button { show.add(k) } label: {
                     Label(loc.t("cue.kind.\(k.rawValue)"), systemImage: k.icon).font(.system(size: 12)).fixedSize()
                 }
@@ -505,7 +515,7 @@ struct ShowIssuesView: View {
 
     private func cueID(_ i: ShowIssue) -> UUID? {
         switch i {
-        case let .missingTarget(id), let .missingFile(id), let .emptyGroup(id), let .invalidRegion(id): return id
+        case let .missingTarget(id), let .missingFile(id), let .emptyGroup(id), let .invalidRegion(id), let .missingDevice(id): return id
         default: return nil
         }
     }
@@ -518,6 +528,7 @@ struct ShowIssuesView: View {
         case let .duplicateHotkey(k): return String(format: loc.t("show.issue.hotkey"), k.uppercased())
         case let .emptyGroup(id): return String(format: loc.t("show.issue.emptyGroup"), label(id))
         case let .invalidRegion(id): return String(format: loc.t("show.issue.region"), label(id))
+        case let .missingDevice(id): return String(format: loc.t("show.issue.device"), label(id))
         }
     }
 }

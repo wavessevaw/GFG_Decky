@@ -41,6 +41,7 @@ targets:
         LSApplicationCategoryType: public.app-category.music
         LSMinimumSystemVersion: "13.0"
         NSHighResolutionCapable: true
+        NSLocalNetworkUsageDescription: "SSMT sends OSC commands to video servers, lighting and sound consoles on your network. / SSMT отправляет OSC-команды видеосерверам, световым и звуковым пультам в вашей сети."
         NSMicrophoneUsageDescription: "SSMT measures your sound system with a measurement microphone. / SSMT измеряет акустическую систему через измерительный микрофон."
     settings:
       base:

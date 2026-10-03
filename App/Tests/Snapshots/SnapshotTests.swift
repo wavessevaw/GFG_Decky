@@ -255,6 +255,15 @@ final class SnapshotTests: XCTestCase {
                      size: CGSize(width: 1000, height: 520), name: "show-waveform", loc: Self.ru)
     }
 
+    func testOSCSetup() throws {
+        prepareShow()
+        let show = Self.model.show
+        show.doc.devices = [OSCDevice(name: "Resolume", kind: .resolume, host: "127.0.0.1"),
+                            OSCDevice(name: "Eos Ion", kind: .eos, host: "10.101.0.2")]
+        try snapshot(OSCDevicesView(), size: CGSize(width: 640, height: 600), name: "osc-devices", loc: Self.ru)
+        try snapshot(OSCDevicesView(startWith: .eos), size: CGSize(width: 640, height: 600), name: "osc-setup-eos", loc: Self.ru)
+    }
+
     func testInputListPrintSheets() throws {
         let doc = Self.sampleInputList
         try snapshot(ChannelSheet(doc: doc, rows: doc.channelPages(rowsPerPage: InputListPrint.rowsPerPage)[0], page: "1 / 3"),

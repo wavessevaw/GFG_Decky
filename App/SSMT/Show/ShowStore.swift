@@ -48,6 +48,10 @@ final class ShowStore: ObservableObject {
     /// Show mode: editing locked, big transport, keyboard GO.
     @Published var showMode = false
     @Published var showSettings = false
+    /// OSC devices window; `oscWizardKind` opens it straight on a device's setup.
+    @Published var showOSC = false
+    var oscWizardKind: OSCDeviceKind?
+    let osc = OSCHub()
     @Published private(set) var snapshot = ShowSnapshot.empty
     @Published private(set) var meters: [Float] = []
     @Published private(set) var outputName = ""
@@ -188,6 +192,27 @@ final class ShowStore: ObservableObject {
             if let g = intoGroup { $0.append(cues, toGroup: g) } else { $0.insert(cues, after: after ?? lastSelected, list: lid) }
         }
         selection = Set(cues.map(\.id))
+    }
+
+    // MARK: OSC
+
+    /// Sends a Network cue's message now (inspector "Send now").
+    func sendNow(_ cue: Cue) {
+        guard let p = cue.osc, let id = p.device, let d = doc.devices.first(where: { $0.id == id }) else { return }
+        osc.send(p.message, to: d)
+    }
+
+    /// Creates a Network cue from a message seen in the monitor (device chosen by sender address).
+    func addNetworkCue(from entry: OSCLogEntry) {
+        guard let lid = listID else { return }
+        var c = Cue(kind: .network, number: doc.nextCueNumber)
+        c.osc?.address = entry.message.address
+        c.osc?.arguments = entry.message.arguments
+        c.osc?.device = doc.devices.first { $0.host == entry.from }?.id ?? doc.devices.first?.id
+        c.name = entry.message.address
+        let anchor = lastSelected
+        edit { $0.insert([c], after: anchor, list: lid) }
+        selection = [c.id]
     }
 
     // MARK: Audition (waveform editor)
@@ -429,6 +454,7 @@ final class ShowStore: ObservableObject {
     func restartOutput() {
         let d = doc
         let core = self.core
+        let transport = osc.transport
         core.queue.async {
             core.timer?.cancel()
             core.output?.stop()
@@ -449,6 +475,7 @@ final class ShowStore: ObservableObject {
                                         guard let path = cue.audio.map({ ShowStore.resolve($0.file, showURL: core.showURL) }) else { return nil }
                                         return clips.cached(path, sampleRate: sr) ?? clips.load(path, sampleRate: sr)
                                     })
+            engine.oscSend = { device, message in transport.send(message, to: device) }
             engine.preload = { cue in
                 if let f = cue.audio?.file { clips.load(ShowStore.resolve(f, showURL: core.showURL), sampleRate: sr) }
             }

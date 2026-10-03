@@ -460,4 +460,63 @@ final class ShowTests: XCTestCase {
         c.audio?.plays = 0
         XCTAssertNil(ShowTimeline.audioDuration(c, fileLength: 10))
     }
+
+    // MARK: OSC
+
+    func testOSCEncodingMatchesSpec() {
+        // "/a" ",if" 1 0.5 → known bytes.
+        let d = OSCMessage("/a", [.int(1), .float(0.5)]).encoded()
+        XCTAssertEqual([UInt8](d), [0x2f, 0x61, 0, 0, 0x2c, 0x69, 0x66, 0, 0, 0, 0, 1, 0x3f, 0, 0, 0])
+        let s = OSCMessage("/eos/cmd", [.string("Go#"), .bool(true)])
+        XCTAssertEqual(OSCMessage.decode(s.encoded()), [s])
+        XCTAssertEqual(OSCMessage.decode(OSCMessage("/go").encoded()), [OSCMessage("/go")])
+        XCTAssertNil(OSCMessage.decode(Data([1, 2, 3])))
+    }
+
+    func testOSCPresetsBuildMessages() {
+        let resolume = OSCDevice(name: "R", kind: .resolume)
+        XCTAssertEqual(resolume.port, 7000)
+        let clip = OSCPreset.presets(for: .resolume).first { $0.id == "resolume.clip" }!
+        XCTAssertEqual(clip.message(["layer": "2", "clip": "5"], device: resolume),
+                       OSCMessage("/composition/layers/2/clips/5/connect", [.int(1)]))
+        let x32 = OSCDevice(name: "X", kind: .x32)
+        let fader = OSCPreset.presets(for: .x32).first { $0.id == "x32.fader" }!
+        XCTAssertEqual(fader.message(["channel": "7", "value": "0.5"], device: x32), OSCMessage("/ch/07/mix/fader", [.float(0.5)]))
+        var ma = OSCDevice(name: "MA", kind: .grandMA3)
+        ma.prefix = "stage"
+        let go = OSCPreset.presets(for: .grandMA3).first { $0.id == "ma3.cue" }!
+        XCTAssertEqual(go.message(["sequence": "3", "cue": "12"], device: ma), OSCMessage("/stage/cmd", [.string("Goto Sequence 3 Cue 12")]))
+    }
+
+    func testNetworkCueSendsAndChecksDevice() {
+        var doc = ShowDocument()
+        let dev = OSCDevice(name: "Resolume", kind: .resolume)
+        doc.devices = [dev]
+        var a = Cue(kind: .network, number: "1")
+        a.osc?.device = dev.id
+        a.osc?.address = "/composition/columns/2/connect"
+        a.osc?.arguments = [.int(1)]
+        a.continueMode = .autoContinue
+        var b = Cue(kind: .network, number: "2")
+        b.osc?.address = "/x"
+        doc.lists[0].cues = [a, b]
+        let rig = ShowRig(doc)
+        var sent: [(String, OSCMessage)] = []
+        rig.engine.oscSend = { d, m in sent.append((d.name, m)) }
+        rig.engine.go(now: 0)
+        rig.run(1000)
+        XCTAssertEqual(sent.map(\.0), ["Resolume"])
+        XCTAssertEqual(sent.first?.1, OSCMessage("/composition/columns/2/connect", [.int(1)]))
+        XCTAssertEqual(rig.engine.problems[b.id], "error.show.noDevice")
+        XCTAssertTrue(doc.issues { _ in true }.contains(.missingDevice(b.id)))
+        XCTAssertEqual(try ShowDocument.decode(doc.encoded()), doc)
+    }
+
+    func testSubnetCheck() {
+        let ifs = [(address: "192.168.1.20", mask: "255.255.255.0")]
+        XCTAssertEqual(IPv4.reachableDirectly("192.168.1.55", interfaces: ifs), true)
+        XCTAssertEqual(IPv4.reachableDirectly("192.168.2.55", interfaces: ifs), false)
+        XCTAssertEqual(IPv4.reachableDirectly("127.0.0.1", interfaces: ifs), true)
+        XCTAssertNil(IPv4.reachableDirectly("resolume.local", interfaces: ifs))
+    }
 }

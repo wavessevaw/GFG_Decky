@@ -1702,6 +1702,23 @@
         }
       }
     },
+    "cue.kind.network": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OSC"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OSC"
+          }
+        }
+      }
+    },
     "cue.kind.pause": {
       "extractionState": "manual",
       "localizations": {
@@ -2752,6 +2769,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Аудиофайл не найден или не читается"
+          }
+        }
+      }
+    },
+    "error.show.noDevice": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OSC cue without a device"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "У OSC-кью не выбрано устройство"
           }
         }
       }
@@ -4843,6 +4877,1740 @@
           "stringUnit": {
             "state": "translated",
             "value": "Белый шум"
+          }
+        }
+      }
+    },
+    "osc.add": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add device"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Добавить устройство"
+          }
+        }
+      }
+    },
+    "osc.choose": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What do you connect?"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Что подключаем?"
+          }
+        }
+      }
+    },
+    "osc.cue.action": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Command"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Команда"
+          }
+        }
+      }
+    },
+    "osc.cue.address": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OSC address"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OSC-адрес"
+          }
+        }
+      }
+    },
+    "osc.cue.args": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Values"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Значения"
+          }
+        }
+      }
+    },
+    "osc.cue.args.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Separated by spaces: 1 (whole), 0.5 (fractional), \"text\", true / false."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Через пробел: 1 (целое), 0.5 (дробное), \"текст\", true / false."
+          }
+        }
+      }
+    },
+    "osc.cue.custom": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Own address…"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Свой адрес…"
+          }
+        }
+      }
+    },
+    "osc.cue.device": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Device"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Устройство"
+          }
+        }
+      }
+    },
+    "osc.cue.devices": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OSC devices…"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OSC-устройства…"
+          }
+        }
+      }
+    },
+    "osc.cue.noDevices": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add the device this cue controls first (Resolume, a lighting console, a mixer…)."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сначала добавьте устройство, которым управляет кью (Resolume, световой пульт, микшер…)."
+          }
+        }
+      }
+    },
+    "osc.cue.sendNow": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send now"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Отправить сейчас"
+          }
+        }
+      }
+    },
+    "osc.edit": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Изменить"
+          }
+        }
+      }
+    },
+    "osc.field.channel": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Channel"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Канал"
+          }
+        }
+      }
+    },
+    "osc.field.clip": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clip"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Клип"
+          }
+        }
+      }
+    },
+    "osc.field.column": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Column"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Колонка"
+          }
+        }
+      }
+    },
+    "osc.field.cue": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cue"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Кью"
+          }
+        }
+      }
+    },
+    "osc.field.layer": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Layer"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Слой"
+          }
+        }
+      }
+    },
+    "osc.field.list": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cue list"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Список кью"
+          }
+        }
+      }
+    },
+    "osc.field.macro": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Macro"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Макрос"
+          }
+        }
+      }
+    },
+    "osc.field.playback": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playback"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Плейбек"
+          }
+        }
+      }
+    },
+    "osc.field.sequence": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sequence"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Секвенция"
+          }
+        }
+      }
+    },
+    "osc.field.text": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Command"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Команда"
+          }
+        }
+      }
+    },
+    "osc.field.value": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Level"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Уровень"
+          }
+        }
+      }
+    },
+    "osc.find.eos": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Commands use the console's command line: “#” at the end means Enter."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Команды — это командная строка пульта: «#» в конце означает Enter."
+          }
+        }
+      }
+    },
+    "osc.find.generic": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not sure of the address? Open the OSC monitor and send it from the device or its editor."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не знаете адрес? Откройте OSC-монитор и отправьте его из устройства или его редактора."
+          }
+        }
+      }
+    },
+    "osc.find.grandMA3": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Any command you can type on the console works as text: Go+ Sequence 3, Off Executor 201…"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сработает любая команда, которую можно набрать на пульте: Go+ Sequence 3, Off Executor 201…"
+          }
+        }
+      }
+    },
+    "osc.find.magicQ": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playback numbers are the playback faders on the current page."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Номер плейбека — номер фейдера плейбека на текущей странице."
+          }
+        }
+      }
+    },
+    "osc.find.qlab": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“Start a cue” takes the cue number as shown in QLab."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "«Запустить кью» — номер кью так, как он показан в QLab."
+          }
+        }
+      }
+    },
+    "osc.find.resolume": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Address of any button: in Resolume choose Shortcuts → Edit OSC and click the button."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Адрес любой кнопки: в Resolume выберите Shortcuts → Edit OSC и нажмите на кнопку."
+          }
+        }
+      }
+    },
+    "osc.find.x32": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fader: 0 = −∞, 0.75 ≈ 0 dB, 1 = +10 dB."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Фейдер: 0 = −∞, 0.75 ≈ 0 дБ, 1 = +10 дБ."
+          }
+        }
+      }
+    },
+    "osc.host": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IP address"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IP-адрес"
+          }
+        }
+      }
+    },
+    "osc.howto.eos": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. On the console: Setup → System Settings → Show Control → OSC.\n2. Turn on OSC RX, set OSC UDP RX Port = 8000.\n3. For the check: OSC TX on, OSC UDP TX IP = this Mac's IP (below), TX Port = 8001.\n4. Enter the console's IP here (Setup → Network on the console)."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. На пульте: Setup → System Settings → Show Control → OSC.\n2. Включите OSC RX, OSC UDP RX Port = 8000.\n3. Для проверки: включите OSC TX, OSC UDP TX IP = IP этого Mac (ниже), TX Port = 8001.\n4. Впишите здесь IP пульта (на пульте: Setup → Network)."
+          }
+        }
+      }
+    },
+    "osc.howto.generic": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. In the program or device, find the OSC settings and switch on OSC input.\n2. Note its IP and port and enter them here.\n3. In the cue, choose “Own address…” and type the address from its documentation, or catch it with the OSC monitor."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. В программе или устройстве найдите настройки OSC и включите приём (OSC In / Input).\n2. Запишите IP и порт и впишите их здесь.\n3. В кью выберите «Свой адрес…» и впишите адрес из документации или поймайте его OSC-монитором."
+          }
+        }
+      }
+    },
+    "osc.howto.grandMA3": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. On the console: Menu → In & Out → OSC.\n2. Add a line: Interface = the network port to the show network, Destination IP = this Mac's IP (below), Port = 8000, Prefix = gma3.\n3. Turn on Receive and Receive Command for the line, and Enable Input.\n4. Enter the console's IP here."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. На пульте: Menu → In & Out → OSC.\n2. Добавьте строку: Interface — сетевой порт к сети шоу, Destination IP — IP этого Mac (ниже), Port = 8000, Prefix = gma3.\n3. Включите у строки Receive и Receive Command, а также Enable Input.\n4. Впишите здесь IP пульта."
+          }
+        }
+      }
+    },
+    "osc.howto.magicQ": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. On the console: Setup → View Settings → Network.\n2. OSC Mode = OSC Rx (or Tx and Rx), OSC Rx Port = 8000.\n3. Enter the console's IP here (Setup → View Settings → Network shows it)."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. На пульте: Setup → View Settings → Network.\n2. OSC Mode = OSC Rx (или Tx and Rx), OSC Rx Port = 8000.\n3. Впишите здесь IP пульта (он показан там же, в Network)."
+          }
+        }
+      }
+    },
+    "osc.howto.qlab": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. In QLab: Workspace Settings → Network (OSC Controls).\n2. Allow OSC control without a passcode, or set access for “no passcode”.\n3. Port 53000. Same Mac: “This Mac”; otherwise its IP."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. В QLab: Workspace Settings → Network (OSC Controls).\n2. Разрешите управление по OSC без пароля (доступ для «no passcode»).\n3. Порт 53000. QLab на этом же Mac — «Этот Mac», иначе — его IP."
+          }
+        }
+      }
+    },
+    "osc.howto.resolume": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. In Resolume open Preferences → OSC.\n2. Turn on OSC Input; leave the port 7000 (or type the same port here).\n3. Same Mac: press “This Mac”. Another computer: enter its IP (on that Mac: System Settings → Network)."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. В Resolume откройте Preferences → OSC.\n2. Включите OSC Input; порт оставьте 7000 (или впишите здесь тот же).\n3. Resolume на этом же Mac — нажмите «Этот Mac». На другом компьютере — впишите его IP (на том Mac: Системные настройки → Сеть)."
+          }
+        }
+      }
+    },
+    "osc.howto.x32": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. Nothing to switch on: the console always listens for OSC on port 10023.\n2. Enter the console's IP (on the console: Setup → Network).\n3. The console and this Mac must be on the same network."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. Включать ничего не нужно: пульт всегда слушает OSC на порту 10023.\n2. Впишите IP пульта (на пульте: Setup → Network).\n3. Пульт и этот Mac должны быть в одной сети."
+          }
+        }
+      }
+    },
+    "osc.intro": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OSC lets show cues control a video server, a lighting console or a mixer over the network. Add the device once — the guide shows what to switch on in it — then use OSC cues with ready-made commands."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OSC позволяет кью управлять видеосервером, световым или звуковым пультом по сети. Добавьте устройство один раз — мастер подскажет, что включить в нём, — и дальше используйте OSC-кью с готовыми командами."
+          }
+        }
+      }
+    },
+    "osc.kind.eos": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ETC Eos"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ETC Eos"
+          }
+        }
+      }
+    },
+    "osc.kind.eos.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eos, Ion, Gio, Element, Nomad: cues, macros"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eos, Ion, Gio, Element, Nomad: кью, макросы"
+          }
+        }
+      }
+    },
+    "osc.kind.generic": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Other device"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Другое устройство"
+          }
+        }
+      }
+    },
+    "osc.kind.generic.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Any OSC address (TouchDesigner, Millumin, MadMapper…)"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Любой OSC-адрес (TouchDesigner, Millumin, MadMapper…)"
+          }
+        }
+      }
+    },
+    "osc.kind.grandMA3": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "grandMA3"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "grandMA3"
+          }
+        }
+      }
+    },
+    "osc.kind.grandMA3.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Any console command: sequences, cues"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Любая команда пульта: секвенции, кью"
+          }
+        }
+      }
+    },
+    "osc.kind.magicQ": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ChamSys MagicQ"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ChamSys MagicQ"
+          }
+        }
+      }
+    },
+    "osc.kind.magicQ.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playbacks: go, release"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Плейбеки: go, release"
+          }
+        }
+      }
+    },
+    "osc.kind.qlab": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "QLab"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "QLab"
+          }
+        }
+      }
+    },
+    "osc.kind.qlab.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Another QLab: GO, start a cue"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Другой QLab: GO, запуск кью"
+          }
+        }
+      }
+    },
+    "osc.kind.resolume": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resolume"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resolume"
+          }
+        }
+      }
+    },
+    "osc.kind.resolume.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arena / Avenue: clips, columns, layers"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arena / Avenue: клипы, колонки, слои"
+          }
+        }
+      }
+    },
+    "osc.kind.x32": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Behringer X32 / Midas M32"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Behringer X32 / Midas M32"
+          }
+        }
+      }
+    },
+    "osc.kind.x32.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Channel mute and fader"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Мьют и фейдер каналов"
+          }
+        }
+      }
+    },
+    "osc.monitor": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OSC monitor"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OSC-монитор"
+          }
+        }
+      }
+    },
+    "osc.monitor.clear": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Очистить"
+          }
+        }
+      }
+    },
+    "osc.monitor.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shows OSC messages sent to this Mac. Point a device or an app (for example a TouchOSC button) at this Mac's IP and the port below, press something, and turn the message into a cue with one click."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Показывает OSC-сообщения, приходящие на этот Mac. Направьте устройство или приложение (например, кнопку TouchOSC) на IP этого Mac и порт ниже, нажмите что-нибудь — и превратите сообщение в кью одним кликом."
+          }
+        }
+      }
+    },
+    "osc.monitor.makeCue": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Make a cue"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сделать кью"
+          }
+        }
+      }
+    },
+    "osc.monitor.on": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listening on port %d"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Слушаю порт %d"
+          }
+        }
+      }
+    },
+    "osc.monitor.start": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listen"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Слушать"
+          }
+        }
+      }
+    },
+    "osc.monitor.stop": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Остановить"
+          }
+        }
+      }
+    },
+    "osc.myip": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Addresses of this Mac"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Адреса этого Mac"
+          }
+        }
+      }
+    },
+    "osc.name": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Название"
+          }
+        }
+      }
+    },
+    "osc.noNetwork": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No network connection"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нет подключения к сети"
+          }
+        }
+      }
+    },
+    "osc.none": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No devices yet."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Устройств пока нет."
+          }
+        }
+      }
+    },
+    "osc.port": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Port"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Порт"
+          }
+        }
+      }
+    },
+    "osc.prefix": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prefix"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Префикс"
+          }
+        }
+      }
+    },
+    "osc.preset.eos.cmd": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Command line"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Командная строка"
+          }
+        }
+      }
+    },
+    "osc.preset.eos.cue": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fire a cue"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Запустить кью"
+          }
+        }
+      }
+    },
+    "osc.preset.eos.go": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GO"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GO"
+          }
+        }
+      }
+    },
+    "osc.preset.eos.macro": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fire a macro"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Запустить макрос"
+          }
+        }
+      }
+    },
+    "osc.preset.ma3.cmd": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Any command"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Любая команда"
+          }
+        }
+      }
+    },
+    "osc.preset.ma3.cue": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Go to a cue"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Перейти на кью"
+          }
+        }
+      }
+    },
+    "osc.preset.ma3.go": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Go+ sequence"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Go+ секвенции"
+          }
+        }
+      }
+    },
+    "osc.preset.ma3.off": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sequence off"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выключить секвенцию"
+          }
+        }
+      }
+    },
+    "osc.preset.magicq.go": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playback GO"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GO плейбека"
+          }
+        }
+      }
+    },
+    "osc.preset.magicq.release": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Release playback"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Снять плейбек"
+          }
+        }
+      }
+    },
+    "osc.preset.qlab.go": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GO"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GO"
+          }
+        }
+      }
+    },
+    "osc.preset.qlab.start": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start a cue"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Запустить кью"
+          }
+        }
+      }
+    },
+    "osc.preset.resolume.clear": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear a layer"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Очистить слой"
+          }
+        }
+      }
+    },
+    "osc.preset.resolume.clip": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Launch a clip"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Запустить клип"
+          }
+        }
+      }
+    },
+    "osc.preset.resolume.column": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Launch a column"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Запустить колонку"
+          }
+        }
+      }
+    },
+    "osc.preset.resolume.opacity": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Layer opacity"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Прозрачность слоя"
+          }
+        }
+      }
+    },
+    "osc.preset.x32.fader": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Channel fader"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Фейдер канала"
+          }
+        }
+      }
+    },
+    "osc.preset.x32.mute": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mute a channel"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выключить канал (мьют)"
+          }
+        }
+      }
+    },
+    "osc.preset.x32.unmute": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unmute a channel"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Включить канал"
+          }
+        }
+      }
+    },
+    "osc.save": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сохранить"
+          }
+        }
+      }
+    },
+    "osc.save.new": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add device"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Добавить устройство"
+          }
+        }
+      }
+    },
+    "osc.step.address": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Where it is"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Где оно находится"
+          }
+        }
+      }
+    },
+    "osc.step.device": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Switch on OSC in the device"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Включите OSC в устройстве"
+          }
+        }
+      }
+    },
+    "osc.step.test": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check the link"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Проверьте связь"
+          }
+        }
+      }
+    },
+    "osc.subnet.short": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Other network"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Другая сеть"
+          }
+        }
+      }
+    },
+    "osc.subnet.warning": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This address is not on the same network as this Mac. Messages will probably not arrive: connect both to the same switch / Wi-Fi and use addresses like 192.168.1.x on both."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Этот адрес не в одной сети с этим Mac — сообщения, скорее всего, не дойдут. Подключите оба к одному коммутатору / Wi-Fi и задайте адреса вида 192.168.1.x на обоих."
+          }
+        }
+      }
+    },
+    "osc.test": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Проверить"
+          }
+        }
+      }
+    },
+    "osc.test.fail": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No answer"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нет ответа"
+          }
+        }
+      }
+    },
+    "osc.test.fail.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check: the IP address and port; OSC is switched on in the device; both are on the same network; the macOS firewall allows SSMT (System Settings → Network → Firewall)."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Проверьте: IP-адрес и порт; OSC включён в устройстве; оба в одной сети; брандмауэр macOS пропускает SSMT (Системные настройки → Сеть → Брандмауэр)."
+          }
+        }
+      }
+    },
+    "osc.test.ok": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The device answered"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Устройство ответило"
+          }
+        }
+      }
+    },
+    "osc.test.send": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send: %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Отправить: %@"
+          }
+        }
+      }
+    },
+    "osc.test.udp": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This device does not answer OSC, so the only check is to send a command and see it work."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Это устройство не отвечает по OSC, поэтому проверка одна: отправить команду и посмотреть, сработала ли она."
+          }
+        }
+      }
+    },
+    "osc.thisMac": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This Mac"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Этот Mac"
+          }
+        }
+      }
+    },
+    "osc.thisMac.help": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The program runs on this same Mac"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Программа запущена на этом же Mac"
+          }
+        }
+      }
+    },
+    "osc.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OSC devices"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OSC-устройства"
+          }
+        }
+      }
+    },
+    "osc.yourip": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IP of this Mac (for answers): %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IP этого Mac (для ответов): %@"
           }
         }
       }
@@ -7529,6 +9297,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Выберите кью, чтобы настроить её"
+          }
+        }
+      }
+    },
+    "show.issue.device": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: no OSC device"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: не выбрано OSC-устройство"
           }
         }
       }
