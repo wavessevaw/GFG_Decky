@@ -24,7 +24,7 @@ public final class SimulatedConsole {
     }
 
     public let sampleRate: Double
-    public private(set) var strips: [Int: ChannelStrip]
+    public internal(set) var strips: [Int: ChannelStrip]
     public var sources: [Int: Source]
     /// Room resonances (frequency, extra loop gain dB) where feedback appears first.
     public var roomModes: [(Double, Double)] = [(2500, 10), (630, 6)]

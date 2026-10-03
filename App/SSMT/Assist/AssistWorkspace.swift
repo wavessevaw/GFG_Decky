@@ -27,11 +27,19 @@ struct AssistWorkspace: View {
                 Picker("", selection: $store.mode) {
                     Text(loc.t("assist.mode.soundcheck")).tag(AssistStore.Mode.soundcheck)
                     Text(loc.t("assist.mode.show")).tag(AssistStore.Mode.show)
+                    Text(loc.t("assist.mode.test")).tag(AssistStore.Mode.test)
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
-                .frame(width: 360)
-                if store.mode == .soundcheck {
+                .frame(width: 480)
+                if store.mode == .test {
+                    HStack(alignment: .top, spacing: 16) {
+                        Panel(title: loc.t("assist.console"), tint: Theme.dataBlue) { ConnectionPanel() }
+                        Panel(title: loc.t("assist.test"), tint: Theme.signalYellow) { ConsoleTestPanel() }
+                            .frame(width: 460)
+                    }
+                    Panel(title: loc.t("assist.test.report"), tint: Theme.dataSecondary) { ConsoleTestReport() }
+                } else if store.mode == .soundcheck {
                     HStack(alignment: .top, spacing: 16) {
                         Panel(title: loc.t("assist.console"), tint: Theme.dataBlue) { ConnectionPanel() }
                         Panel(title: loc.t("assist.oneButton"), tint: Theme.signalYellow) { GroupPanel() }
@@ -388,6 +396,63 @@ private struct GuardLogView: View {
         case let .tonalHold(ch, f, d): return String(format: loc.t("assist.g.tonal"), name(ch), PEQFilter.label(f), d)
         case let .tonalReleased(ch): return String(format: loc.t("assist.g.tonalReleased"), name(ch))
         case let .yielded(ch, b): return String(format: loc.t("assist.g.yielded"), ch.map(name) ?? b.map(bus) ?? "")
+        }
+    }
+}
+
+private struct ConsoleTestPanel: View {
+    @EnvironmentObject var store: AssistStore
+    @EnvironmentObject var loc: Localizer
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(loc.t("assist.test.hint")).font(.system(size: 12)).foregroundStyle(Theme.textSecondary)
+            Picker(loc.t("assist.test.scenario"), selection: $store.testScenario) {
+                ForEach(AssistScenario.all) { s in Text(loc.t("assist.scenario.\(s.id)") + " · \(s.channels.count) ch").tag(s.id) }
+            }
+            .frame(width: 400)
+            Stepper(String(format: loc.t("assist.test.first"), store.testFirst), value: $store.testFirst, in: 1...32)
+                .font(.system(size: 12))
+            Toggle(loc.t("assist.test.muteMain"), isOn: $store.testMuteMain).font(.system(size: 12))
+            Label(loc.t("assist.test.warning"), systemImage: "exclamationmark.triangle.fill")
+                .font(.system(size: 11)).foregroundStyle(Theme.statusWarning)
+            HStack {
+                Button { store.runConsoleTest() } label: {
+                    Label(store.testing ? loc.t("assist.test.running") : loc.t("assist.test.run"), systemImage: "checklist")
+                }
+                .buttonStyle(SSMTButtonStyle(kind: .primary))
+                .disabled(store.testing || (store.family != .simulator && !store.isConnected))
+                if store.testing { ProgressView().controlSize(.small) }
+            }
+        }
+    }
+}
+
+private struct ConsoleTestReport: View {
+    @EnvironmentObject var store: AssistStore
+    @EnvironmentObject var loc: Localizer
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if store.testChecks.isEmpty {
+                Text(loc.t("assist.test.empty")).font(.system(size: 12)).foregroundStyle(Theme.textMuted)
+            }
+            ForEach(store.testChecks) { c in
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    StatusBadge(level: level(c.status), text: loc.t("assist.test.status.\(c.status.rawValue)"))
+                        .frame(width: 110, alignment: .leading)
+                    Text(loc.t("assist.test.step.\(c.id)")).font(.system(size: 12, weight: .semibold)).frame(width: 230, alignment: .leading)
+                    Text(c.detail).font(.system(size: 12)).foregroundStyle(Theme.textSecondary).textSelection(.enabled)
+                }
+            }
+        }
+    }
+
+    private func level(_ s: ConsoleTestCheck.Status) -> StatusLevel {
+        switch s {
+        case .ok: return .good
+        case .warning, .running: return .warning
+        case .failed: return .error
         }
     }
 }

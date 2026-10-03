@@ -112,6 +112,8 @@ public enum X32Codec {
         func i(_ addr: String, _ v: Int32) { out.append(OSCMessage(addr, [.int(v)])) }
         func changed<T: Equatable>(_ k: KeyPath<ChannelStrip, T>) -> Bool { old.map { $0[keyPath: k] != new[keyPath: k] } ?? true }
 
+        // The console keeps up to 12 characters (ASCII on the X32 screen).
+        if changed(\.name) { out.append(OSCMessage("\(p)/config/name", [.string(String(new.name.prefix(12)))])) }
         if changed(\.gainDB) { f(gainAddress(new.id, family: family), gainValue(new.gainDB, family: family)) }
         if changed(\.highPassOn) { i("\(p)/preamp/hpon", new.highPassOn ? 1 : 0) }
         if changed(\.highPassHz) { f("\(p)/preamp/hpf", logUnmap(new.highPassHz, 20, 400)) }

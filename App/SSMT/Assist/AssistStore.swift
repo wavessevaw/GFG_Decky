@@ -97,7 +97,7 @@ final class AssistStore: ObservableObject {
         case interface
     }
 
-    enum Mode: String, CaseIterable { case soundcheck, show }
+    enum Mode: String, CaseIterable { case soundcheck, show, test }
 
     @Published var family: MixerFamily = .simulator
     @Published var host = UserDefaults.standard.string(forKey: "assist.host") ?? "192.168.1.64" {
@@ -134,6 +134,12 @@ final class AssistStore: ObservableObject {
     @Published private(set) var micLevel: Double?
     @Published private(set) var micCalibrated = false
     @Published var message: String?
+    // Console test with simulation
+    @Published var testScenario = "musical"
+    @Published var testFirst = 1
+    @Published var testMuteMain = true
+    @Published private(set) var testChecks: [ConsoleTestCheck] = []
+    @Published private(set) var testing = false
 
     /// Microphones of the function #1 library, the selected one and the SPL calibration (set by AppModel).
     var micLibrary: () -> (mics: [MicrophoneCalibration], selected: UUID?, spl: SPLCalibration?) = { ([], nil, nil) }
@@ -410,6 +416,45 @@ final class AssistStore: ObservableObject {
             link?.send(X32Codec.busMessages(from: old, to: b, family: family))
         }
         if !changed.isEmpty { buses = busMap.values.sorted { $0.id < $1.id } }
+    }
+
+    // MARK: console test with simulation
+
+    /// Runs the whole assistant on the real console with made-up musicians and reads every value back
+    /// (in the simulator: against the built-in X32 emulator). The console is restored at the end.
+    func runConsoleTest() {
+        guard !testing else { return }
+        stopJob()
+        stopGuard()
+        let scenario = AssistScenario.all.first { $0.id == testScenario } ?? .musical
+        let transport: ConsoleTransport
+        var udp: UDPConsoleTransport?
+        switch family {
+        case .x32, .xAir:
+            let t = UDPConsoleTransport(host: host, port: family.defaultPort)
+            udp = t
+            transport = t
+        default:
+            transport = ConsoleEmulator(family: .x32)
+        }
+        let fam: MixerFamily = family == .xAir ? .xAir : .x32
+        let first = min(testFirst, max(1, fam.channelCount - scenario.channels.count + 1))
+        let runner = ConsoleTestRunner(scenario: scenario, family: fam, firstChannel: first, transport: transport)
+        runner.muteMain = testMuteMain
+        runner.character = character
+        runner.onProgress = { [weak self] c in Task { @MainActor in self?.testChecks = c } }
+        testChecks = []
+        testing = true
+        Task.detached { [weak self] in
+            let result = await runner.run()
+            udp?.close()
+            await MainActor.run {
+                self?.testChecks = result
+                self?.testing = false
+                // Show the console as it is now (restored).
+                if let self, let link = self.link { link.queryAll(channels: self.family.channelCount) }
+            }
+        }
     }
 
     // MARK: per-channel state for the table
