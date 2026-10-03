@@ -41,6 +41,8 @@ struct ShowTimelineView: View {
                             .help(label(c.cueID))
                     }
                 }
+                .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
+                .clipped()
             }
         }
         .glassCard(padding: 10)

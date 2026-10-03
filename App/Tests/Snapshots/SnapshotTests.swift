@@ -194,11 +194,12 @@ final class SnapshotTests: XCTestCase {
         return (doc, intro.id, group.id, preshow.id, pads[0].id)
     }
 
-    private func prepareShow(selection: UUID, playhead: UUID) {
-        let s = Self.sampleShow
+    private func prepareShow() {
+        let s = Self.sampleShow // computed: fresh ids on every access, so read it once
         let show = Self.model.show
         show.doc = s.doc
-        show.selection = [selection]
+        show.selection = [s.intro]
+        let playhead = s.group
         var waves: [String: [Float]] = [:]
         var clips: [String: (duration: Double, channels: Int)] = [:]
         for (i, (name, d)) in [("Preshow loop", 95.0), ("Intro", 41.5), ("Rain", 180), ("Thunder", 6.2), ("Phone", 4), ("Door", 2),
@@ -215,9 +216,8 @@ final class SnapshotTests: XCTestCase {
     }
 
     func testShowPlayer() throws {
-        let s = Self.sampleShow
         let show = Self.model.show
-        prepareShow(selection: s.intro, playhead: s.group)
+        prepareShow()
         show.layout = .simple
         show.showMode = false
         try snapshot(ShowWorkspace().padding(16).background(Backdrop()), size: CGSize(width: 1500, height: 900),
