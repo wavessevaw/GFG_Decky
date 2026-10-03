@@ -273,15 +273,16 @@ public enum QLabImport {
 
     /// Index stored in an `NSKeyedArchiver` reference (CFKeyedArchiverUID), read from its description.
     public static func archiverUID(_ x: Any) -> Int? {
-        if let d = x as? [String: Any], d.count == 1, let v = d["CF$UID"] as? Int { return v }
-        guard String(describing: type(of: x)).contains("UID") else { return nil }
+        if let d = x as? [String: Any] { return d.count == 1 ? d["CF$UID"] as? Int : nil }
+        if x is String || x is [Any] || x is Data || x is Date || x is Bool || x is Int || x is Double { return nil }
+        let text = String(describing: x)
+        guard String(describing: type(of: x)).contains("UID") || text.contains("KeyedArchiverUID") else { return nil }
         // Linux: a Swift class with a `value` field; macOS: "<CFKeyedArchiverUID …>{value = 5}".
         for c in Mirror(reflecting: x).children where c.label == "value" {
             if let v = c.value as? UInt32 { return Int(v) }
             if let v = c.value as? Int { return v }
             if let v = c.value as? UInt64 { return Int(v) }
         }
-        let text = String(describing: x)
         guard let r = text.range(of: #"value = (\d+)"#, options: .regularExpression) else { return nil }
         return Int(text[r].split(separator: " ").last ?? "")
     }
