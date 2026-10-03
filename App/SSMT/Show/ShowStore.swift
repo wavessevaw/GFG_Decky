@@ -194,6 +194,32 @@ final class ShowStore: ObservableObject {
         selection = Set(cues.map(\.id))
     }
 
+    // MARK: QLab import
+
+    @Published var showQLabImport = false
+
+    /// Replaces the show with an imported QLab workspace (one undo step). Keeps this Mac's audio
+    /// interface, outputs and OSC devices. Relative file paths are resolved against `baseFolder`.
+    func adoptImported(_ lists: [QLabImport.Item], name: String, baseFolder: URL?) -> QLabImport.Report {
+        var (imported, report) = QLabImport.makeShow(name: name, lists: lists)
+        imported.outputs = doc.outputs
+        imported.deviceUID = doc.deviceUID
+        imported.devices = doc.devices
+        if let base = baseFolder {
+            for c in imported.allCues where c.kind == .audio {
+                guard let f = c.audio?.file, !f.isEmpty, !f.hasPrefix("/") else { continue }
+                imported.updateCue(c.id) { $0.audio?.file = base.appendingPathComponent(f).path }
+            }
+        }
+        run { e, now in e.panic(now: now, hard: true) }
+        edit(loc("qlab.title")) { $0 = imported }
+        fileURL = nil
+        selection = []
+        listID = imported.cueLists.first?.id
+        bankID = imported.banks.first?.id
+        return report
+    }
+
     // MARK: OSC
 
     /// Sends a Network cue's message now (inspector "Send now").

@@ -2,6 +2,19 @@ import SSMTCore
 import SwiftUI
 
 extension OSCDeviceKind {
+    /// Product name (the same in every language).
+    var brand: String {
+        switch self {
+        case .resolume: return "Resolume"
+        case .eos: return "ETC Eos"
+        case .grandMA3: return "grandMA3"
+        case .magicQ: return "MagicQ"
+        case .x32: return "X32"
+        case .qlab: return "QLab"
+        case .generic: return "OSC"
+        }
+    }
+
     var icon: String {
         switch self {
         case .resolume: return "play.rectangle.on.rectangle"
@@ -29,7 +42,7 @@ struct OSCDevicesView: View {
     init(startWith kind: OSCDeviceKind? = nil) {
         if let kind {
             _page = State(initialValue: .setup)
-            _draft = State(initialValue: OSCDevice(name: kind.rawValue, kind: kind))
+            _draft = State(initialValue: OSCDevice(name: kind.brand, kind: kind))
         }
     }
 

@@ -79,6 +79,12 @@ struct ShowWorkspace: View {
             show.installKeyMonitor()
         }
         .onDisappear { show.isActive = false }
+        .sheet(isPresented: $show.showQLabImport) {
+            QLabImportView()
+                .environmentObject(show)
+                .environmentObject(loc)
+                .preferredColorScheme(.dark)
+        }
         .sheet(isPresented: $show.showOSC) {
             OSCDevicesView()
                 .environmentObject(show)

@@ -264,6 +264,11 @@ final class SnapshotTests: XCTestCase {
         try snapshot(OSCDevicesView(startWith: .eos), size: CGSize(width: 640, height: 600), name: "osc-setup-eos", loc: Self.ru)
     }
 
+    func testQLabImport() throws {
+        prepareShow()
+        try snapshot(QLabImportView(), size: CGSize(width: 600, height: 560), name: "qlab-import", loc: Self.ru)
+    }
+
     func testInputListPrintSheets() throws {
         let doc = Self.sampleInputList
         try snapshot(ChannelSheet(doc: doc, rows: doc.channelPages(rowsPerPage: InputListPrint.rowsPerPage)[0], page: "1 / 3"),
