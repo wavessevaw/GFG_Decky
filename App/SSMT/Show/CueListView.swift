@@ -145,7 +145,7 @@ struct CueListView: View {
     }
 
     /// Cue ids (reorder) or audio files (new cues) dropped onto a row.
-    private func drop(_ providers: [NSItemProvider], before: Cue?, into group: UUID? = nil) -> Bool {
+    private func drop(_ providers: [NSItemProvider], before: Cue?, into target: UUID? = nil) -> Bool {
         guard !show.showMode, let lid = show.listID else { return false }
         let files = providers.filter { $0.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) }
         if !files.isEmpty {
@@ -167,9 +167,9 @@ struct CueListView: View {
                     let flat = list.cues.flattened().map(\.cue.id)
                     if let i = flat.firstIndex(of: before.id), i > 0 { after = flat[i - 1] }
                 }
-                if let group {
-                    show.addAudioFiles(audio, intoGroup: group)
-                    show.collapsed.remove(group)
+                if let target {
+                    show.addAudioFiles(audio, intoGroup: target)
+                    show.collapsed.remove(target)
                     return
                 }
                 show.addAudioFiles(audio, after: before == nil ? show.currentList?.cues.last?.id : after)
@@ -181,10 +181,10 @@ struct CueListView: View {
             guard let s = obj as? String, let id = UUID(uuidString: s) else { return }
             DispatchQueue.main.async {
                 let ids = show.selection.contains(id) ? show.orderedSelection : [id]
-                if let group {
-                    guard !ids.contains(group) else { return }
-                    show.edit(loc.t("show.move")) { $0.move(ids, before: nil, intoGroup: group, list: lid) }
-                    show.collapsed.remove(group)
+                if let target {
+                    guard !ids.contains(target) else { return }
+                    show.edit(loc.t("show.move")) { $0.move(ids, before: nil, intoGroup: target, list: lid) }
+                    show.collapsed.remove(target)
                     return
                 }
                 guard before?.id != id else { return }
