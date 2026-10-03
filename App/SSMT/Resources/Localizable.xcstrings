@@ -4309,13 +4309,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tonal deviation left"
+            "value": "Deviation"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Остаток отклонения"
+            "value": "Отклонение"
           }
         }
       }
@@ -4326,13 +4326,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Input gain"
+            "value": "Gain"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Входное усиление"
+            "value": "Усиление"
           }
         }
       }
