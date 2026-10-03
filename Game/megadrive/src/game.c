@@ -65,6 +65,16 @@ static u16 palette[64];
 static u16 overT;
 static s16 flyX0, flyY0, flyX1, flyY1;        // hero leap across the gutter, page coordinates
 static s16 flashT;
+static bool cycling;
+// A new game is a fresh run: page order, start panel, enemies, items and obstacles are rolled each time.
+static u8 order[STORY_PAGES], runStep;
+typedef struct { bool on; u8 kind; s16 x, w, top, hp; Sprite *spr; } Prop;   // kind 0 road case, 1 oil drum
+#define MAX_PROPS 2
+static Prop prop[MAX_PROPS];
+static Spawn rolled[6];
+static u8 rolledN;
+static ItemDef rolledItem;
+static bool rolledHasItem;                    // page palette has running-water / chase-light colours
 static Sprite *arrow;
 static s16 arrowDir = -1;
 
@@ -74,6 +84,9 @@ static const s32 zspeed[4] = { FIXF(0.6), FIXF(1.4), FIXF(0.47), FIXF(0.82) };  
 static const s16 zdamage[4] = { 2, 1, 2, 3 };
 
 static const PanelDef *panel(void) { return &story[pageI].panel[panelI]; }
+static bool lastPanel(void) { return panelI == story[pageI].panels - 1; }
+static bool bossPanel(void) { return runStep == STORY_PAGES - 1 && lastPanel(); }
+static u8 exitOf(void) { return lastPanel() ? (bossPanel() ? EX_END : EX_PAGE) : exitOf(); }
 static const PanelRect *rect(void) { return &pages[story[pageI].art].panel[panelI]; }
 static s16 cellX(void) { return rect()->x; }
 static s16 cellY(void) { return rect()->y; }
@@ -119,12 +132,20 @@ static void say(const char *s, s16 x, s16 headY, bool isHero)
     bubbleLife = 150;
 }
 
+
+// Release a sprite exactly once: a double release corrupts SGDK's sprite pool (two objects end up sharing one slot).
+static void dropSpr(Sprite **s)
+{
+    if (*s) SPR_releaseSprite(*s);
+    *s = NULL;
+}
+
 static void clearFx(void)
 {
     for (u16 i = 0; i < MAX_FX; i++)
-        if (fx[i].on) { SPR_releaseSprite(fx[i].spr); fx[i].on = FALSE; }
+        if (fx[i].on) { dropSpr(&fx[i].spr); fx[i].on = FALSE; }
     for (u16 i = 0; i < MAX_SHOTS; i++)
-        if (shot[i].on) { SPR_releaseSprite(shot[i].spr); shot[i].on = FALSE; }
+        if (shot[i].on) { dropSpr(&shot[i].spr); shot[i].on = FALSE; }
     TXT_clearBubble();
     bubbleLife = 0;
 }
@@ -136,7 +157,7 @@ static s16 halfW(const Actor *a) { return a->kind == K_BOSS ? 20 : 13; }
 
 static void physics(Actor *a)
 {
-    const s32 oldY = a->y;
+    const s32 oldY = a->y, oldX = a->x;
     a->vy += FIXF(0.36);                // gravity, px/frame²
     if (a->vy > FIX(9)) a->vy = FIX(9);
     a->x += a->vx;
@@ -162,10 +183,32 @@ static void physics(Actor *a)
             }
         }
     }
+    // Obstacles: the hero stands on top of them and cannot walk through them.
+    if (a->kind == K_HERO)
+    {
+        const s16 x = UNFIX(a->x);
+        for (u16 i = 0; i < MAX_PROPS; i++)
+        {
+            const Prop *o = &prop[i];
+            if (!o->on) continue;
+            const s16 x0 = o->x - o->w / 2, x1 = o->x + o->w / 2;
+            if (a->vy >= 0 && x > x0 - 4 && x < x1 + 4 && oldY <= FIX(o->top) && a->y >= FIX(o->top))
+            {
+                a->y = FIX(o->top);
+                a->vy = 0;
+                a->ground = TRUE;
+            }
+            else if (a->y > FIX(o->top + 2) && x > x0 - 10 && x < x1 + 10)
+            {
+                a->x = UNFIX(oldX) < o->x ? FIX(x0 - 10) : FIX(x1 + 10);
+                a->vx = 0;
+            }
+        }
+    }
     s16 minX = 14, maxX = panelW() - 14;
     if (a->kind == K_HERO && exitOpen)
     {
-        const u8 e = panel()->exit;
+        const u8 e = exitOf();
         if (e == EX_RIGHT || e == EX_PAGE) maxX = panelW() + 6;
         if (e == EX_LEFT) minX = -6;
     }
@@ -235,6 +278,16 @@ static bool heroHits(void)
     const s16 zx0 = hero.face > 0 ? hx : hx - reach, zx1 = hero.face > 0 ? hx + reach : hx;
     const s16 zy0 = hy - (at == AT_KICK ? 62 : 74), zy1 = hy - (at == AT_KICK ? 26 : 38);
     bool hit = FALSE;
+    // A well-timed punch knocks a singer's sound wave out of the air (the boss's feedback is too big to stop).
+    for (u16 i = 0; i < MAX_SHOTS; i++)
+    {
+        Shot *s = &shot[i];
+        const s16 sx = UNFIX(s->x);
+        if (!s->on || s->big || sx + 12 < zx0 || sx - 12 > zx1 || s->y < zy0 - 12 || s->y > zy1 + 12) continue;
+        s->life = 0;
+        burst(1, sx, s->y);
+        hit = TRUE;
+    }
     for (u16 i = 0; i < MAX_ENEMIES; i++)
     {
         Actor *e = &foe[i];
@@ -264,6 +317,35 @@ static bool heroHits(void)
             SND_play(dmg >= 3 ? SFX_BIGHIT : SFX_HIT);
         }
         hit = TRUE;
+    }
+    // Oil drums break after a few blows and may leave an item behind.
+    for (u16 i = 0; i < MAX_PROPS; i++)
+    {
+        Prop *o = &prop[i];
+        if (!o->on || o->kind != 1 || o->x + 13 < zx0 || o->x - 13 > zx1 || o->top > zy1) continue;
+        o->hp--;
+        hit = TRUE;
+        burst(o->hp ? 1 : 2, o->x, o->top - 10);
+        SND_play(o->hp ? SFX_HIT : SFX_BIGHIT);
+        if (o->hp <= 0)
+        {
+            dropSpr(&o->spr);
+            o->on = FALSE;
+            for (u16 k = 0; k < 2; k++)
+            {
+                Pickup *p = &pick[k];
+                if (p->on || rnd(3) == 0) continue;
+                p->on = TRUE;
+                p->taken = FALSE;
+                p->kind = 1 + rnd(3);
+                p->x = o->x;
+                p->y = floorY();
+                p->spr = SPR_addSprite(&spr_item, 0, 0, TILE_ATTR(PAL0, FALSE, FALSE, FALSE));
+                if (p->spr) SPR_setAnim(p->spr, p->kind - 1);
+                break;
+            }
+        }
+        break;
     }
     if (hit && cable) { cableHits--; HUD_cable(cableHits); }
     return hit;
@@ -510,7 +592,8 @@ static void updateEnemy(Actor *e)
                 e->st = S_IDLE;
                 if (e->cool == 0) { e->st = S_WIND; e->t = k == K_BOSS ? 34 : 28; }
             }
-            if (k == K_SINGER && adx < 80 && e->st != S_WIND) { e->vx = -e->face * zspeed[k]; e->st = S_WALK; e->anim++; }
+            // Singers back off only right after a shot, so they can be cornered.
+            if (k == K_SINGER && adx < 80 && e->st != S_WIND && e->cool > 30) { e->vx = -e->face * zspeed[k]; e->st = S_WALK; e->anim++; }
         }
     }
     physics(e);
@@ -526,7 +609,7 @@ static void updateEnemy(Actor *e)
     }
     if (e->st == S_DEAD && e->t <= 0)
     {
-        SPR_releaseSprite(e->spr);
+        dropSpr(&e->spr);
         e->spr = NULL;
         e->on = FALSE;
     }
@@ -549,7 +632,7 @@ static void updateShots(void)
         }
         if (s->life <= 0 || x < -20 || x > panelW() + 20)
         {
-            SPR_releaseSprite(s->spr);
+            dropSpr(&s->spr);
             s->on = FALSE;
             continue;
         }
@@ -569,7 +652,7 @@ static void updateFx(void)
         if (!f->on) continue;
         if (--f->life <= 0 || !f->spr)
         {
-            if (f->spr) SPR_releaseSprite(f->spr);
+            if (f->spr) dropSpr(&f->spr);
             f->on = FALSE;
             continue;
         }
@@ -596,7 +679,7 @@ static void updatePickups(void)
             HUD_items(inv);
             p->taken = TRUE;
             p->on = FALSE;
-            SPR_releaseSprite(p->spr);
+            dropSpr(&p->spr);
             p->spr = NULL;
             SND_play(SFX_PICKUP);
             burst(p->kind == IT_TAPE ? 7 : p->kind == IT_CABLE ? 8 : 9, p->x, p->y - 30);
@@ -609,7 +692,7 @@ static void updatePickups(void)
 // Blinking exit arrow (right / down / left) once a panel is cleared.
 static void showArrow(s16 dir)
 {
-    if (arrow) { SPR_releaseSprite(arrow); arrow = NULL; }
+    if (arrow) { dropSpr(&arrow); arrow = NULL; }
     arrowDir = dir;
     if (dir < 0 || dir == EX_END) { arrowDir = -1; return; }
     arrow = SPR_addSprite(&spr_arrow, 0, 0, TILE_ATTR(PAL0, TRUE, FALSE, FALSE));
@@ -630,11 +713,72 @@ static void updateArrow(void)
 
 static void releaseAll(void)
 {
+    for (u16 i = 0; i < MAX_PROPS; i++)
+        if (prop[i].on) { dropSpr(&prop[i].spr); prop[i].on = FALSE; }
     for (u16 i = 0; i < MAX_ENEMIES; i++)
-        if (foe[i].on) { if (foe[i].spr) SPR_releaseSprite(foe[i].spr); foe[i].on = FALSE; }
+        if (foe[i].on) { if (foe[i].spr) dropSpr(&foe[i].spr); foe[i].on = FALSE; }
     for (u16 i = 0; i < 2; i++)
-        if (pick[i].spr) { SPR_releaseSprite(pick[i].spr); pick[i].spr = NULL; pick[i].on = FALSE; }
+        if (pick[i].spr) { dropSpr(&pick[i].spr); pick[i].spr = NULL; pick[i].on = FALSE; }
     clearFx();
+}
+
+// Enemies, an item and obstacles are rolled for every panel of a run.
+static void rollPanel(void)
+{
+    if (bossPanel())
+    {
+        rolled[0] = (Spawn) { K_BOSS, 999, 60 };
+        rolledN = 1;
+        if (rnd(2)) { rolled[1] = (Spawn) { K_FAN, 0, 200 }; rolledN = 2; }
+    }
+    else
+    {
+        rolledN = 2 + rnd(2) + runStep + (panelI > 2 ? 1 : 0);
+        if (rolledN > 5) rolledN = 5;
+        u16 t = 30 + rnd(40);
+        for (u16 i = 0; i < rolledN; i++)
+        {
+            const u16 r = rnd(10);
+            const u8 k = r < 4 ? K_FAN : r < 7 ? K_LOADER : K_SINGER;
+            rolled[i] = (Spawn) { k, rnd(2) ? 999 : 0, t };
+            t += 70 + rnd(90);
+        }
+    }
+    rolledHasItem = rnd(10) < 7;
+    rolledItem = (ItemDef) { 1 + rnd(3), 0, 0 };
+    if (rolledItem.kind != IT_TAPE && rnd(2)) rolledItem.kind = IT_TAPE;
+}
+
+static void placeProps(void)
+{
+    for (u16 i = 0; i < MAX_PROPS; i++) prop[i].on = FALSE;
+    const u16 n = panelW() >= 260 ? rnd(3) : rnd(2);
+    s16 used = -999;
+    for (u16 i = 0; i < n; i++)
+    {
+        Prop *o = &prop[i];
+        o->kind = rnd(3) == 0 ? 0 : 1;
+        o->w = o->kind == 0 ? 56 : 26;
+        s16 x = 80 + rnd(panelW() - 170);
+        if (abs(x - used) < 80) x = used + (x > used ? 90 : -90);
+        if (x < 70 || x > panelW() - 80) continue;
+        used = x;
+        o->x = x;
+        o->top = floorY() - (o->kind == 0 ? 36 : 34);
+        o->hp = 3;
+        o->spr = SPR_addSprite(&spr_prop, 0, 0, TILE_ATTR(PAL2, FALSE, FALSE, FALSE));
+        if (!o->spr) continue;
+        SPR_setAnim(o->spr, o->kind);
+        SPR_setDepth(o->spr, 100);
+        o->on = TRUE;
+    }
+}
+
+static void updateProps(void)
+{
+    for (u16 i = 0; i < MAX_PROPS; i++)
+        if (prop[i].on)
+            SPR_setPosition(prop[i].spr, cellX() + prop[i].x - 32 - BG_camX(), cellY() + floorY() - 46 - BG_camY());
 }
 
 static void startPanel(void)
@@ -643,20 +787,22 @@ static void startPanel(void)
     releaseAll();
     plats = rect()->plat;
     platN = rect()->nplat;
+    rollPanel();
 #ifdef NOENEMY
     pendingN = 0;
 #else
-    pendingN = p->spawns;
+    pendingN = rolledN;
 #endif
-    memcpy(pending, p->spawn, sizeof(Spawn) * p->spawns);
+    memcpy(pending, rolled, sizeof(Spawn) * rolledN);
     exitOpen = FALSE;
-    for (u16 i = 0; i < p->items; i++)
+    placeProps();
+    for (u16 i = 0; i < (rolledHasItem ? 1 : 0); i++)
     {
         Pickup *k = &pick[i];
         k->on = TRUE;
         k->taken = FALSE;
-        k->kind = p->item[i].kind;
-        if (p->item[i].x == 0 && platN)
+        k->kind = rolledItem.kind;
+        if (platN)
         {
             // On top of the highest platform (reward for climbing).
             u16 best = 0;
@@ -666,8 +812,8 @@ static void startPanel(void)
         }
         else
         {
-            k->x = p->item[i].x ? p->item[i].x : panelW() / 2;
-            k->y = p->item[i].y ? p->item[i].y : floorY();
+            k->x = panelW() / 2;
+            k->y = floorY();
         }
         k->spr = SPR_addSprite(&spr_item, 0, 0, TILE_ATTR(PAL0, FALSE, FALSE, FALSE));
         if (k->spr) SPR_setAnim(k->spr, k->kind - 1);
@@ -675,25 +821,30 @@ static void startPanel(void)
     hero.vx = 0;
     hero.vy = 0;
     if (hero.st != S_DEAD) hero.st = S_IDLE;
+    BG_setWater(rect()->water ? cellY() + rect()->water : -1, cellY() + rect()->h);
     TXT_caption(p->caption);
-    say(p->line, UNFIX(hero.x), UNFIX(hero.y) - 92, TRUE);
+    if (bossPanel() && story[pageI].panel[panelI].exit != EX_END)
+        say("ФИДБЭК ИДЁТ ЗА МНОЙ… ПУЛЬТ У НЕГО!", UNFIX(hero.x), UNFIX(hero.y) - 92, TRUE);
+    else
+        say(p->line, UNFIX(hero.x), UNFIX(hero.y) - 92, TRUE);
     HUD_page(pageI, panelI);
 }
 
 static void loadPagePalette(void)
 {
+    cycling = TRUE;
     memcpy(palette, BG_colors(), 32 * 2);
     memcpy(palette + 32, spr_hero.palette->data, 16 * 2);
     memcpy(palette + 48, spr_loader.palette->data, 16 * 2);
 }
 
-static void enterPage(u16 p, bool fade)
+static void enterPage(u16 p, u16 startAt, bool fade)
 {
     pageI = p;
 #ifdef START_PANEL
     panelI = START_PANEL;
 #else
-    panelI = 0;
+    panelI = startAt;
 #endif
     if (fade) PAL_fadeOutAll(16, FALSE);
     SYS_disableInts();
@@ -708,7 +859,9 @@ static void enterPage(u16 p, bool fade)
 
 static void newGame(void)
 {
+    Sprite *keep = hero.spr;   // the hero's sprite lives for the whole session; re-adding it would leak one per game
     memset(&hero, 0, sizeof(hero));
+    hero.spr = keep;
     hero.on = TRUE;
     hero.kind = K_HERO;
     hero.x = FIX(60);
@@ -726,11 +879,16 @@ static void newGame(void)
     HUD_items(inv);
     HUD_cable(0);
     HUD_health(hero.hp, HERO_HP);
+    // Roll the run: which location comes first, and where in it the hero lands.
+    setRandomSeed(frame ^ GET_HVCOUNTER ^ (joy << 3));
+    order[0] = rnd(STORY_PAGES);
+    for (u16 i = 1; i < STORY_PAGES; i++) order[i] = (order[0] + i) % STORY_PAGES;
+    runStep = 0;
 #ifdef START_PAGE
-    enterPage(START_PAGE, TRUE);
-#else
-    enterPage(0, TRUE);
+    order[0] = START_PAGE;
+    order[1] = 1 - START_PAGE;
 #endif
+    enterPage(order[0], rnd(3), TRUE);
     mode = M_PLAY;
     startPanel();
     SND_music(MUS_GAME);
@@ -752,10 +910,10 @@ static void restartPanel(void)
 
 static void checkExit(void)
 {
-    const PanelDef *p = panel();
     const s16 x = UNFIX(hero.x);
     bool leave = FALSE;
-    switch (p->exit)
+    const u8 ex = exitOf();
+    switch (ex)
     {
         case EX_RIGHT: case EX_PAGE: leave = x >= panelW() + 2; break;
         case EX_LEFT: leave = x <= -2; break;
@@ -765,7 +923,7 @@ static void checkExit(void)
     releaseAll();
     showArrow(-1);
     TXT_clearCaption();
-    if (p->exit == EX_PAGE)
+    if (ex == EX_PAGE)
     {
         mode = M_TURN;
         turnCol = 40;
@@ -779,15 +937,16 @@ static void checkExit(void)
     flyX0 = cellX() + x;
     flyY0 = cellY() + UNFIX(hero.y);
     panelI++;
-    s16 ex = p->exit == EX_RIGHT ? 30 : p->exit == EX_LEFT ? panelW() - 30 : flyX0 - cellX();
-    if (ex < 30) ex = 30;
-    if (ex > panelW() - 30) ex = panelW() - 30;
-    flyX1 = cellX() + ex;
+    s16 entry = ex == EX_RIGHT ? 30 : ex == EX_LEFT ? panelW() - 30 : flyX0 - cellX();
+    if (entry < 30) entry = 30;
+    if (entry > panelW() - 30) entry = panelW() - 30;
+    flyX1 = cellX() + entry;
     flyY1 = cellY() + floorY();
     camFor(&pages[story[pageI].art], rect(), &panTX, &panTY);
     panTotal = (abs(panTX - BG_camX()) + abs(panTY - BG_camY())) >> 3;
     if (panTotal == 0) panTotal = 1;
     panDone = 0;
+    BG_setWater(-1, -1);
     mode = M_PAN;
     SND_play(SFX_SLIDE);
 }
@@ -816,7 +975,7 @@ static void play(void)
     {
         exitOpen = TRUE;
         SND_play(SFX_CLEAR);
-        if (panel()->exit == EX_END)
+        if (exitOf() == EX_END)
         {
             mode = M_WIN;
             overT = 0;
@@ -826,7 +985,7 @@ static void play(void)
         }
         static const char *const lines[] = { "ЧИСТО. ДАЛЬШЕ!", "ЛИНИЯ СВОБОДНА.", "САУНДЧЕК ПРОЙДЕН.", "СЛЕДУЮЩИЙ!" };
         say(lines[rnd(4)], UNFIX(hero.x), UNFIX(hero.y) - 92, TRUE);
-        showArrow(panel()->exit);
+        showArrow(exitOf());
     }
     if (exitOpen) checkExit();
     if (hero.st == S_DEAD && hero.t <= 0 && mode == M_PLAY)
@@ -872,7 +1031,8 @@ static void stepTurn(void)
         {
             BG_paperColumn(0, FALSE);
             turnPhase = 1;
-            pageI++;
+            runStep++;
+            pageI = order[runStep];
             panelI = 0;
             SYS_disableInts();
             s16 cx, cy;
@@ -908,6 +1068,11 @@ static void stepTurn(void)
 // Test bot: walks to the nearest zombie and fights, then heads for the exit.
 static u16 autopilot(void)
 {
+    static s16 lastX, stuck, dropDir;
+    const s16 cx = UNFIX(hero.x);
+    stuck = (cx == lastX) ? stuck + 1 : 0;
+    lastX = cx;
+    const u16 hop = stuck > 6 ? BUTTON_C : 0;
     if (mode == M_TITLE || mode == M_OVER || mode == M_WIN) return (frame & 32) ? BUTTON_START : 0;
     if (mode != M_PLAY) return 0;
     const s16 hx = UNFIX(hero.x);
@@ -918,7 +1083,27 @@ static u16 autopilot(void)
     {
         const s16 dx = UNFIX(foe[best].x) - hx;
         u16 j = 0;
-        if (abs(dx) > 40) j |= dx > 0 ? BUTTON_RIGHT : BUTTON_LEFT;
+        if (UNFIX(hero.y) < UNFIX(foe[best].y) - 20)   // on a platform: walk off towards the foe, or the other way if blocked
+        {
+            if (dropDir == 0 || stuck > 6) dropDir = (stuck > 6) ? -dropDir : (dx > 0 ? 1 : -1);
+            if (dropDir == 0) dropDir = 1;
+            return dropDir > 0 ? BUTTON_RIGHT : BUTTON_LEFT;
+        }
+        dropDir = 0;
+        for (u16 i = 0; i < MAX_SHOTS; i++)   // a sound wave incoming: punch it away
+            if (shot[i].on && !shot[i].big && abs(UNFIX(shot[i].x) - hx) < 44 && ((shot[i].vx > 0) == (UNFIX(shot[i].x) < hx)))
+            {
+                const bool right = UNFIX(shot[i].x) > hx;
+                if (right != (hero.face > 0)) return right ? BUTTON_RIGHT : BUTTON_LEFT;
+                return (frame & 3) == 0 ? BUTTON_A : 0;
+            }
+        for (u16 i = 0; i < MAX_PROPS; i++)   // an oil drum in the way: smash it
+            if (prop[i].on && prop[i].kind == 1 && ((prop[i].x - hx) > 0) == (dx > 0) && abs(prop[i].x - hx) < 40 && abs(prop[i].x - hx) < abs(dx))
+            {
+                if ((dx > 0) != (hero.face > 0)) return dx > 0 ? BUTTON_RIGHT : BUTTON_LEFT;
+                return (frame & 7) == 0 ? BUTTON_A : 0;
+            }
+        if (abs(dx) > 40) j |= (dx > 0 ? BUTTON_RIGHT : BUTTON_LEFT) | hop | (abs(dx) < 120 && (frame & 31) == 0 ? BUTTON_C : 0);
         else
         {
             if ((dx > 0) != (hero.face > 0)) j |= dx > 0 ? BUTTON_RIGHT : BUTTON_LEFT;
@@ -932,10 +1117,10 @@ static u16 autopilot(void)
         for (u16 i = 0; i < 2; i++) if (pick[i].on) return pick[i].x > hx ? BUTTON_RIGHT : BUTTON_LEFT;
         return 0;
     }
-    switch (panel()->exit)
+    switch (exitOf())
     {
-        case EX_RIGHT: case EX_PAGE: return BUTTON_RIGHT;
-        case EX_LEFT: return BUTTON_LEFT;
+        case EX_RIGHT: case EX_PAGE: return BUTTON_RIGHT | hop;
+        case EX_LEFT: return BUTTON_LEFT | hop;
         case EX_DOWN: return abs(hx - 160) > 20 ? (hx < 160 ? BUTTON_RIGHT : BUTTON_LEFT) : BUTTON_DOWN;
     }
     return 0;
@@ -953,6 +1138,8 @@ static void title(void)
     TXT_clearBanner();
     pageI = 0;
     mode = M_TITLE;
+    cycling = FALSE;
+    BG_setWater(-1, -1);
     PAL_fadeOutAll(16, FALSE);
     SYS_disableInts();
     BG_loadPage(0, 0, 0);
@@ -1030,6 +1217,8 @@ void GAME_run(void)
                     BG_loadPage(0, pages[0].panel[1].x, 0);
                     SYS_enableInts();
                     memcpy(palette, BG_colors(), 64);
+                    cycling = FALSE;
+                    BG_setWater(-1, -1);
                     PAL_fadeInAll(palette, 20, TRUE);
                 }
                 if (overT == 260) TXT_banner("ПУЛЬТ СПАСЁН. ШОУ ДОЛЖНО ПРОДОЛЖАТЬСЯ!", 18, C_YELLOW, C_INK, FALSE);
@@ -1042,6 +1231,7 @@ void GAME_run(void)
             for (u16 i = 0; i < MAX_ENEMIES; i++) if (foe[i].on) place(&foe[i]);
             updateFx();
             updateArrow();
+            updateProps();
         }
         if (flashT > 0)
         {
@@ -1058,10 +1248,20 @@ void GAME_run(void)
         if (mode != M_TITLE && (frame & 15) == 0)
         {
             char dbg[48];
-            sprintf(dbg, "V%ld X%ld Y%ld A%ld T%ld", (long) hero.spr->visibility, (long) hero.spr->x, (long) hero.spr->y, (long) hero.spr->animInd, (long) hero.spr->attribut);
+            sprintf(dbg, "M%d V%ld X%d Y%d P%d E%d", (int) mode, (long) hero.spr->visibility, UNFIX(hero.x), UNFIX(hero.y), (int) panelI, (int) exitOpen);
             TXT_banner(dbg, 14, C_WHITE, C_INK, FALSE);
         }
 #endif
+        BG_animate(frame);
+        // Running water and chasing lights: rotate the three cycling colours of palette 1 (13..15).
+        if (cycling && (frame % 6) == 0 && !PAL_isDoingFade() && flashT == 0)
+        {
+            const u16 t = palette[29];
+            palette[29] = palette[30];
+            palette[30] = palette[31];
+            palette[31] = t;
+            PAL_setColors(29, &palette[29], 3, DMA_QUEUE);
+        }
         SPR_update();
         SYS_doVBlankProcess();
     }

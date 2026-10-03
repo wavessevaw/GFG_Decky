@@ -19,7 +19,11 @@ R = dict(
 )
 
 
-def cast_shadow(c, mask, dx=-4, dy=5, k=0.55):
+# Page style: outline colour (comic ink in the shade of the scene, not pure black) and shadow tint.
+STYLE = dict(outline=None, tint=None)
+
+
+def cast_shadow(c, mask, dx=-6, dy=7, k=0.45):
     sh = np.zeros_like(mask)
     h, w = mask.shape
     ys, xs = slice(max(0, dy), h), slice(max(0, dx), w)
@@ -28,13 +32,16 @@ def cast_shadow(c, mask, dx=-4, dy=5, k=0.55):
         xs, xd = slice(0, w + dx), slice(-dx, w)
     sh[ys, xs] = mask[yd, xd]
     sh &= ~mask
-    c.rgb[sh] = snap_ramps(c.rgb[sh] * k)
+    if STYLE['tint'] is not None:
+        c.rgb[sh] = snap_ramps(c.rgb[sh] * k + np.asarray(STYLE['tint'], np.float32) * (1 - k) * 0.6)
+    else:
+        c.rgb[sh] = snap_ramps(c.rgb[sh] * k)
 
 
 def ink_ring(c, mask):
     p = np.pad(mask, 1)
     ring = ~mask & (p[:-2, 1:-1] | p[2:, 1:-1] | p[1:-1, :-2] | p[1:-1, 2:])
-    c.rgb[ring] = INK
+    c.rgb[ring] = STYLE['outline'] if STYLE['outline'] is not None else INK
 
 
 def shade_into(c, mask, normal, rmp, ambient=0.25, spec=0.0, line=None, extra=None, lightmap=None, shadow=True):
@@ -49,6 +56,8 @@ def shade_into(c, mask, normal, rmp, ambient=0.25, spec=0.0, line=None, extra=No
     if spec:
         s = specular(normal, 24) * spec
         col = np.where((s > 0.55)[..., None], rmp[-1], col)
+    if line is not None and STYLE['outline'] is not None and np.array_equal(np.asarray(line), INK):
+        line = STYLE['outline']
     pid = c.put(mask, col, line=line)
     if line is not None and lightmap is not None:
         ink_ring(c, mask)
@@ -272,6 +281,7 @@ class Scene:
     def finish(self):
         self.c.platforms = self.platforms
         self.c.floor = getattr(self, 'floor', FLOOR)
+        self.c.water = getattr(self, 'water', 0)
         return self.c
 
 

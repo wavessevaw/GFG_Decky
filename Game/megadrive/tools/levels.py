@@ -3,51 +3,119 @@ a page with gutters and yellow route arrows. Each page has its own colour theme 
 import math
 import numpy as np
 import scenes
-from scenes import Scene, R, shade_into, ink_ring, cast_shadow, stencil, snap_ramps, INK
+from scenes import Scene, R, STYLE, shade_into, ink_ring, cast_shadow, stencil, snap_ramps, INK
 from art import (tube, ellipsoid, poly, inflate, ramp, rect_mask, normals_from_height, noise, toon, lambert,
                  bayer, md, LIGHT)
 
+# Hue-shifted ramps: shadows lean to violet / navy, highlights to warm cream or cool cyan (16-bit comic style).
 THEMES = {
     'backstage': dict(
-        wall=ramp('#08301c', '#145a28', '#22903c', '#4cc04c', '#a0ec6c'),
-        purple=ramp('#280840', '#5c1c8c', '#9c48d4', '#e0a0ff'),
-        red=ramp('#3c1000', '#902c00', '#e06414', '#ffb03c', '#fff0a0'),
-        steel=ramp('#0c1838', '#1c4888', '#4088d4', '#90d0ff', '#ffffff'),
-        case=ramp('#0c0c1c', '#22223e', '#3e3e66'),
-        yellow=ramp('#5c3c00', '#d4a000', '#fff040'),
-        floor=ramp('#041830', '#0c3058', '#1c5c90'),
-        warm=ramp('#a04c00', '#ffa820', '#fff0a0'),
-        wood=ramp('#3c1400', '#7c3000', '#c0641c', '#f0a048'),
-        magenta=ramp('#600040', '#c8188c', '#ff70d0'),
-        cyan=ramp('#00406c', '#0098d8', '#70f0ff'),
-        green=ramp('#0c3018', '#1c6c30', '#48b040'),
+        wall=ramp('#140c38', '#0c4440', '#1c7c40', '#5cb83c', '#c8ec78'),
+        purple=ramp('#180830', '#481c84', '#9040c4', '#e488e4', '#fff0ff'),
+        red=ramp('#300c30', '#8c1c24', '#e0500c', '#ffa830', '#fff4b4'),
+        steel=ramp('#100c3c', '#20409c', '#4c88dc', '#a0e0ff', '#ffffff'),
+        case=ramp('#0c0820', '#241c48', '#443c70'),
+        yellow=ramp('#5c2410', '#dc9800', '#fff050'),
+        floor=ramp('#0c0828', '#0c2c58', '#185c94'),
+        warm=ramp('#a03c10', '#ffa024', '#fff4b0'),
+        wood=ramp('#300c24', '#7c2c10', '#c4641c', '#f4a848'),
+        magenta=ramp('#3c0848', '#c01890', '#ff84d8'),
+        cyan=ramp('#102c6c', '#0098d8', '#80f4ff'),
+        green=ramp('#0c1c30', '#1c6c38', '#58c040'),
+        _outline='#140828', _tint='#2c0c58', _cycle=('#2448fc', '#48b4fc', '#d8fcfc'),
     ),
     'show': dict(
-        purple=ramp('#0c0424', '#220c48', '#441c84', '#7c44c8'),
-        curtain=ramp('#480418', '#900c38', '#e02860', '#ff84a8'),
-        red=ramp('#480418', '#900c38', '#e02860', '#ff84a8', '#ffe0e8'),
-        magenta=ramp('#580048', '#c010a0', '#ff60e0'),
-        cyan=ramp('#00406c', '#0090d0', '#60f0ff'),
-        steel=ramp('#3c2000', '#8c5800', '#dca820', '#fff078', '#ffffff'),
-        case=ramp('#08081c', '#1c1c3c', '#363664'),
-        yellow=ramp('#603c00', '#e0a800', '#fff050'),
-        warm=ramp('#b05800', '#ffb030', '#fff0b0'),
-        wall=ramp('#100428', '#220c48', '#441c84', '#7c44c8', '#c0a0ff'),
+        purple=ramp('#08041c', '#1c0c48', '#401c88', '#8448cc'),
+        curtain=ramp('#28042c', '#800c3c', '#e0285c', '#ffa0b8'),
+        red=ramp('#28042c', '#800c3c', '#e0285c', '#ff94b0', '#fff0f0'),
+        magenta=ramp('#400460', '#c010a8', '#ff70e8'),
+        cyan=ramp('#082c6c', '#0090d0', '#70f4ff'),
+        steel=ramp('#2c1028', '#8c4c08', '#e0a420', '#fff080', '#ffffff'),
+        case=ramp('#06061c', '#1c1840', '#383068'),
+        yellow=ramp('#602010', '#e0a000', '#fff058'),
+        warm=ramp('#b04410', '#ffac30', '#fff4c0'),
+        wall=ramp('#08041c', '#1c0c48', '#401c88', '#8448cc', '#c8a8ff'),
         floor=ramp('#04020c', '#140828', '#2c1450'),
-        wood=ramp('#300c00', '#6c2c00', '#b05c18', '#e89848'),
-        green=ramp('#003020', '#008050', '#30e090'),
-        skin_dead=ramp('#18200c', '#34442c', '#5c7448'),
+        wood=ramp('#280818', '#6c2810', '#b45c1c', '#ec9c4c'),
+        green=ramp('#0c1c30', '#008050', '#40f0a0'),
+        skin_dead=ramp('#18102c', '#344430', '#6c8450'),
+        _outline='#0c0420', _tint='#200c48', _cycle=('#b4006c', '#fc24b4', '#fcb4fc'),
     ),
 }
 
 
 def theme(name):
-    R.update(THEMES[name])
+    t = THEMES[name]
+    R.update({k: v for k, v in t.items() if not k.startswith('_')})
+    STYLE['outline'] = np.asarray(md(t['_outline']), np.float32)
+    STYLE['tint'] = np.asarray(md(t['_tint']), np.float32)
+    STYLE['cycle'] = [np.asarray(md(c), np.float32) for c in t['_cycle']]
+
+
+def flow(s, mask, along='y', period=2, offset=0):
+    """Pixels painted with the three palette-cycling colours in moving stripes: running water, chasing lights."""
+    coord = (s.yy if along == 'y' else s.xx) if along in ('y', 'x') else (s.yy + s.xx)
+    k = ((coord // period + offset) % 3).astype(int)
+    for i in range(3):
+        sel = mask & (k == i)
+        s.c.rgb[sel] = STYLE['cycle'][i]
+
+
+def is_cycle(rgb):
+    m = np.zeros(rgb.shape[:2], bool)
+    for c in STYLE.get('cycle', []):
+        m |= np.all(rgb == c, -1)
+    return m
+
+def grit(rgb, seed, dark=0.13, light=0.05):
+    """Hand-drawn texture: clustered dark specks and chips with a lit edge, like crumbling paint and concrete."""
+    h, w, _ = rgb.shape
+    n1 = noise(h, w, 2, seed, 2)
+    n2 = noise(h, w, 9, seed + 1, 2)
+    lum = rgb.mean(-1)
+    body = (lum > 30) & (lum < 235) & ~is_cycle(rgb)
+    specks = body & (n1 > 1 - dark * 2.2) & (n2 > 0.35)
+    out = rgb.copy()
+    # Grit reuses colours already in the scene (a darker / lighter neighbour), so it adds texture, not colours.
+    U = np.unique(rgb.reshape(-1, 3), axis=0).astype(np.float32)
+    UL = U.mean(-1)
+
+    def nearest(cols, target):
+        res = np.empty_like(cols)
+        for i, (c, t) in enumerate(zip(cols, target)):
+            d = ((U - t) ** 2).sum(-1) + (np.abs(UL - c.mean()) < 6) * 1e6     # never the same tone
+            res[i] = U[d.argmin()]
+        return res
+
+    def remap(mask, fn):
+        if not mask.any():
+            return
+        cols = rgb[mask]
+        uc, inv = np.unique(cols, axis=0, return_inverse=True)
+        mapped = nearest(uc, fn(uc))
+        out[mask] = mapped[inv.ravel()]
+
+    remap(specks, lambda c: c * 0.62 + np.asarray(STYLE['tint'], np.float32) * 0.25)
+    lit = np.roll(specks, 1, 0) & ~specks & body & (noise(h, w, 3, seed + 2) > 1 - light * 6)
+    remap(lit, lambda c: np.minimum(255, c * 1.25 + 30))
+    # cracks: short jagged ink strokes in the colour of the scene's outline
+    rng = np.random.default_rng(seed)
+    for _ in range(int(w * h / 2600)):
+        x, y = rng.uniform(0, w), rng.uniform(0, h * 0.8)
+        for _ in range(rng.integers(4, 9)):
+            nx, ny = x + rng.uniform(-3, 3), y + rng.uniform(1, 4)
+            for t in np.linspace(0, 1, 5):
+                px, py = int(x + (nx - x) * t), int(y + (ny - y) * t)
+                if 0 <= px < w and 0 <= py < h and body[py, px]:
+                    out[py, px] = STYLE['outline']
+
+            x, y = nx, ny
+    return out
 
 
 def bright(s, base=1.12):
-    s.light[:] = base
-    s.vignette(0.32)
+    s.light[:] = base * 0.86
+    s.vignette(0.45)
 
 
 # ------------------------------------------------------------------ extra bold props
@@ -103,6 +171,8 @@ def deck(s, y0, kind='water'):
     """Bold floor: a lit metal ledge with rivets over dark water / boards with glossy reflections."""
     if kind == 'water':
         s.wet_floor(y0 + 6)
+        shimmer(s, y0 + 8, s.h)
+        s.water = y0 + 6
     elif kind == 'stage':
         s.stage_floor(y0 + 6)
     lip = rect_mask(s.h, s.w, 0, y0, s.w, 7)
@@ -135,9 +205,51 @@ def tiles_wall(s, y0, y1, size=16):
 
 
 def drips(s, xs, y0, length, rmp):
+    """Water running out of a pipe or grate (palette-cycled so it flows), with a splash at the bottom."""
     for x in xs:
-        m, n, _ = tube(s.h, s.w, [(x, y0), (x, y0 + length * 0.6), (x + 0.5, y0 + length)], [1.4, 1.0, 1.6])
-        shade_into(s.c, m, n, rmp, 0.5, 1.0, lightmap=s.light, shadow=False)
+        m, n, _ = tube(s.h, s.w, [(x, y0), (x, y0 + length * 0.6), (x + 0.5, y0 + length)], [1.6, 1.2, 1.8])
+        flow(s, m, 'y', 2)
+        sp, _ = ellipsoid(s.h, s.w, x, y0 + length + 1, 4, 1.5)
+        flow(s, sp, 'x', 1)
+
+
+def leak(s, x, y0, y1, width=3.0):
+    """A thick stream pouring from a broken pipe down to the floor."""
+    m, n, _ = tube(s.h, s.w, [(x, y0), (x + 1, (y0 + y1) / 2), (x + 2, y1)], [width * 0.7, width, width * 1.2])
+    flow(s, m, 'y', 2)
+    sp, _ = ellipsoid(s.h, s.w, x + 2, y1, width * 3.5, 2.5)
+    flow(s, sp, 'x', 2)
+
+
+def shimmer(s, y0, y1, density=0.10):
+    """Glints on the water surface that sparkle as the palette cycles."""
+    rng = np.random.default_rng(s.seed + 5)
+    m = np.zeros((s.h, s.w), bool)
+    for _ in range(int(s.w * (y1 - y0) * density / 8)):
+        x, y = rng.integers(0, s.w - 6), rng.integers(y0, y1)
+        m[y, x:x + rng.integers(2, 7)] = True
+    flow(s, m, 'x', 3, offset=0)
+
+
+def chase(s, x, y, w, h, step=4):
+    """Marquee bulbs around a rectangle: classic chasing theatre lights."""
+    m = np.zeros((s.h, s.w), bool)
+    for t in range(0, 2 * (w + h), step):
+        if t < w:
+            px, py = x + t, y
+        elif t < w + h:
+            px, py = x + w, y + t - w
+        elif t < 2 * w + h:
+            px, py = x + w - (t - w - h), y + h
+        else:
+            px, py = x, y + h - (t - 2 * w - h)
+        m[max(0, int(py) - 1):int(py) + 1, max(0, int(px) - 1):int(px) + 1] = True
+    k = np.zeros((s.h, s.w), int)
+    ys, xs = np.nonzero(m)
+    for i in range(3):
+        sel = np.zeros_like(m)
+        sel[ys, xs] = (((xs + ys) // step) % 3) == i
+        s.c.rgb[sel] = STYLE['cycle'][i]
 
 
 def neon(s, text, x, y, rmp, scale=2):
@@ -179,6 +291,7 @@ def p1_boiler(w, h, seed=101):
     porthole(s, 160, 78, 24)
     porthole(s, 236, 70, 14, glass=R['cyan'])
     drips(s, (160, 152, 168), 102, 26, R['cyan'])
+    leak(s, 34, 27, F + 4)
     tank(s, w - 70, F - 96, 44, 96, 'BOILER')
     s.road_case(110, F - 34, 52, 34, 'SSMT')
     s.road_case(170, F - 22, 36, 22, 'XLR')
@@ -281,6 +394,7 @@ def p1_lift(w, h, seed=104):
     s.road_case(w - 74, F - 30, 60, 30, 'LIFT')
     s.hazard_stripe(0, F - 6, w, 6)
     caption_sign(s, 'B2', 10, 10, 20, R['yellow'], R['case'][0])
+    leak(s, w - 30, 0, F + 4, 2.6)
     deck(s, F)
     return s.finish()
 
@@ -329,6 +443,7 @@ def p1_corridor(w, h, seed=106):
     s.speaker(116, F - 82, 38, 44, 2)
     s.platforms.append((116, F - 82, 38))
     s.blood(250, 90, 7, hand=True)
+    leak(s, 230, 18, F + 4, 2.4)
     deck(s, F)
     return s.finish()
 
@@ -369,6 +484,7 @@ def p2_stage(w, h, seed=202):
     col = np.where(grid[..., None], R['case'][0], col)
     s.c.put(led, col)
     ink_ring(s.c, led)
+    chase(s, 38, 24, w - 76, 90, 5)
     s.truss_h(0, w, 4, 12)
     for k, (px, c) in enumerate(((30, R['magenta']), (110, R['cyan']), (w - 110, R['yellow']), (w - 34, R['magenta']))):
         s.par_can(px, 18, c)
@@ -430,6 +546,7 @@ def p2_dancefloor(w, h, seed=204):
     s.crowd(F - 74, 22, seed, R['purple'][1:], hands=True, scale=1.0, body=R['purple'][:2])
     s.crowd(F - 48, 14, seed + 1, R['purple'][2:], hands=True, scale=1.3, body=R['case'])
     s.barricade(0, w, F - 4)
+    chase(s, 0, 4, w - 1, 6, 5)
     s.road_case(w / 2 - 30, F - 30, 60, 30, 'FX')
     fl = s.yy >= F
     s.c.put(fl, toon(0.4 + noise(s.h, s.w, 6, seed) * 0.3, R['purple'], 0.3))
@@ -448,6 +565,7 @@ def p2_bar(w, h, seed=205):
     m = s.yy < F
     s.c.put(m, toon(0.3 + noise(s.h, s.w, 16, seed) * 0.3, R['purple'], 0.4))
     neon(s, 'BAR', 70, 18, R['cyan'], 4)
+    chase(s, 60, 12, 160, 44, 5)
     neon(s, '24/7', 160, 30, R['magenta'], 2)
     # shelves with glowing bottles
     for sy in (70, 96):
@@ -482,6 +600,7 @@ def p2_foh(w, h, seed=206):
     s.truss_v(w - 14, 0, F, 8)
     s.truss_h(4, w - 6, 96, 8)
     neon(s, 'FOH', w / 2 - 30, 104, R['yellow'], 2)
+    chase(s, 8, 98, w - 18, 4, 6)
     s.box(30, F - 40, w - 60, 40, R['case'], 2)
     s.platforms.append((30, F - 40, w - 60))
     s.desk(50, F - 70, w - 100, 30)
@@ -545,8 +664,8 @@ def render_page(name):
     for (x, y, w, h), fn in spec['panels']:
         sc = fn(w, h)
         img[y - 3:y + h + 3, x - 3:x + w + 3] = 0
-        img[y:y + h, x:x + w] = sc.rgb
-        panels.append((x, y, w, h, sc.floor, list(sc.platforms)))
+        img[y:y + h, x:x + w] = grit(sc.rgb, x * 7 + y)
+        panels.append((x, y, w, h, sc.floor, list(sc.platforms), getattr(sc, 'water', 0)))
     rects = [p[0] for p in spec['panels']]
     for i, d in enumerate(spec['route']):
         (x0, y0, w0, h0), (x1, y1, w1, h1) = rects[i], rects[i + 1]
@@ -556,4 +675,4 @@ def render_page(name):
             route_arrow(img, (x1 + w1 + x0) // 2, max(y0, y1) + 70, 'left')
         else:
             route_arrow(img, x0 + w0 // 2, (y0 + h0 + y1) // 2, 'down')
-    return img, panels
+    return img, panels, [tuple(int(v) for v in c) for c in STYLE['cycle']]

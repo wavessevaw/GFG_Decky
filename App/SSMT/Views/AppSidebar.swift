@@ -33,6 +33,8 @@ struct AppSidebar: View {
     var brandNamespace: Namespace.ID? = nil
     var showBrand = true
     @State private var showAbout = false
+    @State private var brandTaps = 0
+    @State private var brandTapTask: Task<Void, Never>?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -139,7 +141,7 @@ struct AppSidebar: View {
     }
 
     private var brand: some View {
-        Button { showAbout = true } label: {
+        Button(action: brandTapped) {
             HStack(spacing: 12) {
                 ZStack {
                     if showBrand {
@@ -157,6 +159,24 @@ struct AppSidebar: View {
         .buttonStyle(.plain)
         .help(loc.t("about.title"))
         .popover(isPresented: $showAbout) { AboutView() }
+    }
+
+    /// One click on the name opens About; five quick clicks open the hidden game.
+    private func brandTapped() {
+        brandTaps += 1
+        brandTapTask?.cancel()
+        if brandTaps >= 5 {
+            brandTaps = 0
+            GameWindow.show(localizer: loc)
+            return
+        }
+        let taps = brandTaps
+        brandTapTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 450_000_000)
+            guard !Task.isCancelled else { return }
+            if taps == 1 { showAbout = true }
+            brandTaps = 0
+        }
     }
 
     private var stages: some View {

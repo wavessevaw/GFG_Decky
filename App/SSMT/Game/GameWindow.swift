@@ -155,27 +155,3 @@ final class GameWindow {
         window = w
     }
 }
-
-/// The way in: the Konami code (↑ ↑ ↓ ↓ ← → ← → B A) typed anywhere in SSMT.
-@MainActor
-enum SecretCode {
-    private static let code: [UInt16] = [126, 126, 125, 125, 123, 124, 123, 124, 11, 0]
-    private static var progress = 0
-    private static var monitor: Any?
-
-    static func install(localizer: Localizer) {
-        guard monitor == nil else { return }
-        monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { e in
-            MainActor.assumeIsolated {
-                if let r = NSApp.keyWindow?.firstResponder, r is NSText || r is NSTextView { progress = 0; return }
-                if e.keyCode == code[progress] {
-                    progress += 1
-                    if progress == code.count { progress = 0; GameWindow.show(localizer: localizer) }
-                } else {
-                    progress = e.keyCode == code[0] ? 1 : 0
-                }
-            }
-            return e
-        }
-    }
-}

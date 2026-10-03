@@ -15,7 +15,7 @@ PAL = {
     'hair': ramp('#844c0c', '#dc9c24', '#fce070'),
 }
 
-LOOK = dict(torso=25, thighlen=19, shinlen=19, ualen=13, falen=12, shoulders=9.5, headlen=9.5, headfwd=1.5)
+LOOK = dict(torso=24, thighlen=19, shinlen=18, ualen=12, falen=12, shoulders=12.5, headlen=8.0, headfwd=2.0)
 
 # Keyframes (degrees from straight down, positive = towards the facing side).
 POSES = {
@@ -76,32 +76,31 @@ class Hero:
 
     # -- body parts
     def arm(self, c, s, e, h, dark, fist):
+        """Bare bodybuilder arm: round deltoid, huge biceps/triceps, thick forearm, big gloved fist."""
         P = PAL
-        self.muscle(c, s, e, 3.6, 4.4, 3.1, P['skin'], dark)                     # upper arm with biceps
-        self.muscle(c, e, h, 3.2, 3.8, 2.6, P['skin'], dark, at=0.3)             # forearm
-        # rolled-up shirt sleeve over the shoulder half of the upper arm
-        mid = lerp(s, e, 0.4)
-        self.muscle(c, s, mid, 4.6, 4.8, 4.4, P['shirt'], dark)
-        m, n, _ = tube(self.h, self.w, [lerp(s, e, 0.34), lerp(s, e, 0.46)], [4.9, 4.9])
-        self.part(c, m, n, P['shirt'], dark - 0.1)
-        # fingerless glove: dark cuff and a big fist
-        self.muscle(c, lerp(e, h, 0.8), h, 2.8, 2.9, 2.8, P['dark'], dark)
+        self.blob(c, s[0], s[1] + 1.5, 6.4, 6.0, P['skin'], dark, spec=0.5)              # deltoid
+        self.muscle(c, s, e, 5.6, 6.6, 4.4, P['skin'], dark, at=0.4)                       # biceps / triceps
+        # vein / muscle split line on the upper arm
+        m, n, _ = tube(self.h, self.w, [lerp(s, e, 0.25), lerp(s, e, 0.7)], [0.5, 0.5])
+        c.rgb[m & (c.part == c.parts)] = P['skin'][1]
+        self.muscle(c, e, h, 4.6, 5.4, 3.6, P['skin'], dark, at=0.3)                       # forearm
+        self.muscle(c, lerp(e, h, 0.82), h, 3.8, 3.9, 3.8, P['dark'], dark)                # wrist wrap
         d = (h[0] - e[0], h[1] - e[1])
         ln = math.hypot(*d) or 1
         ux, uy = d[0] / ln, d[1] / ln
-        fx, fy = h[0] + ux * 2.2, h[1] + uy * 2.2
-        r = 4.3 if fist else 3.6
-        self.blob(c, fx, fy, r, r * 0.88, P['dark'] if fist else P['skin'], dark, spec=0.8)
-        if fist:   # bare knuckles peeking out of the glove
+        fx, fy = h[0] + ux * 2.6, h[1] + uy * 2.6
+        r = 5.4 if fist else 4.4
+        self.blob(c, fx, fy, r, r * 0.86, P['dark'] if fist else P['skin'], dark, spec=0.8)
+        if fist:
             for k in (-1, 0, 1):
-                kx, ky = fx + ux * 2.6 - uy * k * 1.6, fy + uy * 2.6 + ux * k * 1.6
+                kx, ky = fx + ux * 3.4 - uy * k * 2.0, fy + uy * 3.4 + ux * k * 2.0
                 if 0 <= int(ky) < self.h and 0 <= int(kx) < self.w:
                     c.rgb[int(ky), int(kx)] = P['skin'][2]
 
     def leg(self, c, hip, knee, ank, toe, dark, f):
         P = PAL
-        self.muscle(c, hip, knee, 5.6, 6.0, 4.4, P['dark'], dark)                # thigh
-        self.muscle(c, knee, ank, 4.6, 5.0, 3.4, P['dark'], dark, at=0.3)        # shin with calf
+        self.muscle(c, hip, knee, 6.8, 7.4, 5.2, P['dark'], dark)                # thigh
+        self.muscle(c, knee, ank, 5.4, 6.2, 4.0, P['dark'], dark, at=0.3)        # shin with calf
         # cargo pocket and knee pad
         k = lerp(hip, knee, 0.55)
         m = rect_mask(self.h, self.w, int(k[0] - 3), int(k[1] - 2), 6, 5)
@@ -119,46 +118,62 @@ class Hero:
         c.rgb[lace] = PAL['shirt'][1]
 
     def torso(self, c, p, f):
+        """V-shaped bodybuilder torso: traps, bulging pecs, six-pack, narrow waist; open sleeveless white vest."""
         P = PAL
         bs, fs, bh, fh, nk = p['bsho'], p['fsho'], p['bhip'], p['fhip'], p['neck']
-        pts = [(bs[0] - f * 3, bs[1] - 3), (fs[0] + f * 2, fs[1] - 3.5), (fs[0] + f * 6, fs[1] + 5),        # shoulders, chest
-               (lerp(fs, fh, 0.55)[0] + f * 3.5, lerp(fs, fh, 0.55)[1]), (fh[0] + f * 1.5, fh[1] - 1),       # waist
-               (bh[0] - f * 1.5, bh[1] - 1), (lerp(bs, bh, 0.5)[0] - f * 3, lerp(bs, bh, 0.5)[1]), (bs[0] - f * 6, bs[1] + 4)]
+        ch = p['chest']
+        pts = [(bs[0] - f * 4, bs[1] - 4), (nk[0], nk[1] - 1), (fs[0] + f * 3, fs[1] - 4.5), (fs[0] + f * 8, fs[1] + 4),   # traps, shoulders
+               (fs[0] + f * 8.5, fs[1] + 10),                                                                        # pec front
+               (lerp(fs, fh, 0.62)[0] + f * 4, lerp(fs, fh, 0.62)[1]), (fh[0] + f * 2, fh[1] - 1),                  # waist
+               (bh[0] - f * 2, bh[1] - 1), (lerp(bs, bh, 0.55)[0] - f * 4, lerp(bs, bh, 0.55)[1]), (bs[0] - f * 8, bs[1] + 5)]
         m = poly(self.h, self.w, pts)
-        _, n = inflate(m, 6)
-        # black tank top underneath
-        self.part(c, m, n, P['dark'], 0.0, spec=0.4)
-        tank = m
-        # open white shirt: everything except a strip down the front shows the shirt
-        neck_front = (nk[0] + f * 3.0, nk[1] + 2)
-        belt_front = (fh[0] + f * 2.0, fh[1] - 2)
-        gap = poly(self.h, self.w, [(neck_front[0] - f * 1.5, neck_front[1]), (neck_front[0] + f * 3.5, neck_front[1] - 1),
-                                    (belt_front[0] + f * 4, belt_front[1]), (belt_front[0] - f * 2.5, belt_front[1])])
-        shirt = tank & ~gap
-        # shirt tails below the belt
-        tails = poly(self.h, self.w, [(bh[0] - f * 3, bh[1] - 4), (bh[0] - f * 2, bh[1] + 6), (lerp(bh, fh, 0.5)[0], bh[1] + 4),
-                                      (belt_front[0] - f * 3, belt_front[1] + 7), (belt_front[0] - f * 2, belt_front[1] - 2)])
-        sm = shirt | tails
-        _, sn = inflate(sm, 5)
-        folds = (np.sin((self.yy + self.xx * 0.4) * 0.9) * 0.08) * sm
-        v = lambert(sn, LIGHT, 0.3) + folds + 0.25 * (np.clip(1 - sn[..., 2], 0, 1) ** 2) * (sn[..., 0] < -0.3)
-        c.put(sm, toon(v, P['shirt'], 0.18), line=INK)
-        # collar
-        col = poly(self.h, self.w, [(nk[0] - f * 4, nk[1] - 1), (nk[0] + f * 1, nk[1] - 2), (neck_front[0] + f * 1, neck_front[1] + 3),
-                                    (nk[0] - f * 1, nk[1] + 3)])
-        c.put(col, P['shirt'][3], line=INK)
-        # belt + gaffer tape roll on the hip
-        by = (bh[1] + fh[1]) / 2 - 2
-        belt = (m | tails) & (self.yy > by - 1.5) & (self.yy < by + 1.5)
-        c.rgb[belt & ~tails] = P['dark'][0]
-        buckle = rect_mask(self.h, self.w, int(belt_front[0] - 1), int(by - 1.5), 3, 3)
-        c.rgb[buckle & m] = P['hair'][2]
-        tx = bh[0] - f * 2
-        self.blob(c, tx, by + 3, 3.4, 3.4, P['shirt'], 0.05, spec=0.6)
-        hole, _ = ellipsoid(self.h, self.w, tx, by + 3, 1.2, 1.2)
+        # muscle relief as a height field: pecs, abs grid, lats
+        hgt = np.zeros((self.h, self.w), np.float32)
+        px, py = fs[0] + f * 3, fs[1] + 6
+        for cx, w in ((px, 6.5), (px - f * 9, 5.5)):
+            hgt += 3.2 * np.exp(-(((self.xx - cx) / w) ** 2 + ((self.yy - py) / 4.5) ** 2))
+        ax0 = lerp(fs, fh, 0.45)
+        for row in range(3):
+            for col in (0, 1):
+                cx = ax0[0] + f * (1.5 - col * 4.5)
+                cy = ax0[1] - 2 + row * 4.4
+                hgt += 1.6 * np.exp(-(((self.xx - cx) / 2.1) ** 2 + ((self.yy - cy) / 1.8) ** 2))
+        d = np.zeros_like(hgt)
+        _, base = inflate(m, 6)
+        from art import normals_from_height
+        nn = normals_from_height(hgt * m, 1.0)
+        n = base + (nn - np.array([0, 0, 1.0])) * 1.2
+        n /= np.linalg.norm(n, axis=-1, keepdims=True)
+        self.part(c, m, n, P['skin'], 0.0, spec=0.5)
+        # sternum line and pec underline
+        line = poly(self.h, self.w, [(px - f * 4.5, py - 4), (px - f * 3.8, py - 4), (px - f * 3.6, py + 5), (px - f * 4.3, py + 5)])
+        c.rgb[line & m] = P['skin'][1]
+        under = m & (np.abs(self.yy - (py + 4.4 + np.abs(self.xx - px) * 0.15)) < 0.7) & (np.abs(self.xx - px) < 6)
+        c.rgb[under] = P['skin'][0]
+        # open sleeveless vest: two white panels down the sides, torn armholes
+        side_b = poly(self.h, self.w, [(bs[0] - f * 8, bs[1] + 3), (bs[0] + f * 1, bs[1] - 3), (nk[0] - f * 1, nk[1] + 2),
+                                       (lerp(nk, bh, 0.6)[0] - f * 1, lerp(nk, bh, 0.6)[1]), (bh[0] + f * 1, bh[1] + 5),
+                                       (bh[0] - f * 4, bh[1] + 6), (lerp(bs, bh, 0.55)[0] - f * 4.5, lerp(bs, bh, 0.55)[1])])
+        side_f = poly(self.h, self.w, [(fs[0] + f * 3.5, fs[1] - 3), (fs[0] + f * 9, fs[1] + 9), (lerp(fs, fh, 0.62)[0] + f * 4.5, lerp(fs, fh, 0.62)[1]),
+                                       (fh[0] + f * 3, fh[1] + 5), (fh[0] + f * 0.5, fh[1] + 6), (lerp(fs, fh, 0.5)[0] + f * 4, lerp(fs, fh, 0.5)[1]),
+                                       (fs[0] + f * 6, fs[1] + 4)])
+        vest = (side_b | side_f) & ~(np.abs(self.xx - px) < 4.5) | (side_b & m)
+        _, vn = inflate(vest, 4)
+        v = lambert(vn, LIGHT, 0.32) + 0.25 * (np.clip(1 - vn[..., 2], 0, 1) ** 2) * (vn[..., 0] < -0.3)
+        v = v + np.sin((self.yy * 1.1 + self.xx * 0.5)) * 0.06
+        c.put(vest, toon(v, P['shirt'], 0.18), line=INK)
+        # belt with buckle + gaffer tape roll
+        by = (bh[1] + fh[1]) / 2 - 1
+        belt = poly(self.h, self.w, [(bh[0] - f * 4, by - 2), (fh[0] + f * 3, by - 2), (fh[0] + f * 3, by + 2), (bh[0] - f * 4, by + 2)])
+        c.put(belt, P['dark'][0], line=INK)
+        buckle = rect_mask(self.h, self.w, int(fh[0] + f * 0.5 - 1.5), int(by - 1.5), 4, 3)
+        c.rgb[buckle] = P['hair'][2]
+        tx = bh[0] - f * 3
+        self.blob(c, tx, by + 3.5, 3.4, 3.4, P['shirt'], 0.05, spec=0.6)
+        hole, _ = ellipsoid(self.h, self.w, tx, by + 3.5, 1.2, 1.2)
         c.rgb[hole] = P['dark'][0]
-        # deltoids
-        self.blob(c, bs[0], bs[1] + 1, 4.8, 4.6, P['shirt'], 0.1)
+        # traps: thick neck base
+        self.blob(c, nk[0] - f * 0.5, nk[1] + 2, 6.5, 3.6, P['skin'], 0.05)
         return m
 
     def head(self, c, p, f):
@@ -171,11 +186,11 @@ class Hero:
         m, n, _ = tube(self.h, self.w, pt, [3.0, 2.8, 2.2, 1.2])
         self.part(c, m, n, P['hair'], 0.05, spec=0.6)
         # neck
-        self.muscle(c, (nk[0] - f * 0.5, nk[1] + 2), (hx - f * 0.5, hy + 5), 3.4, 3.4, 3.2, P['skin'], 0.05)
+        self.muscle(c, (nk[0] - f * 0.5, nk[1] + 3), (hx - f * 0.5, hy + 4), 5.2, 5.0, 4.6, P['skin'], 0.05)
         # skull + square comic jaw
-        skull, sn = ellipsoid(self.h, self.w, hx, hy, 6.6, 7.4)
-        jaw = poly(self.h, self.w, [(hx - f * 4.5, hy + 1), (hx + f * 6.6, hy + 0.5), (hx + f * 6.4, hy + 6), (hx + f * 4, hy + 8.6),
-                                    (hx - f * 0.5, hy + 8.4), (hx - f * 4.5, hy + 5)])
+        skull, sn = ellipsoid(self.h, self.w, hx, hy, 6.2, 7.0)
+        jaw = poly(self.h, self.w, [(hx - f * 5, hy + 1), (hx + f * 6.8, hy + 0.5), (hx + f * 7, hy + 6.5), (hx + f * 5, hy + 9.4),
+                                    (hx - f * 1.5, hy + 9.4), (hx - f * 5.5, hy + 6)])
         _, jn = inflate(jaw, 3)
         mm = skull | jaw
         nn = np.where(skull[..., None], sn, jn)

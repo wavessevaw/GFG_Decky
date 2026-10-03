@@ -3,6 +3,32 @@
 
 static const PageData *page;
 static s16 camX, camY;
+static s16 waterTop = -1, waterBottom = -1;
+static s16 lineA[224], lineB[224];
+
+// Horizontal scroll per scanline: plane A follows the camera; plane B too, except the water band of the
+// current panel, whose lines sway by a pixel to make the reflections ripple.
+static void applyScroll(u16 frame)
+{
+    static const s8 sway[32] = { 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, -1, -1, -1, -1, 0, 0,
+                                 0, 1, 1, 0, 0, -1, -1, 0, 0, 1, 1, 1, 0, -1, -1, 0 };
+    for (u16 y = 0; y < 224; y++)
+    {
+        lineA[y] = -camX;
+        const s16 py = camY + y;
+        lineB[y] = (py >= waterTop && py < waterBottom) ? -camX + sway[(py * 3 + (frame >> 2)) & 31] : -camX;
+    }
+    VDP_setHorizontalScrollLine(BG_A, 0, lineA, 224, DMA_QUEUE);
+    VDP_setHorizontalScrollLine(BG_B, 0, lineB, 224, DMA_QUEUE);
+}
+
+void BG_setWater(s16 top, s16 bottom)
+{
+    waterTop = top;
+    waterBottom = bottom;
+}
+
+void BG_animate(u16 frame) { applyScroll(frame); }
 
 // Ring slots live in two VRAM ranges: tiles 16..1039 and the (unused) font area 1440..1535.
 u16 BG_slotTile(u16 tx, u16 ty)
@@ -16,13 +42,13 @@ static void putTile(u16 tx, u16 ty)
     const u16 i = ty * page->tw + tx;
     const u16 vram = BG_slotTile(tx, ty);
     VDP_loadTileData(page->tiles + i * 8, vram, 1, DMA_QUEUE);
-    VDP_setTileMapXY(BG_B, TILE_ATTR_FULL(page->pal[i], FALSE, FALSE, FALSE, vram), tx & 63, ty & 31);
+    VDP_setTileMapXY(BG_B, TILE_ATTR_FULL(page->pal[i] & 3, page->pal[i] >> 7, FALSE, FALSE, vram), tx & 63, ty & 31);
 }
 
 void BG_init(void)
 {
     VDP_setPlaneSize(64, 32, TRUE);
-    VDP_setScrollingMode(HSCROLL_PLANE, VSCROLL_PLANE);
+    VDP_setScrollingMode(HSCROLL_LINE, VSCROLL_PLANE);
 }
 
 void BG_loadPage(u16 p, s16 x, s16 y)
@@ -38,13 +64,12 @@ void BG_loadPage(u16 p, s16 x, s16 y)
             const u16 i = ty * page->tw + tx;
             const u16 vram = BG_slotTile(tx, ty);
             VDP_loadTileData(page->tiles + i * 8, vram, 1, CPU);
-            VDP_setTileMapXY(BG_B, TILE_ATTR_FULL(page->pal[i], FALSE, FALSE, FALSE, vram), tx & 63, ty & 31);
+            VDP_setTileMapXY(BG_B, TILE_ATTR_FULL(page->pal[i] & 3, page->pal[i] >> 7, FALSE, FALSE, vram), tx & 63, ty & 31);
         }
     }
-    VDP_setHorizontalScroll(BG_B, -camX);
     VDP_setVerticalScroll(BG_B, camY);
-    VDP_setHorizontalScroll(BG_A, -camX);
     VDP_setVerticalScroll(BG_A, camY);
+    applyScroll(0);
 }
 
 void BG_step(s16 dx, s16 dy)
@@ -60,10 +85,9 @@ void BG_step(s16 dx, s16 dy)
         for (u16 tx = tx0; tx < tx0 + VIEW_TW; tx++) putTile(tx, ty0 - 1);
     camX += dx * 8;
     camY += dy * 8;
-    VDP_setHorizontalScroll(BG_B, -camX);
     VDP_setVerticalScroll(BG_B, camY);
-    VDP_setHorizontalScroll(BG_A, -camX);
     VDP_setVerticalScroll(BG_A, camY);
+    applyScroll(0);
 }
 
 s16 BG_camX(void) { return camX; }

@@ -17,6 +17,9 @@ s16 BG_camY(void);
 const u16 *BG_colors(void);
 // VRAM tile index of the ring slot for page tile (tx, ty).
 u16 BG_slotTile(u16 tx, u16 ty);
+// Page-coordinate band whose reflections ripple (-1 = none); BG_animate runs the line scroll every frame.
+void BG_setWater(s16 top, s16 bottom);
+void BG_animate(u16 frame);
 void BG_paperColumn(s16 col, bool edge);
 void BG_paperClearColumn(s16 col);
 void BG_paperAll(void);

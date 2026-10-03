@@ -14,7 +14,6 @@ struct SSMTApp: App {
                 .onAppear {
                     appDelegate.model = model
                     MiniPanelController.shared.attach(model: model, localizer: localizer)
-                    SecretCode.install(localizer: localizer)
                 }
         }
         .windowStyle(.hiddenTitleBar)

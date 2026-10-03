@@ -64,21 +64,27 @@ def build_pages(out_c, out_h, preview_dir):
     covers = np.zeros((224, 640, 3), np.float32)
     covers[:, :320] = scenes.cover().rgb
     covers[:, 320:] = scenes.ending().rgb
-    pages = [(covers, [(0, 0, 320, 224, 200, []), (320, 0, 320, 224, 200, [])])]
+    pages = [(covers, [(0, 0, 320, 224, 200, [], 0), (320, 0, 320, 224, 200, [], 0)], [])]
     for name in ('backstage', 'show'):
         pages.append(levels.render_page(name))
     forced = [key(to9(md(h))) for h in UI_COLORS]
     src = ['#include <genesis.h>', '#include "gen_pages.h"', '']
     hdr = ['#pragma once', '#include <genesis.h>', '', f'#define PAGE_COUNT {len(pages)}', '',
            'typedef struct { s16 x, y, w; } Platform;',
-           'typedef struct { s16 x, y, w, h, floor; u16 nplat; const Platform *plat; } PanelRect;',
+           'typedef struct { s16 x, y, w, h, floor, water; u16 nplat; const Platform *plat; } PanelRect;',
            'typedef struct { const u32 *tiles; const u8 *pal; const u16 *colors; u16 tw, th; u16 panels; const PanelRect *panel; } PageData;',
            'extern const PageData pages[PAGE_COUNT];', '']
     table = []
-    for pi, (img, panels) in enumerate(pages):
+    for pi, (img, panels, cyc) in enumerate(pages):
         th, tw = img.shape[0] // 8, img.shape[1] // 8
-        assign, pals, idx = quantize_tiles(img, forced)
-        preview(assign, pals, idx, os.path.join(preview_dir, f'page{pi}.png'), 1)
+        assign, pals, idx = quantize_tiles(img, forced, cycle=[key(to9(c)) for c in cyc])
+        # Gutters and panel borders are drawn over the sprites (priority bit), so fighters are clipped at the panel edge.
+        inside = np.zeros((th, tw), bool)
+        for (x, y, w, h, *_rest) in panels:
+            inside[y // 8:(y + h + 7) // 8, x // 8:(x + w + 7) // 8] = True
+        if pi > 0:
+            assign = assign | (~inside * 0x80)
+        preview(assign & 3, pals, idx, os.path.join(preview_dir, f'page{pi}.png'), 1)
         words = []
         for ty in range(th):
             for tx in range(tw):
@@ -90,11 +96,11 @@ def build_pages(out_c, out_h, preview_dir):
         src.append(c_array(f'page{pi}_pal', 'u8', assign.ravel().tolist(), 40, '{}'))
         src.append(c_array(f'page{pi}_colors', 'u16', colors, 16))
         rects = []
-        for k, (x, y, w, h, floor, plats) in enumerate(panels):
+        for k, (x, y, w, h, floor, plats, water) in enumerate(panels):
             pn = f'plat_{pi}_{k}'
             if plats:
                 src.append(f'static const Platform {pn}[] = {{ ' + ', '.join(f'{{ {int(px)}, {int(py)}, {int(pw)} }}' for px, py, pw in plats) + ' };')
-            rects.append(f'{{ {x}, {y}, {w}, {h}, {floor}, {len(plats)}, {pn if plats else "NULL"} }}')
+            rects.append(f'{{ {x}, {y}, {w}, {h}, {floor}, {water}, {len(plats)}, {pn if plats else "NULL"} }}')
         src.append(f'static const PanelRect page{pi}_panels[] = {{ ' + ', '.join(rects) + ' };')
         table.append(f'    {{ page{pi}_tiles, page{pi}_pal, page{pi}_colors, {tw}, {th}, {len(panels)}, page{pi}_panels }},')
     src.append('const PageData pages[PAGE_COUNT] = {')
@@ -105,6 +111,51 @@ def build_pages(out_c, out_h, preview_dir):
 
 
 # ------------------------------------------------------------------ sprites
+
+def prop_case():
+    from art import Canvas, inflate, rect_mask, ellipsoid
+    import hero
+    P = hero.PAL
+    c = Canvas(64, 48)
+    m = rect_mask(48, 64, 2, 10, 60, 38)
+    _, n = inflate(m, 3, 'bevel')
+    c.shaded((m, n), P['dark'], ambient=0.35, line=np.array([0, 0, 0], np.float32))
+    for x0 in (2, 58):
+        e = rect_mask(48, 64, x0, 10, 4, 38)
+        _, en = inflate(e, 1.5, 'bevel')
+        c.shaded((e, en), P['shirt'], ambient=0.4, spec=1.0)
+    for y0 in (10, 44):
+        e = rect_mask(48, 64, 2, y0, 60, 4)
+        _, en = inflate(e, 1.5, 'bevel')
+        c.shaded((e, en), P['shirt'], ambient=0.4, spec=1.0)
+    for cx, cy in ((5, 13), (59, 13), (5, 45), (59, 45)):
+        b, bn = ellipsoid(48, 64, cx, cy, 3.2, 3.2)
+        c.shaded((b, bn), P['hair'], ambient=0.5, spec=1.0)
+    h = rect_mask(48, 64, 24, 26, 16, 5)
+    _, hn = inflate(h, 1.5)
+    c.shaded((h, hn), P['shirt'], ambient=0.4, spec=1.0)
+    c.outline(np.array([0, 0, 0], np.float32))
+    return c.image()
+
+
+def prop_drum():
+    from art import Canvas, tube, ellipsoid
+    import hero
+    P = hero.PAL
+    c = Canvas(64, 48)
+    m, n, _ = tube(48, 64, [(32, 12), (32, 44)], [13, 13])
+    c.shaded((m, n), P['hair'], ambient=0.35, spec=0.9)
+    for y in (18, 30, 41):
+        band, bn, _ = tube(48, 64, [(19, y), (45, y)], [1.4, 1.4])
+        c.shaded((band, bn), P['dark'], ambient=0.4)
+    t, tn = ellipsoid(48, 64, 32, 9, 13, 4)
+    c.shaded((t, tn), P['hair'], ambient=0.5)
+    # hazard trefoil
+    s, sn = ellipsoid(48, 64, 32, 25, 5, 5)
+    c.put(s, P['dark'][0])
+    c.outline(np.array([0, 0, 0], np.float32))
+    return c.image()
+
 
 def frame_image(pup, pose):
     return pup.draw(pose).image()
@@ -174,8 +225,11 @@ def build_sprites(res_dir):
         [lying(H('hurt'), 92)],
         [H('cheer')],
     ]
-    write_sheet(rows, 96, 96, 'hero', res_dir, ink)
+    hero_pal = write_sheet(rows, 96, 96, 'hero', res_dir, ink)
     res.append('SPRITE spr_hero "hero.png" 12 12 FAST 0 NONE BALANCED')
+    # Obstacles placed at random on every new game (hero palette): road case (platform), oil drum (breakable).
+    write_sheet([[prop_case()], [prop_drum()]], 64, 48, 'props', res_dir, hero_pal)
+    res.append('SPRITE spr_prop "props.png" 8 6 FAST 0 NONE BALANCED')
     # Zombies share one palette: write them in one sheet set with the same forced colour order.
     zpal = None
     for name, look in (('loader', chars.LOADER), ('fan', chars.FAN), ('singer', chars.SINGER), ('boss', chars.BOSS)):

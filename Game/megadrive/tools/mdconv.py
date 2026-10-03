@@ -52,7 +52,7 @@ def build_palette(keys_counts, size, forced=()):
     return pal
 
 
-def quantize_tiles(img_rgb, forced0=(), npal=2, iters=4):
+def quantize_tiles(img_rgb, forced0=(), npal=2, iters=4, cycle=()):
     """img (H, W, 3) 0..255 -> (tile palette ids, palettes [npal][15 keys], index image).
     Each 8x8 tile uses one palette; colour 0 of every palette stays unused (transparent)."""
     H, W, _ = img_rgb.shape
@@ -64,7 +64,10 @@ def quantize_tiles(img_rgb, forced0=(), npal=2, iters=4):
     flat = tkeys.reshape(-1, 64)
     allk, allc = np.unique(keys, return_counts=True)
     counts = dict(zip(allk.tolist(), allc.tolist()))
-    pal0 = build_palette(counts, 15, forced0)
+    cycle = [k for k in cycle]
+    # Palette-cycling colours live only in palette 1, at its last three slots (indices 13..15).
+    cyc_tiles = np.isin(flat, cycle).any(-1) if cycle else np.zeros(len(flat), bool)
+    pal0 = build_palette({k: v for k, v in counts.items() if k not in cycle}, 15, forced0)
     assign = np.zeros(len(flat), np.int32)
     pals = [pal0] + [pal0[:] for _ in range(npal - 1)]
     if npal > 1:
@@ -72,6 +75,7 @@ def quantize_tiles(img_rgb, forced0=(), npal=2, iters=4):
         err = tile_errors(flat, pal0)
         order = np.argsort(-err)
         assign[order[: len(order) // 3]] = 1
+        assign[cyc_tiles] = 1
     for _ in range(iters):
         pals = []
         for p in range(npal):
@@ -80,15 +84,32 @@ def quantize_tiles(img_rgb, forced0=(), npal=2, iters=4):
                 pals.append(pal0[:])
                 continue
             k, c = np.unique(sel, return_counts=True)
-            pals.append(build_palette(dict(zip(k.tolist(), c.tolist())), 15, forced0 if p == 0 else (forced0[:1] if forced0 else ())))
-        errs = np.stack([tile_errors(flat, p) for p in pals], -1)
+            cnt = dict(zip(k.tolist(), c.tolist()))
+            if p == 0:
+                cnt = {a: b for a, b in cnt.items() if a not in cycle}
+                pals.append(build_palette(cnt, 15, forced0))
+            else:
+                pals.append(build_palette(cnt, 15, (list(forced0[:1]) if forced0 else []) + cycle))
+        # Non-cycling pixels may never use the cycling slots, so score palettes without them.
+        errs = np.stack([tile_errors(flat, [k for k in p if k not in cycle] or p) for p in pals], -1)
         assign = errs.argmin(-1)
+        assign[cyc_tiles] = 1
+    if cycle and npal > 1:
+        rest = [k for k in pals[1] if k not in cycle][:15 - len(cycle)]
+        rest += [rest[-1]] * (15 - len(cycle) - len(rest))
+        pals[1] = rest + cycle
     # index image with ordered remap (nearest colour within the tile's palette)
     idx = np.zeros((th * tw, 64), np.uint8)
     for t in range(len(flat)):
-        P = np.array([unkey(k) for k in pals[assign[t]]])
+        pal = pals[assign[t]]
+        P = np.array([unkey(k) for k in pal])
         cols = np.array([unkey(k) for k in flat[t]])
-        d = dist(cols[:, None, :], P[None, :, :])
+        d = dist(cols[:, None, :], P[None, :, :]).astype(np.float64)
+        if cycle:
+            # Cycling slots are reserved: only exact cycling pixels may use them.
+            is_cyc_slot = np.array([k in cycle for k in pal])
+            is_cyc_px = np.isin(flat[t], cycle)
+            d[np.ix_(~is_cyc_px, is_cyc_slot)] = 1e12
         idx[t] = d.argmin(-1) + 1
     return assign.reshape(th, tw), pals, idx.reshape(th, tw, 64)
 
