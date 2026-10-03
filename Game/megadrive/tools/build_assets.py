@@ -26,6 +26,8 @@ UI_COLORS = ['#000000', '#ffffff', '#e8dcb4', '#c8b48c', '#fcd828', '#d82020']
 
 
 def cell_image(scene_rgb):
+    if scene_rgb.shape[:2] == (224, 320):
+        return scene_rgb
     cell = np.zeros((224, 320, 3), np.float32)
     cell[:] = PAPER
     yy, xx = np.mgrid[0:224, 0:320]
@@ -59,9 +61,9 @@ def c_array(name, ctype, values, per_line=12, fmt='0x{:04X}'):
 
 def build_pages(out_c, out_h, preview_dir):
     pages = [
-        [[scenes.basement(11), scenes.basement(13)], [None, None]],
-        [[scenes.basement(3), scenes.basement(5)], [scenes.basement(7), scenes.basement(9)]],
-        [[scenes.basement(15), scenes.basement(17)], [scenes.basement(19), scenes.basement(21)]],
+        [[scenes.cover(), scenes.ending()], [None, None]],
+        [[scenes.basement(), scenes.loading_dock()], [scenes.corridor(), scenes.dressing_room()]],
+        [[scenes.wings(), scenes.stage()], [scenes.foh(), scenes.dancefloor()]],
     ]
     forced = [key(to9(md(h))) for h in UI_COLORS]
     src = ['#include <genesis.h>', '#include "gen_pages.h"', '']
@@ -449,12 +451,24 @@ def build_font(out_c, out_h):
                            'extern const u8 font_width[FONT_GLYPHS];\nextern const u8 font_rows[FONT_GLYPHS * 7];\n' % len(order))
 
 
+def build_sound(res_dir):
+    import music
+    import sfx
+    lines = []
+    for name in music.build(res_dir):
+        lines.append(f'XGM2 {name} "{name}.vgm"')
+    for name in sfx.build(res_dir):
+        lines.append(f'WAV sfx_{name} "sfx_{name}.wav" XGM2')
+    open(os.path.join(res_dir, 'sound.res'), 'w').write('\n'.join(lines) + '\n')
+
+
 def main():
     res_dir = os.path.join(ROOT, 'res')
     src_dir = os.path.join(ROOT, 'src')
     prev = os.path.join(ROOT, 'out', 'preview')
     os.makedirs(prev, exist_ok=True)
     build_sprites(res_dir)
+    build_sound(res_dir)
     build_font(os.path.join(src_dir, 'gen_font.c'), os.path.join(src_dir, 'gen_font.h'))
     build_hud(os.path.join(src_dir, 'gen_hud.c'), os.path.join(src_dir, 'gen_hud.h'))
     build_pages(os.path.join(src_dir, 'gen_pages.c'), os.path.join(src_dir, 'gen_pages.h'), prev)

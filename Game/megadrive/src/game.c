@@ -4,7 +4,7 @@
 #include "text.h"
 #include "hud.h"
 #include "sound.h"
-#include "sprites.h"
+#include "sprites_res.h"
 #include "gen_pages.h"
 
 // «Саундчек мёртвых»: a stage technician fights through the panels of a comic book.
@@ -183,6 +183,9 @@ static void place(Actor *a)
 
 static void hurtHero(s16 dmg, s16 fromX)
 {
+#ifdef GOD
+    dmg = 0;
+#endif
     if (hero.inv > 0 || hero.st == S_DEAD) return;
     hero.hp -= dmg;
     hero.inv = 70;
@@ -621,7 +624,11 @@ static void startPanel(void)
     const PanelDef *p = panel();
     releaseAll();
     plats = platformsFor(story[pageI].art, p->col, p->row, &platN);
+#ifdef NOENEMY
+    pendingN = 0;
+#else
     pendingN = p->spawns;
+#endif
     memcpy(pending, p->spawn, sizeof(Spawn) * p->spawns);
     exitOpen = FALSE;
     for (u16 i = 0; i < p->items; i++)
@@ -664,7 +671,11 @@ static void loadPagePalette(void)
 static void enterPage(u16 p, bool fade)
 {
     pageI = p;
+#ifdef START_PANEL
+    panelI = START_PANEL;
+#else
     panelI = 0;
+#endif
     if (fade) PAL_fadeOutAll(16, FALSE);
     SYS_disableInts();
     BG_loadPage(story[p].art, cellX(), cellY());
@@ -694,7 +705,11 @@ static void newGame(void)
     HUD_items(inv);
     HUD_cable(0);
     HUD_health(hero.hp, HERO_HP);
+#ifdef START_PAGE
+    enterPage(START_PAGE, TRUE);
+#else
     enterPage(0, TRUE);
+#endif
     mode = M_PLAY;
     startPanel();
     SND_music(MUS_GAME);
@@ -723,7 +738,7 @@ static void checkExit(void)
     {
         case EX_RIGHT: case EX_PAGE: leave = x >= PANEL_X1 + 2; break;
         case EX_LEFT: leave = x <= PANEL_X0 - 2; break;
-        case EX_DOWN: leave = abs(x - 160) < 40 && hero.ground && UNFIX(hero.y) == FLOOR_Y && (joy & BUTTON_DOWN); break;
+        case EX_DOWN: leave = abs(x - 160) < 70 && hero.ground && UNFIX(hero.y) == FLOOR_Y && (joy & BUTTON_DOWN); break;
     }
     if (!leave) return;
     releaseAll();
@@ -734,6 +749,7 @@ static void checkExit(void)
         mode = M_TURN;
         turnCol = 40;
         turnPhase = 0;
+        HUD_show(FALSE);
         SPR_setVisibility(hero.spr, HIDDEN);
         SND_play(SFX_PAGE);
         return;
@@ -853,10 +869,49 @@ static void stepTurn(void)
             hero.x = FIX(40);
             hero.y = FIX(FLOOR_Y);
             SPR_setVisibility(hero.spr, VISIBLE);
+            HUD_show(TRUE);
             startPanel();
         }
     }
 }
+
+#ifdef AUTOPLAY
+// Test bot: walks to the nearest zombie and fights, then heads for the exit.
+static u16 autopilot(void)
+{
+    if (mode == M_TITLE || mode == M_OVER || mode == M_WIN) return (frame & 32) ? BUTTON_START : 0;
+    if (mode != M_PLAY) return 0;
+    const s16 hx = UNFIX(hero.x);
+    s16 best = -1, bd = 999;
+    for (u16 i = 0; i < MAX_ENEMIES; i++)
+        if (foe[i].on && foe[i].st != S_DEAD && foe[i].st != S_SPAWN && abs(UNFIX(foe[i].x) - hx) < bd) { bd = abs(UNFIX(foe[i].x) - hx); best = i; }
+    if (best >= 0)
+    {
+        const s16 dx = UNFIX(foe[best].x) - hx;
+        u16 j = 0;
+        if (abs(dx) > 40) j |= dx > 0 ? BUTTON_RIGHT : BUTTON_LEFT;
+        else
+        {
+            if ((dx > 0) != (hero.face > 0)) j |= dx > 0 ? BUTTON_RIGHT : BUTTON_LEFT;
+            if ((frame & 7) == 0) j |= (frame & 32) ? BUTTON_A : BUTTON_B;
+        }
+        if (hero.hp < 8 && inv[0] && (frame & 63) == 0) j |= BUTTON_X;
+        return j;
+    }
+    if (!exitOpen)
+    {
+        for (u16 i = 0; i < 2; i++) if (pick[i].on) return pick[i].x > hx ? BUTTON_RIGHT : BUTTON_LEFT;
+        return 0;
+    }
+    switch (panel()->exit)
+    {
+        case EX_RIGHT: case EX_PAGE: return BUTTON_RIGHT;
+        case EX_LEFT: return BUTTON_LEFT;
+        case EX_DOWN: return abs(hx - 160) > 20 ? (hx < 160 ? BUTTON_RIGHT : BUTTON_LEFT) : BUTTON_DOWN;
+    }
+    return 0;
+}
+#endif
 
 // ---------------------------------------------------------------------------- screens
 
@@ -887,6 +942,9 @@ void GAME_run(void)
     {
         joyPrev = joy;
         joy = JOY_readJoypad(JOY_1);
+#ifdef AUTOPLAY
+        joy = autopilot();
+#endif
         pressed = joy & ~joyPrev;
         frame++;
         switch (mode)

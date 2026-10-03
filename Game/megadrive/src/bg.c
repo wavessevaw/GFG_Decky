@@ -79,12 +79,15 @@ void BG_paperColumn(s16 col, bool edge)
     const u16 tx = ((camX >> 3) + col) & 63, ty0 = camY >> 3;
     const u16 attr = TILE_ATTR_FULL(PAL0, TRUE, FALSE, FALSE, PAPER_TILE + (edge ? 1 : 0));
     for (u16 y = 0; y < VIEW_TH; y++) VDP_setTileMapXY(BG_A, attr, tx, (ty0 + y) & 31);
+    // The HUD window covers plane A in the top rows: the sheet covers it too.
+    for (u16 y = 0; y < 4; y++) VDP_setTileMapXY(WINDOW, attr, col, y);
 }
 
 void BG_paperClearColumn(s16 col)
 {
     const u16 tx = ((camX >> 3) + col) & 63, ty0 = camY >> 3;
     for (u16 y = 0; y < VIEW_TH; y++) VDP_setTileMapXY(BG_A, 0, tx, (ty0 + y) & 31);
+    for (u16 y = 0; y < 4; y++) VDP_setTileMapXY(WINDOW, 0, col, y);
 }
 
 void BG_paperAll(void)

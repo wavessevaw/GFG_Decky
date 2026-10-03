@@ -44,8 +44,8 @@ AFLAGS="-x assembler-with-cpp -Wa,--register-prefix-optional,--bitwise-or"
 for r in res/*.res; do
   n=$(basename "$r" .res)
   java -jar "$SGDK/bin/rescomp.jar" "$r" "$OUT/$n.s" 2>&1 | grep -iv "JAVA_TOOL_OPTIONS\|^$" | grep -i "error\|warn" || true
-  mv "$OUT/$n.h" "res/$n.h"
-  $CC $AFLAGS $FLAGS -c "$OUT/$n.s" -o "$OUT/obj/$n.o"
+  mv "$OUT/$n.h" "res/${n}_res.h"
+  $CC $AFLAGS $FLAGS -c "$OUT/$n.s" -o "$OUT/obj/res_$n.o"
 done
 
 # ROM header and boot code.
@@ -74,3 +74,7 @@ $CC -m68000 -n -T "$SGDK/md.ld" -nostdlib -fno-use-linker-plugin "$OUT/sega.o" "
 ${P}objcopy -O binary "$OUT/rom.out" "$OUT/soundcheck.bin"
 java -jar "$SGDK/bin/sizebnd.jar" "$OUT/soundcheck.bin" -sizealign 131072 -checksum >/dev/null 2>&1
 ls -l "$OUT/soundcheck.bin"
+# INSTALL=1: ship the ROM inside SSMT (the hidden launcher opens it in an emulator).
+if [ "${INSTALL:-0}" = 1 ]; then
+  cp "$OUT/soundcheck.bin" ../../App/SSMT/Resources/Game/soundcheck.bin
+fi

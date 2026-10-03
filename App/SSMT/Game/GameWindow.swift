@@ -1,135 +1,149 @@
 import AppKit
-import GameController
-import SSMTCore
 import SwiftUI
 
-/// Runs the hidden game at 60 steps per second: input from the keyboard or a gamepad, world step,
-/// pixel rendering into a 320×224 image scaled without smoothing.
-@MainActor
-final class GameController: ObservableObject {
-    @Published private(set) var image: CGImage?
-    @Published var musicOn = true { didSet { sound.setMusic(musicOn) } }
-    private let world = GameWorld(seed: UInt64(Date().timeIntervalSince1970))
-    private let renderer = GameRenderer()
-    private let sound = GameSound()
-    private var timer: Timer?
-    private var keys = Set<UInt16>()
-    private var monitor: Any?
-    var onClose: (() -> Void)?
+/// The hidden game is a real Sega Mega Drive / Genesis cartridge image (built from `Game/megadrive` with SGDK).
+/// SSMT ships the ROM and hands it to an emulator (OpenEmu if installed) or saves it for a flash cart.
+enum GameROM {
+    static let fileName = "soundcheck-of-the-dead.md"
+    static let openEmuID = "org.openemu.OpenEmu"
 
-    func start() {
-        sound.start()
-        monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .keyUp]) { [weak self] e in
-            guard let self else { return e }
-            return MainActor.assumeIsolated {
-                guard e.window?.title == GameWindow.title else { return e }
-                if e.type == .keyDown {
-                    if e.keyCode == 53 { self.onClose?(); return nil }   // Esc
-                    if e.keyCode == 46 { self.musicOn.toggle(); return nil } // M
-                    self.keys.insert(e.keyCode)
-                } else {
-                    self.keys.remove(e.keyCode)
-                }
-                return nil
-            }
-        }
-        let t = Timer(timeInterval: 1.0 / 60, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.tick() }
-        }
-        RunLoop.main.add(t, forMode: .common)
-        timer = t
-        tick()
+    static var bundled: URL? { Bundle.main.url(forResource: "soundcheck", withExtension: "bin") }
+
+    static var size: Int {
+        guard let url = bundled, let n = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize else { return 0 }
+        return n
     }
 
-    func stop() {
-        timer?.invalidate()
-        timer = nil
-        if let monitor { NSEvent.removeMonitor(monitor) }
-        monitor = nil
-        sound.stop()
+    static var openEmu: URL? { NSWorkspace.shared.urlForApplication(withBundleIdentifier: openEmuID) }
+
+    /// A copy outside the app bundle with an extension emulators recognise (.md).
+    static func exported() throws -> URL {
+        guard let src = bundled else { throw CocoaError(.fileNoSuchFile) }
+        let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("SSMT/Game", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let dst = dir.appendingPathComponent(fileName)
+        if FileManager.default.fileExists(atPath: dst.path) { try FileManager.default.removeItem(at: dst) }
+        try FileManager.default.copyItem(at: src, to: dst)
+        return dst
     }
 
-    private func input() -> GameInput {
-        var i = GameInput()
-        let k = keys
-        i.left = k.contains(123) || k.contains(0)          // ← or A
-        i.right = k.contains(124) || k.contains(2)         // → or D
-        i.down = k.contains(125) || k.contains(1)          // ↓ or S
-        i.up = k.contains(126) || k.contains(13)           // ↑ or W
-        i.jump = k.contains(49) || i.up                    // space
-        i.punch = k.contains(6) || k.contains(38)          // Z or J
-        i.kick = k.contains(7) || k.contains(40)           // X or K
-        i.item1 = k.contains(18); i.item2 = k.contains(19); i.item3 = k.contains(20)
-        i.start = k.contains(36) || k.contains(76)         // Return / Enter
-        // Gamepad: d-pad or left stick, A jump, X punch, B kick, Y / shoulder buttons items, menu start.
-        if let pad = GCController.current?.extendedGamepad {
-            let x = pad.leftThumbstick.xAxis.value, y = pad.leftThumbstick.yAxis.value
-            i.left = i.left || pad.dpad.left.isPressed || x < -0.4
-            i.right = i.right || pad.dpad.right.isPressed || x > 0.4
-            i.down = i.down || pad.dpad.down.isPressed || y < -0.5
-            i.jump = i.jump || pad.buttonA.isPressed
-            i.punch = i.punch || pad.buttonX.isPressed
-            i.kick = i.kick || pad.buttonB.isPressed
-            i.item1 = i.item1 || pad.buttonY.isPressed
-            i.item2 = i.item2 || pad.leftShoulder.isPressed
-            i.item3 = i.item3 || pad.rightShoulder.isPressed
-            i.start = i.start || pad.buttonMenu.isPressed
-        }
-        return i
+    static func play() {
+        guard let app = openEmu, let rom = try? exported() else { return }
+        NSWorkspace.shared.open([rom], withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
     }
 
-    private func tick() {
-        world.step(input())
-        for e in world.events { sound.play(e) }
-        let fb = renderer.render(world)
-        image = Self.makeImage(fb)
+    static func reveal() {
+        guard let rom = try? exported() else { return }
+        NSWorkspace.shared.activateFileViewerSelecting([rom])
     }
 
-    private static func makeImage(_ fb: Framebuffer) -> CGImage? {
-        let bytes = fb.rgbaBytes
-        guard let provider = CGDataProvider(data: Data(bytes) as CFData) else { return nil }
-        return CGImage(width: fb.width, height: fb.height, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: fb.width * 4,
-                       space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipLast.rawValue),
-                       provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent)
+    @MainActor
+    static func save() {
+        guard let src = bundled else { return }
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = fileName
+        guard panel.runModal() == .OK, let dst = panel.url else { return }
+        try? FileManager.default.removeItem(at: dst)
+        try? FileManager.default.copyItem(at: src, to: dst)
+    }
+
+    static func screenshot(_ name: String) -> NSImage? {
+        guard let url = Bundle.main.url(forResource: name, withExtension: "png") else { return nil }
+        return NSImage(contentsOf: url)
     }
 }
 
-struct GameScreen: View {
-    @StateObject private var game = GameController()
-    var close: () -> Void
+struct GameLauncherView: View {
+    @EnvironmentObject var loc: Localizer
+    @State private var shot = 0
+    @State private var hasOpenEmu = GameROM.openEmu != nil
+    static let shots = ["game-shot-title", "game-shot-play", "game-shot-boss"]
+    private let timer = Timer.publish(every: 4, on: .main, in: .common).autoconnect()
 
     var body: some View {
+        HStack(alignment: .top, spacing: 22) {
+            VStack(spacing: 10) {
+                screen
+                HStack(spacing: 6) {
+                    ForEach(Self.shots.indices, id: \.self) { i in
+                        Circle().fill(i == shot ? Theme.accent : Theme.hairlineStrong).frame(width: 7, height: 7)
+                            .onTapGesture { shot = i }
+                    }
+                }
+            }
+            VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(loc.t("game.title")).font(Theme.heading(22))
+                    Text(loc.t("game.subtitle", GameROM.size / 1024)).font(Theme.mono(11)).foregroundStyle(Theme.textSecondary)
+                }
+                Text(loc.t("game.story")).font(.system(size: 12)).foregroundStyle(Theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: 8) {
+                    if hasOpenEmu {
+                        Button(loc.t("game.play")) { GameROM.play() }.buttonStyle(SSMTButtonStyle(kind: .primary))
+                    } else {
+                        Button(loc.t("game.getOpenEmu")) { NSWorkspace.shared.open(URL(string: "https://openemu.org")!) }
+                            .buttonStyle(SSMTButtonStyle(kind: .primary))
+                    }
+                    HStack(spacing: 8) {
+                        Button(loc.t("game.save")) { GameROM.save() }.buttonStyle(SSMTButtonStyle())
+                        Button(loc.t("game.reveal")) { GameROM.reveal() }.buttonStyle(SSMTButtonStyle())
+                    }
+                }
+                controls
+                Text(loc.t("game.run")).font(.system(size: 11)).foregroundStyle(Theme.textMuted)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+            }
+            .frame(width: 300)
+        }
+        .padding(22)
+        .background(Theme.background)
+        .onReceive(timer) { _ in withAnimation(.easeInOut(duration: 0.2)) { shot = (shot + 1) % Self.shots.count } }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            hasOpenEmu = GameROM.openEmu != nil
+        }
+    }
+
+    private var screen: some View {
         ZStack {
             Color.black
-            if let img = game.image {
-                Image(decorative: img, scale: 1)
-                    .interpolation(.none)
-                    .resizable()
-                    .aspectRatio(320.0 / 224.0, contentMode: .fit)
+            if let img = GameROM.screenshot(Self.shots[shot]) {
+                Image(nsImage: img).interpolation(.none).resizable().aspectRatio(320.0 / 224.0, contentMode: .fit)
             }
         }
-        .onAppear {
-            game.onClose = close
-            game.start()
+        .frame(width: 640, height: 448)
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .overlay(RoundedRectangle(cornerRadius: 6).stroke(Theme.hairlineStrong))
+    }
+
+    private var controls: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(loc.t("game.controls")).font(Theme.label(11)).foregroundStyle(Theme.textMuted)
+            ForEach(["move", "punch", "kick", "jump", "items", "down", "start"], id: \.self) { k in
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(loc.t("game.key.\(k)")).font(Theme.mono(11, weight: .semibold)).foregroundStyle(Theme.accent)
+                        .frame(width: 74, alignment: .leading)
+                    Text(loc.t("game.does.\(k)")).font(.system(size: 12)).foregroundStyle(Theme.textPrimary)
+                }
+            }
         }
-        .onDisappear { game.stop() }
     }
 }
 
-/// The hidden game's own window.
+/// The launcher's own window.
 @MainActor
 final class GameWindow {
-    static let title = "САУНДЧЕК МЁРТВЫХ"
     private static var window: NSWindow?
 
-    static func show() {
+    static func show(localizer: Localizer) {
         if let w = window { w.makeKeyAndOrderFront(nil); return }
-        let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 960, height: 672),
-                         styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
-        w.title = title
-        w.contentAspectRatio = NSSize(width: 320, height: 224)
+        let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1030, height: 540),
+                         styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
+        w.title = localizer.t("game.title")
         w.isReleasedWhenClosed = false
-        w.contentView = NSHostingView(rootView: GameScreen(close: { GameWindow.close() }))
+        w.contentView = NSHostingView(rootView: GameLauncherView().environmentObject(localizer))
         w.center()
         w.makeKeyAndOrderFront(nil)
         NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: w, queue: .main) { _ in
@@ -140,8 +154,6 @@ final class GameWindow {
         }
         window = w
     }
-
-    static func close() { window?.close() }
 }
 
 /// The way in: the Konami code (↑ ↑ ↓ ↓ ← → ← → B A) typed anywhere in SSMT.
@@ -151,14 +163,14 @@ enum SecretCode {
     private static var progress = 0
     private static var monitor: Any?
 
-    static func install() {
+    static func install(localizer: Localizer) {
         guard monitor == nil else { return }
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { e in
             MainActor.assumeIsolated {
                 if let r = NSApp.keyWindow?.firstResponder, r is NSText || r is NSTextView { progress = 0; return }
                 if e.keyCode == code[progress] {
                     progress += 1
-                    if progress == code.count { progress = 0; GameWindow.show() }
+                    if progress == code.count { progress = 0; GameWindow.show(localizer: localizer) }
                 } else {
                     progress = e.keyCode == code[0] ? 1 : 0
                 }
