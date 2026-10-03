@@ -28,11 +28,6 @@ private final class PlaybackCore: @unchecked Sendable {
     }
 }
 
-/// Player layout: "Simple" (list + one side column) or "Expert" (library, pads, timeline).
-enum ShowLayout: String, CaseIterable {
-    case simple, expert
-}
-
 /// The open show: document with undo, file handling, selection, and the link to the playback engine.
 @MainActor
 final class ShowStore: ObservableObject {
@@ -46,8 +41,18 @@ final class ShowStore: ObservableObject {
     @Published var listID: UUID?
     /// One-shot bank shown in the pad grid.
     @Published var bankID: UUID?
-    @Published var layout: ShowLayout = ShowLayout(rawValue: UserDefaults.standard.string(forKey: "ssmt.show.layout") ?? "") ?? .simple {
-        didSet { UserDefaults.standard.set(layout.rawValue, forKey: "ssmt.show.layout") }
+    /// Panels around the cue list (remembered).
+    @Published var showSidebar = UserDefaults.standard.object(forKey: "ssmt.show.sidebar") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(showSidebar, forKey: "ssmt.show.sidebar") }
+    }
+    @Published var showInspector = UserDefaults.standard.object(forKey: "ssmt.show.inspector") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(showInspector, forKey: "ssmt.show.inspector") }
+    }
+    @Published var showTimeline = UserDefaults.standard.bool(forKey: "ssmt.show.timeline") {
+        didSet { UserDefaults.standard.set(showTimeline, forKey: "ssmt.show.timeline") }
+    }
+    @Published var sidebarTab = QtrlSidebarTab(rawValue: UserDefaults.standard.string(forKey: "ssmt.show.sidebarTab") ?? "") ?? .active {
+        didSet { UserDefaults.standard.set(sidebarTab.rawValue, forKey: "ssmt.show.sidebarTab") }
     }
     /// Timeline shows this group's contents for editing (nil = the live show).
     @Published var timelineGroup: UUID?

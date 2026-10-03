@@ -64,7 +64,7 @@ input list и план сцены, подготовить фонограммы, 
 |---|---|
 | ![](App/Tests/Snapshots/References/step7-eq.png) | ![](App/Tests/Snapshots/References/input-list.png) |
 | **Qtrl** | **Отчёт** |
-| ![](App/Tests/Snapshots/References/show-expert-show.png) | ![](App/Tests/Snapshots/References/report.png) |
+| ![](App/Tests/Snapshots/References/show-show.png) | ![](App/Tests/Snapshots/References/report.png) |
 
 </details>
 

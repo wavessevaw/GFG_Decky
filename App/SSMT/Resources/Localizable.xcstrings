@@ -14537,57 +14537,6 @@
         }
       }
     },
-    "show.layout.expert": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Expert"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Эксперт"
-          }
-        }
-      }
-    },
-    "show.layout.help": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Simple: list and one side panel. Expert: library, one-shot pads and timeline."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Простой: список и одна панель сбоку. Эксперт: библиотека, one-shot и таймлайн."
-          }
-        }
-      }
-    },
-    "show.layout.simple": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Simple"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Простой"
-          }
-        }
-      }
-    },
     "show.level": {
       "extractionState": "manual",
       "localizations": {
@@ -15438,6 +15387,23 @@
         }
       }
     },
+    "show.sidebar.active": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Active %ld"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Идёт %ld"
+          }
+        }
+      }
+    },
     "show.start": {
       "extractionState": "manual",
       "localizations": {
@@ -15740,6 +15706,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "Выше"
+          }
+        }
+      }
+    },
+    "show.view.inspector": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inspector"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Инспектор"
+          }
+        }
+      }
+    },
+    "show.view.sidebar": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sidebar: lists, one-shot, active"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Боковая панель: списки, one-shot, идёт"
           }
         }
       }

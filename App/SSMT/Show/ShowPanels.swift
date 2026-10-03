@@ -10,13 +10,17 @@ struct PadGridView: View {
     @EnvironmentObject var show: ShowStore
     @EnvironmentObject var loc: Localizer
     var columns: Int
+    /// Inside the sidebar: no own title and card (the sidebar tab names it).
+    var embedded = false
 
     var body: some View {
         let bank = show.currentBank
         let running = Dictionary(uniqueKeysWithValues: show.snapshot.running.map { ($0.id, $0) })
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 6) {
-                Text(loc.t("show.oneShot").uppercased()).font(Theme.label(11)).tracking(1.2).foregroundStyle(Theme.textSecondary)
+                if !embedded {
+                    Text(loc.t("show.oneShot").uppercased()).font(Theme.label(11)).tracking(1.2).foregroundStyle(Theme.textSecondary)
+                }
                 Spacer()
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 4) {
@@ -60,7 +64,7 @@ struct PadGridView: View {
             }
         }
         .frame(maxHeight: .infinity, alignment: .top)
-        .glassCard(padding: 12)
+        .glassCard(padding: embedded ? 0 : 12, plain: embedded)
         .onDrop(of: [.fileURL], isTargeted: nil) { providers in
             guard !show.showMode else { return false }
             var urls: [URL] = []

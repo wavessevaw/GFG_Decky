@@ -30,8 +30,12 @@
 (и с конца списка), при удалении кью под курсором — на следующую; щелчок по кью ставит на неё курсор GO, как в QLab.
 В режиме «Правка» появилась панель воспроизведения — GO, пауза и «Стоп всё»: треки можно слушать, не переходя
 в режим «Шоу». Пробел больше не теряется в полях (заметки, имя, номер): щелчок в любом месте вне поля или Esc заканчивает
-ввод, и пробел снова запускает GO. В виде «Эксперт» убрана боковая панель, дублировавшая вкладки списков и панель
-добавления кью; новый банк one-shot создаётся кнопкой «+» над кнопками.
+ввод, и пробел снова запускает GO.
+
+**Qtrl: экран переделан по образцу QLab, без дублей.** Сверху — GO, «Далее» с заметками, «Пауза» и «Стоп всё»
+(одинаково в «Правке» и «Шоу»); под ней — панель инструментов с типами кью; в центре — список; справа — вкладки
+«Списки · One-shot · Идёт»; снизу — инспектор и по кнопке таймлайн; внизу — строка состояния с «Правка / Шоу».
+Переключатель «Простой / Эксперт» и повторяющиеся панели убраны.
 
 Функции №1 и №2 — без изменений.
 
@@ -54,8 +58,9 @@ shows the system's reason instead of a generic "File not found". Folder access p
 for it (up to 15 s) instead of reporting "File not found"; a genuinely missing file is still reported at once. GO and Space no longer stay disabled after adding cues: the
 playhead moves to the first added cue (also from the end of the list) and off a deleted cue; clicking a cue puts the
 playhead on it, as in QLab. Edit mode now has a transport (GO, pause, Stop all), so tracks can be played while
-building the show; a click anywhere outside a text field (notes, name, number) or Esc ends typing, so Space is GO again. The Expert view no longer has the side panel that duplicated the list tabs and the add-cue
-toolbar; a new one-shot bank is created from the "+" above the pads.
+building the show; a click anywhere outside a text field (notes, name, number) or Esc ends typing, so Space is GO again. **Qtrl laid out as QLab, without duplicates:** GO, standing by with notes, Pause all and Stop all on top (same in Edit
+and Show); the cue toolbar; the cue list; a sidebar with Cue lists · One-shot · Active; the inspector and optional
+timeline at the bottom; a status bar with Edit / Show. The Simple / Expert switch and repeated panels are gone.
 
 ---
 
