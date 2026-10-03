@@ -14,7 +14,41 @@
   разборчивости, общий журнал ассистента и звукорежиссёра.
 - **Тест пульта:** отчёт по шагам.
 
-Функции №1–№3 — без изменений.
+**Qtrl: аудио в шоу — как в QLab.** При сохранении шоу все его аудиофайлы копируются в папку «<имя шоу> Audio»
+рядом с файлом шоу и записываются относительно него — шоу переносится одной папкой. До сохранения треки играют
+с исходного места. Если файл не удаётся скопировать или прочитать, показывается
+настоящая причина от macOS, а не общее «Файл не найден». SSMT запрашивает доступ к папкам «Рабочий стол»,
+«Документы», «Загрузки» и внешним дискам с понятным объяснением.
+
+**Qtrl: трек играет сразу после добавления, как в QLab.** Воспроизведение начинается, как только подготовлены
+первые ~1,5 с файла (доли секунды), остальное готовится в фоне быстрее, чем играет.
+
+**Qtrl:** трек, добавленный перетаскиванием, сразу запускается по GO. Раньше, если файл ещё готовился к
+воспроизведению, кью показывала «Файл не найден» и не играла; теперь она дожидается готовности файла (до 15 с),
+а в списке пишется «Файл ещё готовится». Отсутствующий файл по-прежнему сообщается сразу.
+Кнопка GO и пробел больше не «засыпают» после добавления кью: курсор GO переходит на первую добавленную кью
+(и с конца списка), при удалении кью под курсором — на следующую; щелчок по кью ставит на неё курсор GO, как в QLab.
+В режиме «Правка» появилась панель воспроизведения — GO, пауза и «Стоп всё»: треки можно слушать, не переходя
+в режим «Шоу». Пробел больше не теряется в полях (заметки, имя, номер): щелчок в любом месте вне поля или Esc заканчивает
+ввод, и пробел снова запускает GO.
+
+**Qtrl: экран переделан по образцу QLab, без дублей.** Сверху — GO, «Далее» с заметками, «Пауза» и «Стоп всё»
+(одинаково в «Правке» и «Шоу»); под ней — панель инструментов с типами кью; в центре — список; справа — вкладки
+«Списки · One-shot · Идёт»; снизу — инспектор и по кнопке таймлайн; внизу — строка состояния с «Правка / Шоу».
+Переключатель «Простой / Эксперт» и повторяющиеся панели убраны.
+
+**Qtrl: группы как локальный мультитрек (как в QLab).** Выделите несколько кью и нажмите «Группа» (или «Сгруппировать
+выделенные» в меню) — они объединятся в группу. Файлы и кью, перетащенные на нижнюю часть строки группы, попадают
+внутрь неё. У группы в инспекторе есть вкладка «Мультитрек»: каждая кью — своя дорожка, старт сдвигается
+перетаскиванием, края клипа обрезают начало и конец, клипы прилипают к краям соседних (⌘ при перетаскивании —
+без прилипания), кнопка «Добавить треки»; в режиме «Таймлайн (все вместе)» группа играет как мультитрек.
+
+**Qtrl: сочетания клавиш QLab.** Пробел — GO, Esc — стоп всё, [ и ] — пауза и продолжение всего, P/S/L/V — пауза,
+стоп, загрузка и прослушивание выделенных, ↑/↓ и ⇧⌘↑/⇧⌘↓ — переходы, ⌘J — к кью по номеру, ⌘]/⌘[ — «Шоу»/«Правка»,
+⌘I/⌘L — инспектор и боковая панель, ⌘1/⌘0/⌘7/⌘8 — новые кью, N/Q/E/D/W/C/T — поля кью, ⌘R, ⌘D, ⌘C/⌘X/⌘V/⌘A, ⌫.
+Буквенные клавиши работают и в русской раскладке. Полный список — кнопка с клавиатурой в строке состояния.
+
+Функции №1 и №2 — без изменений.
 
 ## English
 
@@ -22,7 +56,31 @@
 profile status, settings in a sheet; soundcheck as a grouped channel list with live meters plus a detail card
 with the EQ curve over the channel spectrum; show mode with the guard status, monitor lines with levels and a
 restore countdown, active corrections that can be cancelled one by one, and one log for the assistant and the
-engineer; the console test report as steps. Functions #1–#3 are unchanged.
+engineer; the console test report as steps.
+
+**Qtrl: show audio as in QLab.** Saving a show copies all its audio into "<show name> Audio" next to the show file
+(stored relative to it), so a show travels as one folder; before saving, tracks play from where they are. A file that cannot be copied or read
+shows the system's reason instead of a generic "File not found". Folder access prompts now explain why.
+
+**Qtrl: a track plays right after it is added, as in QLab** — playback starts once the first ~1.5 s are decoded
+(a fraction of a second); the rest is decoded in the background faster than it plays.
+
+**Qtrl fix:** a track dropped into the cue list now plays on GO: if its file is still being prepared, the cue waits
+for it (up to 15 s) instead of reporting "File not found"; a genuinely missing file is still reported at once. GO and Space no longer stay disabled after adding cues: the
+playhead moves to the first added cue (also from the end of the list) and off a deleted cue; clicking a cue puts the
+playhead on it, as in QLab. Edit mode now has a transport (GO, pause, Stop all), so tracks can be played while
+building the show; a click anywhere outside a text field (notes, name, number) or Esc ends typing, so Space is GO again. **Qtrl laid out as QLab, without duplicates:** GO, standing by with notes, Pause all and Stop all on top (same in Edit
+and Show); the cue toolbar; the cue list; a sidebar with Cue lists · One-shot · Active; the inspector and optional
+timeline at the bottom; a status bar with Edit / Show. The Simple / Expert switch and repeated panels are gone.
+
+**Qtrl groups as a local multitrack (as in QLab):** select cues and press Group (or "Group the selected cues") to wrap
+them; files and cues dropped on the lower part of a group row go into it; the group inspector has a Multitrack tab —
+one track per cue, drag to move its start (pre-wait), drag its edges to trim, clips snap to each other (⌘ while
+dragging: no snapping), "Add tracks"; in "Timeline (all together)" mode the group plays as a multitrack.
+
+**Qtrl: QLab keyboard shortcuts** — Space GO, Esc stop all, [ ] pause / resume all, P S L V on the selected cues,
+arrows and ⇧⌘ arrows, ⌘J jump, ⌘] / ⌘[ Show / Edit, ⌘I / ⌘L panels, ⌘1 ⌘0 ⌘7 ⌘8 new cues, N Q E D W C T fields,
+⌘R ⌘D ⌘C ⌘X ⌘V ⌘A ⌫. Letter keys work on any layout; the full list is behind the keyboard button in the status bar.
 
 ---
 
