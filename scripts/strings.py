@@ -529,7 +529,7 @@ STRINGS = {
     "template.percussion": ("Percussion", "Перкуссия"),
     "template.ambience": ("Ambience L/R", "Зальные L/R"),
     "template.talkback": ("Talkback", "Толкбэк"),
-    # Function #3 — show player
+    # Function #3 — Qtrl, show control center
     "section.show": ("Qtrl", "Qtrl"),
     "show.new": ("New show", "Новое шоу"),
     "show.open": ("Open show…", "Открыть шоу…"),

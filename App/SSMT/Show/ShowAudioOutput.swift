@@ -5,7 +5,7 @@ import Foundation
 import SSMTAudio
 import SSMTCore
 
-/// Output of the show player: an AVAudioEngine source node on the chosen interface that pulls
+/// Audio output of Qtrl: an AVAudioEngine source node on the chosen interface that pulls
 /// every channel from the `ShowMixer`.
 final class ShowAudioOutput {
     let engine = AVAudioEngine()

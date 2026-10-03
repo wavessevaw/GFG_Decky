@@ -90,7 +90,7 @@ struct AppSidebar: View {
         .buttonStyle(.plain)
     }
 
-    /// Document actions of the show player.
+    /// Document actions of Qtrl.
     private var showItems: some View {
         VStack(alignment: .leading, spacing: 2) {
             UtilityRow(icon: "doc", title: loc.t("show.new")) { model.show.newDocument() }

@@ -53,7 +53,7 @@ func showTime(_ s: Double?) -> String {
     return m > 0 ? String(format: "%d:%04.1f", m, rest) : String(format: "%.1f", rest)
 }
 
-/// Function #3: the show player, in two layouts.
+/// Function #3: Qtrl, the show control center, in two layouts.
 /// Simple: cue list + one side column (inspector while editing, operator panel in show mode).
 /// Expert: library, cue list, one-shot pads, wide multitrack timeline, inspector / operator panel.
 struct ShowWorkspace: View {

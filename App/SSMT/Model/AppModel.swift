@@ -40,7 +40,7 @@ enum AppSection: String, CaseIterable, Identifiable {
     case setup
     /// Function #2: input list and stage plan.
     case inputList
-    /// Function #3: show player.
+    /// Function #3: Qtrl, show control center.
     case show
     var id: String { rawValue }
 }
