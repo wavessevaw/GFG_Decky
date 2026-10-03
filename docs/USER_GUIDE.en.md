@@ -57,7 +57,7 @@ Sidebar → "Input list & stage plan".
 
 ## Show player (function #3)
 
-Sidebar → "Show player". Drop audio files onto the list or use "+ Audio" (⌘I). **GO** (Space) starts the cue on the playhead and moves on; double-click a row to move the playhead; **Stop all** (Esc) fades everything out, a second press cuts at once. Continue modes: wait for GO, next cue after the post-wait, next cue when this one ends. The inspector edits every setting (file region, loops, speed, level, fades, routing matrix; fade, group and control cue options). Show mode locks editing. The gear opens the output patch. "Check show" lists missing targets and files, duplicate numbers and hotkeys; missing files can be relinked from a folder. Files: `.ssmtshow`, autosave, undo.
+Sidebar → "Show player". Drop audio files onto the list or use "+ Audio" (⌘I). **GO** (Space) starts the cue on the playhead and moves on; double-click a row to move the playhead; **Stop all** (Esc) fades everything out, a second press cuts at once. Continue modes: wait for GO, next cue after the post-wait, next cue when this one ends. The inspector edits every setting (file region, loops, speed, level, fades, routing matrix; fade, group and control cue options). Show mode locks editing. The gear opens the output patch. "Check show" lists missing targets and files, duplicate numbers and hotkeys; missing files can be relinked from a folder. Two views: Simple (list + one side panel: tabbed inspector while editing, operator panel with GO in show mode) and Expert (library, list, one-shot pads on F1–F12 with start / toggle / restart / hold modes, and a wide multitrack timeline: live view, or a group editable by dragging). Files: `.ssmtshow`, autosave, undo.
 
 ## Microphone correction
 
