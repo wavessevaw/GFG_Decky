@@ -4,8 +4,8 @@
 
 # SSMT — SoundSolution Multi Tool
 
-**Меньше рутины. Больше внимания звуку.**<br>
-Настройка системы, подготовка сцены и управление шоу — в одном приложении для macOS.
+**Рабочий инструмент звукорежиссёра и инженера на macOS**<br>
+настройка системы · input list · плейбек шоу · ассистент за пультом
 
 [![Release](https://img.shields.io/github/v/release/wavessevaw/SSMT-Soundsolution-Multitool-?label=release&color=2EE59D)](../../releases/latest)
 [![CI](https://github.com/wavessevaw/SSMT-Soundsolution-Multitool-/actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
@@ -18,11 +18,11 @@
 </div>
 
 > [!NOTE]
-> **FOH Assist — бета-версия.** Взаимодействие с Behringer X32 / Midas M32 и X Air / MR реализовано
-> на основе открытого описания протокола. Работа с физическим оборудованием пока не проверена.
-> Для первичной проверки предусмотрен режим «Тест пульта» с восстановлением исходных настроек после завершения.
+> **FOH Assist — beta.** Работа с пультом Behringer X32 / Midas M32 и X Air / MR построена по открытому описанию
+> протокола и ещё не сверена с живым пультом. Начните с режима «Тест пульта» — он проверит всё на вашем пульте
+> и вернёт настройки как были.
 
-## Скачать
+## 📥 Скачать
 
 | Что | Для кого | Где |
 |---|---|---|
@@ -30,63 +30,35 @@
 | Руководство | Как пользоваться всеми функциями | [Русский](docs/USER_GUIDE.ru.md) · [English](docs/USER_GUIDE.en.md) |
 | Установка | Первый запуск без подписи Apple Developer ID | [docs/INSTALL.md](docs/INSTALL.md) |
 
-## От первого измерения до последней команды GO
+## 🎚️ Зачем
 
-Новая площадка, ограниченное время на монтаж, десятки каналов и шоу, которое должно начаться вовремя.
-Нужно настроить акустическую систему, подготовить коммутацию, проверить микрофоны и собрать фонограммы
-в точную последовательность.
+Каждый выезд начинается с одного и того же: выставить сабы с порталами, найти задержку, поправить EQ, собрать
+input list и план сцены, подготовить фонограммы, прогнать саундчек по каждому каналу — а потом весь концерт
+следить, чтобы не завёлся фидбэк и не зазвенел монитор. Часы рутины, разными программами, каждый раз заново.
 
-**SSMT помогает пройти этот путь в одном приложении.** Измеряйте и настраивайте систему, готовьте
-технический райдер, запускайте фонограммы и подключайте ассистента к микшерному пульту.
-Меньше переключений между инструментами — больше внимания исполнителям и звучанию.
+**SSMT собирает эту рутину в одно окно и берёт её на себя там, где машина справляется не хуже человека:
+измеряет, считает, подсказывает и настраивает. Решения и микс остаются за звукорежиссёром.**
 
-Для звукорежиссёров и системных инженеров, работающих на концертах, спектаклях и выездных мероприятиях.
+## ✨ Что умеет
 
-## Четыре инструмента для вашей работы
-
-### Настройка системы — от измерения к решению
-
-Получите данные для согласования сабвуферов с основными акустическими системами:
-задержка, полярность и рекомендации по эквализации. Пошаговый мастер помогает провести измерение,
-внести настройки и проверить результат. Сохраните отчёт в PDF, чтобы вернуться к нему на следующем выезде.
-
-Двухканальный FFT-анализ, калибровочные файлы измерительных микрофонов и типовые профили —
-в основе каждого этапа настройки.
-
-### Input list и план сцены — площадка знает, что вам нужно
-
-Соберите каналы из шаблонов, спланируйте мониторные миксы и размещение оборудования.
-Получите перечень микрофонов, DI-боксов и стоек с указанием фантомного питания.
-Экспортируйте материалы в PDF, PNG или CSV и передайте площадке готовую основу технического райдера.
-
-### Qtrl — шоу начинается с GO
-
-Подготовьте последовательность фонограмм и команд: точный запуск, плавные изменения уровня,
-группы, паузы и кнопки однократного воспроизведения. Временная шкала помогает видеть ход шоу,
-а общая остановка и защита от повторного GO дают контроль в ответственный момент.
-
-Запуск с точностью до сэмпла и управление по OSC связывают звук, свет и видео:
-Resolume, ETC Eos, grandMA3, MagicQ, X32/M32 и QLab.
-
-### FOH Assist — дополнительное внимание за пультом
-
-Ассистент для X32 / M32 и X Air помогает с настройкой каналов и контролем звука во время мероприятия.
-Подключение по Wi-Fi, профили «Мюзикл», «Рок», «Классика» и «Речь», обработка каналов оркестра и хора
-с распознаванием по названиям.
-
-- **На саундчеке:** входное усиление, фильтрация низких частот, эквализация, компрессия
-  и проверка полярности парных микрофонов.
-- **Во время шоу:** подавление акустической обратной связи, контроль проблемных мониторных каналов
-  и поддержание разборчивости солиста в массовых сценах.
-- **Перед работой:** тест взаимодействия с пультом и симуляция мероприятия
-  с восстановлением исходных настроек.
-
-**Вы управляете миксом. Ассистент помогает следить за деталями, не изменяя положения фейдеров каналов.**
-
-FOH Assist находится в бета-версии; работа с физическими пультами пока не проверена.
+- 📐 **Настройка системы** — пошаговый мастер: двухканальный FFT, задержка и полярность, совмещение сабов с
+  порталами, EQ на стандартных частотах процессора, проверка после ввода и отчёт в PDF. Калибровочные файлы
+  измерительных микрофонов и типовые профили.
+- 📋 **Input list и стейдж-план** — каналы из шаблонов, мониторные миксы, сводка «что выдать на сцену»
+  (микрофоны, DI, стойки, +48 V), план сцены. PDF, PNG, CSV — готовый райдер для площадки.
+- ▶️ **Qtrl — Show Control Center** — плейбек шоу из кью: старт с точностью до сэмпла, фейды, группы, паузы,
+  OSC для света, видео и пультов (Resolume, ETC Eos, grandMA3, MagicQ, X32/M32, QLab), кнопки one-shot,
+  таймлайн, «Стоп всё» и защита от двойного GO.
+- 🤖 **FOH Assist** *(beta)* — ассистент за пультом X32 / M32 и X Air по Wi-Fi, как Mixing Station:
+  - 🎛️ **саундчек сам** — гейн, срез НЧ, эквализация, компрессия до «Готово»; оркестр и хор одной кнопкой
+    по названиям каналов; баланс и подъём с проверкой фидбэка; характеры Мюзикл · Рок · Классика · Речь;
+  - 🔄 **полярность** — щёлкает пары микрофонов (kick in/out, snare top/bottom…) и оставляет правильную;
+  - 🛡️ **страховка на шоу** — микс ведёте вы: ассистент вырезает фидбэк, прижимает и возвращает зазвеневший
+    монитор, держит солиста разборчивым в массовых сценах; фейдеры каналов не трогает;
+  - 🧪 **тест пульта и симуляция шоу** — вся работа с вашим пультом на выдуманном шоу, с возвратом как было.
 
 <details>
-<summary>Скриншоты</summary>
+<summary>📸 Скриншоты</summary>
 
 | Настройка системы | Input list и сцена |
 |---|---|
@@ -96,20 +68,17 @@ FOH Assist находится в бета-версии; работа с физи
 
 </details>
 
-## Почему SSMT
+## 💡 Почему это решение
 
-| Ваша задача | Что даёт SSMT |
+| | |
 |---|---|
-| **Подготовиться к новой площадке** | Измерения, рекомендации и проверка результата в пошаговом мастере. |
-| **Передать понятный райдер** | Input list, план сцены и перечень оборудования с экспортом в привычные форматы. |
-| **Провести шоу по плану** | Фонограммы и OSC-команды в единой последовательности с точным запуском. |
-| **Сохранить контроль** | Приоритет ручного управления, ограниченные автоматические корректировки и отмена изменений. |
-| **Освоить инструменты заранее** | Виртуальный зал и симулятор пульта для знакомства с рабочим процессом без оборудования. |
+| ⏱️ **Быстрее** | Настройка системы и саундчек — шаги «измерить → проверить → готово» вместо часов вручную. |
+| 🔁 **Повторяемо** | Измерения, а не «на слух в шуме зала»: результат проверяется, сохраняется в отчёт и повторяется на следующей площадке. |
+| 🛟 **Безопасно** | Ассистент правит в пределах нескольких дБ, всё отменяется одной кнопкой, любое касание звукорежиссёра главнее автоматики. |
+| 🧰 **Одно окно** | Измерения, райдер, плейбек и связь с пультом — без переключения между пятью программами. |
+| 🎓 **Без железа** | Виртуальный зал и виртуальный пульт — научиться и проверить всё до выезда. |
 
-**Начните с виртуального зала — затем переходите к своей площадке.**
-[Скачать SSMT для macOS](../../releases/latest)
-
-## Быстрый старт
+## 🚀 Быстрый старт
 
 1. Скачайте `SSMT-<версия>.pkg` со страницы [Releases](../../releases/latest) и откройте его.
 2. macOS предупредит о неподтверждённом разработчике (бесплатная программа без подписи Apple Developer ID):
@@ -118,15 +87,14 @@ FOH Assist находится в бета-версии; работа с физи
 4. Выберите функцию в боковой панели: **Настройка системы**, **Input list**, **Qtrl** или **FOH Assist**.
 
 > [!TIP]
-> Для ознакомления без подключения оборудования в настройке системы выберите **«Симуляция (виртуальный зал)»**, а в FOH Assist —
-> **«Симулятор (без пульта)»**: режимы позволяют изучить рабочий процесс без аудиоинтерфейса и микшерного пульта.
+> Нет железа под рукой? В настройке системы выберите **«Симуляция (виртуальный зал)»**, а в FOH Assist —
+> **«Симулятор (без пульта)»**: все функции можно попробовать без звуковой карты и пульта.
 
 > [!IMPORTANT]
-> Перед запуском «Теста пульта» и «Симуляции шоу» на физическом оборудовании сохраните сцену пульта
-> и убедитесь, что на сцене нет исполнителей. Тест изменяет названия и параметры выбранных каналов
-> с последующим восстановлением исходных настроек; основной выход на время проверки отключается.
+> Перед «Тестом пульта» и «Симуляцией шоу» на настоящем пульте сохраните сцену и уберите музыкантов со сцены:
+> тест меняет названия и настройки выбранных каналов (в конце всё возвращается), главный выход на время теста глушится.
 
-## Документация
+## 📚 Документация
 
 - [Руководство пользователя (RU)](docs/USER_GUIDE.ru.md) · [User guide (EN)](docs/USER_GUIDE.en.md)
 - [Установка](docs/INSTALL.md) · [Что нового](docs/RELEASE_NOTES.md) · [История версий](docs/CHANGELOG.md)
@@ -135,36 +103,28 @@ FOH Assist находится в бета-версии; работа с физи
 ---
 
 <details>
-<summary>English</summary>
+<summary>🇬🇧 English</summary>
 
-**Less routine. More focus on sound.**
+**SSMT is a macOS workstation tool for live sound engineers and system techs: system alignment, input lists,
+show playback and a console assistant in one app.**
 
-SSMT brings system setup, stage preparation and show control into one macOS application for live sound
-engineers and system engineers. From your first measurement to the final GO, keep your tools together
-and your attention on the performance.
+- 📐 **System setup** — guided sub ↔ mains alignment from dual-channel FFT measurements, delay and polarity,
+  EQ suggestions on standard processor frequencies, verification and a PDF report; measurement-mic calibration.
+- 📋 **Input list & stage plan** — channels from templates, monitor mixes, a pull list, a stage plot; PDF / PNG / CSV.
+- ▶️ **Qtrl — Show Control Center** — cue-based playback with sample-accurate starts, fades, groups, OSC to
+  lighting, video and consoles, one-shot pads, a timeline, two-stage Stop all.
+- 🤖 **FOH Assist** *(beta)* — connects to Behringer X32 / Midas M32 and X Air over Wi-Fi like Mixing Station;
+  tunes channels by itself, one-button orchestra and choir, automatic polarity check, a show guard that backs up
+  the engineer without moving channel faders, plus a console test and a show simulation.
 
-- **System setup — turn measurements into decisions.** Align subwoofers with the main loudspeaker
-  system using dual-channel FFT analysis, delay and polarity assessment, and EQ recommendations.
-  Verify your adjustments and save a PDF report. Supports measurement microphone calibration files.
-- **Input list and stage plan — give the venue a clear brief.** Build channel lists from templates,
-  plan monitor mixes and equipment placement, and export your documentation as PDF, PNG or CSV.
-- **Qtrl — put the show on GO.** Organize playback and OSC commands with sample-accurate starts,
-  fades, groups, pauses, one-shot triggers and a timeline. Includes a two-stage stop-all function.
-- **FOH Assist — extra attention at the console.** Connect to X32 / M32 or X Air over Wi-Fi for
-  assisted channel setup, orchestra and choir processing, polarity checks and feedback control.
-  The engineer keeps control of the mix; the assistant does not move channel faders.
-
-FOH Assist is in beta, based on publicly available protocol documentation, and has not yet been verified
-with physical consoles. Console testing and show simulation restore initial settings after completion.
-
-Explore the workflow with a virtual venue and console simulator before connecting equipment.
-Requires macOS 13+ (Apple Silicon or Intel).
-[Download](../../releases/latest) · [User guide](docs/USER_GUIDE.en.md) · [Install](docs/INSTALL.md)
+Why: hours of routine on every gig become a few measured, repeatable, undoable steps — while the mix stays in
+the engineer's hands. Requires macOS 13+ (Apple Silicon or Intel). [Download](../../releases/latest) ·
+[User guide](docs/USER_GUIDE.en.md) · [Install](docs/INSTALL.md)
 
 </details>
 
 <details>
-<summary>Для разработчиков</summary>
+<summary>🛠️ Для разработчиков</summary>
 
 | Path | What |
 |---|---|
@@ -189,4 +149,3 @@ open SSMT.xcodeproj         # or: xcodebuild -scheme SSMT -configuration Release
 - UI strings: `scripts/strings.py` (en + ru). Plan: [docs/PLAN.md](docs/PLAN.md) · Acceptance: [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md)
 
 </details>
-
