@@ -40,7 +40,13 @@
 **Qtrl: группы как локальный мультитрек (как в QLab).** Выделите несколько кью и нажмите «Группа» (или «Сгруппировать
 выделенные» в меню) — они объединятся в группу. Файлы и кью, перетащенные на нижнюю часть строки группы, попадают
 внутрь неё. У группы в инспекторе есть вкладка «Мультитрек»: каждая кью — своя дорожка, старт сдвигается
-перетаскиванием, кнопка «Добавить треки»; в режиме «Все вместе» группа играет как мультитрек.
+перетаскиванием, края клипа обрезают начало и конец, клипы прилипают к краям соседних (⌘ при перетаскивании —
+без прилипания), кнопка «Добавить треки»; в режиме «Таймлайн (все вместе)» группа играет как мультитрек.
+
+**Qtrl: сочетания клавиш QLab.** Пробел — GO, Esc — стоп всё, [ и ] — пауза и продолжение всего, P/S/L/V — пауза,
+стоп, загрузка и прослушивание выделенных, ↑/↓ и ⇧⌘↑/⇧⌘↓ — переходы, ⌘J — к кью по номеру, ⌘]/⌘[ — «Шоу»/«Правка»,
+⌘I/⌘L — инспектор и боковая панель, ⌘1/⌘0/⌘7/⌘8 — новые кью, N/Q/E/D/W/C/T — поля кью, ⌘R, ⌘D, ⌘C/⌘X/⌘V/⌘A, ⌫.
+Буквенные клавиши работают и в русской раскладке. Полный список — кнопка с клавиатурой в строке состояния.
 
 Функции №1 и №2 — без изменений.
 
@@ -69,7 +75,12 @@ timeline at the bottom; a status bar with Edit / Show. The Simple / Expert switc
 
 **Qtrl groups as a local multitrack (as in QLab):** select cues and press Group (or "Group the selected cues") to wrap
 them; files and cues dropped on the lower part of a group row go into it; the group inspector has a Multitrack tab —
-one track per cue, drag to move its start, "Add tracks"; in "All together" mode the group plays as a multitrack.
+one track per cue, drag to move its start (pre-wait), drag its edges to trim, clips snap to each other (⌘ while
+dragging: no snapping), "Add tracks"; in "Timeline (all together)" mode the group plays as a multitrack.
+
+**Qtrl: QLab keyboard shortcuts** — Space GO, Esc stop all, [ ] pause / resume all, P S L V on the selected cues,
+arrows and ⇧⌘ arrows, ⌘J jump, ⌘] / ⌘[ Show / Edit, ⌘I / ⌘L panels, ⌘1 ⌘0 ⌘7 ⌘8 new cues, N Q E D W C T fields,
+⌘R ⌘D ⌘C ⌘X ⌘V ⌘A ⌫. Letter keys work on any layout; the full list is behind the keyboard button in the status bar.
 
 ---
 

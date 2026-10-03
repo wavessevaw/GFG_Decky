@@ -310,6 +310,7 @@ struct QtrlStatusBar: View {
     @EnvironmentObject var show: ShowStore
     @EnvironmentObject var loc: Localizer
     @State private var showIssues = false
+    @State private var showKeys = false
 
     var body: some View {
         HStack(spacing: 10) {
@@ -337,6 +338,10 @@ struct QtrlStatusBar: View {
             }
             toggle("sidebar.right", loc.t("show.view.sidebar"), on: show.showSidebar) { show.showSidebar.toggle() }
             Rectangle().fill(Theme.hairline).frame(width: 1, height: 20)
+            Button { showKeys = true } label: { Image(systemName: "keyboard") }
+                .buttonStyle(ToolButtonStyle())
+                .help(loc.t("show.keys.title"))
+                .popover(isPresented: $showKeys, arrowEdge: .top) { QtrlShortcutsView().environmentObject(loc) }
             Button { show.showOSC = true } label: { Image(systemName: "antenna.radiowaves.left.and.right") }
                 .buttonStyle(ToolButtonStyle())
                 .help(loc.t("osc.title"))
@@ -478,6 +483,37 @@ struct OutputMeters: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassCard(padding: embedded ? 0 : 14, plain: embedded)
+    }
+}
+
+/// The keyboard shortcuts (QLab's), for the status bar popover.
+struct QtrlShortcutsView: View {
+    @EnvironmentObject var loc: Localizer
+
+    private let rows: [(String, String)] = [
+        ("Space", "show.keys.go"), ("Esc", "show.keys.panic"), ("[  /  ]", "show.keys.pauseResumeAll"),
+        ("P", "show.keys.pauseSelected"), ("S", "show.keys.stopSelected"), ("L", "show.keys.load"), ("V", "show.keys.preview"),
+        ("↑  /  ↓", "show.keys.cursor"), ("⇧⌘↑  /  ⇧⌘↓", "show.keys.playhead"), ("⌘J", "show.keys.jump"),
+        ("⌘]  /  ⌘[", "show.keys.mode"), ("⌘I  /  ⌘L", "show.keys.panels"),
+        ("⌘1 · ⌘0 · ⌘7 · ⌘8", "show.keys.newCue"), ("N · Q · E · D · W", "show.keys.fields"), ("C", "show.keys.continue"),
+        ("T", "show.keys.target"), ("⌘R", "show.keys.renumber"), ("⌘D", "show.keys.duplicate"),
+        ("⌘C · ⌘X · ⌘V · ⌘A", "show.keys.clipboard"), ("⌫", "show.keys.delete"), ("F1…F12", "show.keys.pads"),
+    ]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(loc.t("show.keys.title")).font(Theme.heading(15))
+            Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 5) {
+                ForEach(rows, id: \.1) { k, key in
+                    GridRow {
+                        Text(k).font(Theme.mono(12, weight: .semibold)).foregroundStyle(Theme.accent)
+                        Text(loc.t(key)).font(.system(size: 12)).foregroundStyle(Theme.textSecondary)
+                    }
+                }
+            }
+            Text(loc.t("show.keys.note")).font(.system(size: 11)).foregroundStyle(Theme.textMuted).frame(maxWidth: 420, alignment: .leading)
+        }
+        .padding(16)
     }
 }
 

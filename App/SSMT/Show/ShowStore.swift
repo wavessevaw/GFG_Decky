@@ -929,6 +929,7 @@ final class ShowStore: ObservableObject {
             return false
         }
         let mods = event.modifierFlags.intersection([.command, .control, .option])
+        if mods == [.command], event.type == .keyDown { return commandKey(event) }
         guard mods.isEmpty else { return false }
         // One-shot pads on F-keys: press and release (for "hold" pads).
         if let fkey = Self.functionKeyCodes[event.keyCode] {
@@ -944,11 +945,197 @@ final class ShowStore: ObservableObject {
         default: break
         }
         guard let ch = event.charactersIgnoringModifiers?.lowercased(), !ch.isEmpty else { return false }
+        // Hotkeys the user gave to cues come first.
         if let cue = doc.allCues.first(where: { ($0.hotkey ?? "").lowercased() == ch }) {
             if doc.banks.contains(where: { $0.cues.findCue(cue.id) != nil }) { pad(cue.id, pressed: true) } else { start(cue.id) }
             return true
         }
-        return false
+        return plainKey(event)
+    }
+
+    // MARK: QLab keyboard shortcuts (by physical key, so they work on any layout, Russian included)
+
+    private enum Key {
+        static let a: UInt16 = 0, s: UInt16 = 1, d: UInt16 = 2, c: UInt16 = 8, v: UInt16 = 9, q: UInt16 = 12, w: UInt16 = 13
+        static let e: UInt16 = 14, r: UInt16 = 15, t: UInt16 = 17, one: UInt16 = 18, seven: UInt16 = 26, eight: UInt16 = 28
+        static let zero: UInt16 = 29, rightBracket: UInt16 = 30, leftBracket: UInt16 = 33, i: UInt16 = 34, p: UInt16 = 35
+        static let l: UInt16 = 37, j: UInt16 = 38, n: UInt16 = 45, x: UInt16 = 7, delete: UInt16 = 51, forwardDelete: UInt16 = 117
+        static let up: UInt16 = 126, down: UInt16 = 125
+    }
+
+    /// Keys without modifiers (Space, Esc and F-keys are handled before).
+    private func plainKey(_ event: NSEvent) -> Bool {
+        let shift = event.modifierFlags.contains(.shift)
+        switch event.keyCode {
+        case Key.leftBracket: pauseAll(); return true                       // [  Pause all
+        case Key.rightBracket: resumeAll(); return true                     // ]  Resume all
+        case Key.p: selectedCues.forEach(togglePause); return true          // P  pause / resume selected
+        case Key.s: stopSelected(); return true                             // S  stop selected (S S: at once)
+        case Key.l: selectedCues.forEach(load); return true                 // L  load selected
+        case Key.v: selectedCues.forEach(start); return true                // V  preview selected
+        case Key.up where !shift: moveCursor(by: -1); return true           // ↑ / ↓  previous / next cue
+        case Key.down where !shift: moveCursor(by: 1); return true
+        default: break
+        }
+        guard !showMode else { return false }
+        switch event.keyCode {
+        case Key.delete, Key.forwardDelete:                                 // ⌫  delete selected
+            guard !selection.isEmpty else { return false }
+            deleteSelection(); return true
+        case Key.n: editSelected(.number); return true                      // N  number
+        case Key.q: editSelected(.name); return true                        // Q  name
+        case Key.e: editSelected(.preWait); return true                     // E  pre-wait
+        case Key.d: editSelected(.duration); return true                    // D  duration
+        case Key.w: editSelected(.postWait); return true                    // W  post-wait
+        case Key.c: cycleContinueMode(); return true                        // C  continue mode
+        case Key.t: inspectorTab = .action; showInspector = true; return true // T  target (inspector)
+        default: return false
+        }
+    }
+
+    /// ⌘ shortcuts of the cue list. ⌘S / ⌘O / ⌘Z stay with the app menu.
+    private func commandKey(_ event: NSEvent) -> Bool {
+        let shift = event.modifierFlags.contains(.shift)
+        switch event.keyCode {
+        case Key.rightBracket: showMode = true; return true                 // ⌘]  Show mode
+        case Key.leftBracket: showMode = false; return true                 // ⌘[  Edit mode
+        case Key.i: showInspector.toggle(); return true                     // ⌘I  inspector
+        case Key.l: showSidebar.toggle(); return true                       // ⌘L  lists, one-shot, active
+        case Key.j: jumpToCue(); return true                                // ⌘J  jump to cue
+        case Key.up where shift: movePlayhead(by: -1); return true          // ⇧⌘↑ / ⇧⌘↓  playhead
+        case Key.down where shift: movePlayhead(by: 1); return true
+        default: break
+        }
+        guard !showMode else { return false }
+        switch event.keyCode {
+        case Key.zero: add(.group); return true                             // ⌘0  group (wraps the selection)
+        case Key.one: chooseAudioFiles(); return true                       // ⌘1  audio
+        case Key.seven: add(.fade); return true                             // ⌘7  fade
+        case Key.eight: add(.network); return true                          // ⌘8  network (OSC)
+        case Key.r: renumberSelection(); return true                        // ⌘R  renumber
+        case Key.d: duplicateSelection(); return true                       // ⌘D  duplicate
+        case Key.a: selection = Set(currentList?.cues.flattened().map(\.cue.id) ?? []); return true // ⌘A
+        case Key.c: copySelection(); return true                            // ⌘C / ⌘X / ⌘V  cues
+        case Key.x: copySelection(); deleteSelection(); return true
+        case Key.v: pasteCues(); return true
+        default: return false
+        }
+    }
+
+    private var selectedCues: [UUID] { orderedSelection.isEmpty ? Array(selection) : orderedSelection }
+
+    func load(_ id: UUID) { run { e, _ in e.load(id) } }
+
+    private var lastStop: Date?
+
+    /// S: stops the selected cues with the panic fade; S again within a second stops them at once.
+    private func stopSelected() {
+        let hard = lastStop.map { Date().timeIntervalSince($0) < 1 } ?? false
+        lastStop = hard ? nil : Date()
+        let fade = hard ? 0 : doc.panicFade
+        for id in selectedCues { run { e, now in e.stop(id, now: now, fade: fade) } }
+    }
+
+    /// ↑ / ↓: the previous / next row is selected; a top-level cue also gets the playhead (as a click does).
+    private func moveCursor(by delta: Int) {
+        let rows = currentList?.cues.flattened(collapsed: collapsed) ?? []
+        guard !rows.isEmpty else { return }
+        let current = rows.lastIndex { selection.contains($0.cue.id) } ?? (delta > 0 ? -1 : rows.count)
+        let i = max(0, min(rows.count - 1, current + delta))
+        selection = [rows[i].cue.id]
+        if rows[i].depth == 0 { setPlayhead(rows[i].cue.id) }
+    }
+
+    /// ⇧⌘↑ / ⇧⌘↓: the playhead to the previous / next top-level cue.
+    private func movePlayhead(by delta: Int) {
+        guard let cues = currentList?.cues, !cues.isEmpty else { return }
+        let ph = snapshot.playhead
+        let i = ph.flatMap { id in cues.firstIndex { $0.id == id } } ?? (delta > 0 ? -1 : cues.count)
+        let j = i + delta
+        setPlayhead(cues.indices.contains(j) ? cues[j].id : nil)
+    }
+
+    /// ⌘J: asks for a cue number, selects it and puts the playhead on it.
+    private func jumpToCue() {
+        guard let n = prompt(loc("show.key.jump"), value: "") else { return }
+        guard let cue = doc.allCues.first(where: { $0.number == n.trimmingCharacters(in: .whitespaces) }) else { NSSound.beep(); return }
+        if let l = doc.cueLists.first(where: { $0.cues.findCue(cue.id) != nil }), l.id != listID { selectList(l.id) }
+        selection = [cue.id]
+        setPlayhead(cue.id)
+    }
+
+    private enum Field { case number, name, preWait, duration, postWait }
+
+    /// N, Q, E, D, W: edit the number, name, pre-wait, duration or post-wait of the selected cue.
+    private func editSelected(_ f: Field) {
+        guard selection.count == 1, let id = selection.first, let cue = doc.cue(id) else { return }
+        let title: String, value: String
+        switch f {
+        case .number: title = loc("show.key.number"); value = cue.number
+        case .name: title = loc("show.key.name"); value = cue.name
+        case .preWait: title = loc("show.key.preWait"); value = String(cue.preWait)
+        case .duration:
+            guard cue.kind == .wait || cue.kind == .fade else { inspectorTab = .time; showInspector = true; return }
+            title = loc("show.key.duration"); value = String(cue.kind == .fade ? cue.fade?.duration ?? 0 : cue.duration)
+        case .postWait: title = loc("show.key.postWait"); value = String(cue.postWait)
+        }
+        guard let v = prompt(title, value: value) else { return }
+        let seconds = Double(v.replacingOccurrences(of: ",", with: "."))
+        edit { d in
+            d.updateCue(id) { c in
+                switch f {
+                case .number: c.number = v
+                case .name: c.name = v
+                case .preWait: if let s = seconds { c.preWait = max(0, s) }
+                case .duration: if let s = seconds { if c.kind == .fade { c.fade?.duration = max(0, s) } else { c.duration = max(0, s) } }
+                case .postWait: if let s = seconds { c.postWait = max(0, s) }
+                }
+            }
+        }
+    }
+
+    /// C: no continue → auto-continue → auto-follow → no continue.
+    private func cycleContinueMode() {
+        let ids = selectedCues
+        guard !ids.isEmpty else { return }
+        edit { d in
+            for id in ids {
+                d.updateCue(id) { c in
+                    switch c.continueMode {
+                    case .none: c.continueMode = .autoContinue
+                    case .autoContinue: c.continueMode = .autoFollow
+                    case .autoFollow: c.continueMode = .none
+                    }
+                }
+            }
+        }
+    }
+
+    private var cueClipboard: [Cue] = []
+
+    private func copySelection() {
+        cueClipboard = orderedSelection.compactMap { doc.cue($0) }
+    }
+
+    private func pasteCues() {
+        guard let lid = listID, !cueClipboard.isEmpty else { return }
+        let copies = cueClipboard.map { $0.duplicated() }
+        let after = lastSelected
+        edit { $0.insert(copies, after: after, list: lid) }
+        selection = Set(copies.map(\.id))
+    }
+
+    private func prompt(_ title: String, value: String) -> String? {
+        let alert = NSAlert()
+        alert.messageText = title
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 240, height: 24))
+        field.stringValue = value
+        alert.accessoryView = field
+        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: loc("action.cancel"))
+        alert.window.initialFirstResponder = field
+        guard alert.runModal() == .alertFirstButtonReturn else { return nil }
+        return field.stringValue
     }
 
     private func loc(_ key: String) -> String { localizer?.t(key) ?? key }

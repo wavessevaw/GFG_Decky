@@ -208,6 +208,11 @@ public final class ShowEngine {
         advance(to: now)
     }
 
+    /// Loads a cue (QLab "L"): its files are read in advance so it starts instantly.
+    public func load(_ id: UUID) {
+        if let c = document.cue(id) { preloadTree(c) }
+    }
+
     public func isRunning(_ id: UUID) -> Bool { instances[id].map { !$0.stopping } ?? false }
 
     public func stop(_ id: UUID, now: Int64, fade: Double = 0) {
