@@ -304,6 +304,38 @@ final class ShowTests: XCTestCase {
         XCTAssertEqual(rig.ops.count, 1)
     }
 
+    func testFileStillBeingPreparedPlaysWhenReady() {
+        var doc = ShowDocument()
+        var a = audioCue("a", "1"); a.continueMode = .autoFollow
+        let b = audioCue("b", "2")
+        doc.lists[0].cues = [a, b]
+        let rig = ShowRig(doc)
+        rig.engine.clipPending = { _ in true }
+        rig.clips["b"] = constClip(0.1, frames: 480)
+        rig.engine.go(now: 0)
+        rig.run(4800)
+        XCTAssertEqual(rig.engine.problems[a.id], "error.show.notReady")
+        XCTAssertTrue(rig.ops.isEmpty, "nothing plays while the file is decoded, the chain waits")
+        rig.clips["a"] = constClip(0.5, frames: 4800)
+        rig.run(4800 * 3)
+        XCTAssertNil(rig.engine.problems[a.id])
+        XCTAssertTrue(rig.out[0].contains { abs($0 - 0.5) < 1e-6 }, "the cue played once its file was ready")
+        XCTAssertTrue(rig.out[0].contains { abs($0 - 0.1) < 1e-6 }, "auto-follow continued after it")
+    }
+
+    func testFileThatNeverBecomesReadyIsReportedAfterTimeout() {
+        var doc = ShowDocument()
+        let a = audioCue("a", "1")
+        doc.lists[0].cues = [a]
+        let rig = ShowRig(doc)
+        rig.engine.clipPending = { _ in true }
+        rig.engine.clipWaitSeconds = 0.2
+        rig.engine.go(now: 0)
+        rig.runSeconds(0.5)
+        XCTAssertEqual(rig.engine.problems[a.id], "error.show.missingFile")
+        XCTAssertFalse(rig.engine.isActive)
+    }
+
     // MARK: Editing
 
     func testEditingOperations() {

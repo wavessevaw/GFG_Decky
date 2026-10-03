@@ -23,7 +23,7 @@ struct CueListView: View {
                                    isPlayhead: row.cue.id == playhead,
                                    isSelected: show.selection.contains(row.cue.id),
                                    running: running[row.cue.id],
-                                   hasProblem: show.snapshot.problems[row.cue.id] != nil || isMissing(row.cue))
+                                   problem: isMissing(row.cue) ? "show.fileMissing" : show.snapshot.problems[row.cue.id])
                                 .id(row.cue.id)
                                 .onTapGesture(count: 2) { show.setPlayhead(row.cue.id) }
                                 .simultaneousGesture(TapGesture().onEnded { select(row.cue.id, rows: rows) })
@@ -179,7 +179,9 @@ struct CueRow: View {
     var isPlayhead: Bool
     var isSelected: Bool
     var running: RunningCue?
-    var hasProblem: Bool
+    /// Localisation key of what is wrong with the cue (nil = fine).
+    var problem: String?
+    private var hasProblem: Bool { problem != nil && problem != "error.show.notReady" }
 
     var body: some View {
         HStack(spacing: 0) {
@@ -212,7 +214,7 @@ struct CueRow: View {
                         .strikethrough(!cue.armed, color: Theme.textMuted)
                         .lineLimit(1)
                     if let sub = subtitle {
-                        Text(sub).font(.system(size: 11)).foregroundStyle(hasProblem ? Theme.statusWarning : Theme.textSecondary).lineLimit(1)
+                        Text(sub).font(.system(size: 11)).foregroundStyle(hasProblem ? Theme.statusWarning : problem != nil ? Theme.dataBlue : Theme.textSecondary).lineLimit(1)
                     }
                 }
                 if let key = cue.hotkey, !key.isEmpty {
@@ -249,7 +251,7 @@ struct CueRow: View {
 
     private var subtitle: String? {
         if cue.kind == .audio {
-            if hasProblem { return loc.t("show.fileMissing") }
+            if let problem { return loc.t(problem) }
             return cue.audio.map { ($0.file as NSString).lastPathComponent }
         }
         if cue.kind.needsTarget {

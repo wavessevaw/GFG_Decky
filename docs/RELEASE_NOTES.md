@@ -14,7 +14,11 @@
   разборчивости, общий журнал ассистента и звукорежиссёра.
 - **Тест пульта:** отчёт по шагам.
 
-Функции №1–№3 — без изменений.
+**Qtrl:** трек, добавленный перетаскиванием, сразу запускается по GO. Раньше, если файл ещё готовился к
+воспроизведению, кью показывала «Файл не найден» и не играла; теперь она дожидается готовности файла (до 15 с),
+а в списке пишется «Файл ещё готовится». Отсутствующий файл по-прежнему сообщается сразу.
+
+Функции №1 и №2 — без изменений.
 
 ## English
 
@@ -22,7 +26,10 @@
 profile status, settings in a sheet; soundcheck as a grouped channel list with live meters plus a detail card
 with the EQ curve over the channel spectrum; show mode with the guard status, monitor lines with levels and a
 restore countdown, active corrections that can be cancelled one by one, and one log for the assistant and the
-engineer; the console test report as steps. Functions #1–#3 are unchanged.
+engineer; the console test report as steps.
+
+**Qtrl fix:** a track dropped into the cue list now plays on GO: if its file is still being prepared, the cue waits
+for it (up to 15 s) instead of reporting "File not found"; a genuinely missing file is still reported at once.
 
 ---
 

@@ -570,6 +570,11 @@ final class ShowStore: ObservableObject {
                                         DispatchQueue.global(qos: .userInitiated).async { clips.load(path, sampleRate: sr) }
                                         return nil
                                     })
+            engine.clipPending = { cue in
+                guard let f = cue.audio?.file, !f.isEmpty else { return false }
+                let path = ShowStore.resolve(f, showURL: core.showURL)
+                return FileManager.default.fileExists(atPath: path) && clips.failure(path) == nil
+            }
             engine.oscSend = { device, message in transport.send(message, to: device) }
             engine.preload = { cue in
                 guard let f = cue.audio?.file else { return }

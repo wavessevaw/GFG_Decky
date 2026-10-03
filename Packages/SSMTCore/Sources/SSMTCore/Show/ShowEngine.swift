@@ -53,6 +53,9 @@ public final class ShowEngine {
     public var send: (MixerOp) -> Void
     /// Returns the decoded clip of an audio cue (nil = not available).
     public var clipProvider: (Cue) -> AudioClip?
+    /// True when a cue's file exists and is still being prepared (decoded into the cache), so GO waits for
+    /// it instead of reporting it missing. False for a missing or unreadable file.
+    public var clipPending: (Cue) -> Bool = { _ in false }
     /// Sends an OSC message to a show device.
     public var oscSend: (OSCDevice, OSCMessage) -> Void = { _, _ in }
     /// Called by Load cues.
@@ -92,10 +95,16 @@ public final class ShowEngine {
         var stopTargetsAtEnd: [UUID] = []
         var holdTargets: [UUID] = []
         var onEnd: (cue: UUID, list: UUID, parent: UUID?)?
+        /// Audio file still being decoded at GO: retried until this frame, then reported missing.
+        var awaitingClip: Int64?
     }
+
+    /// How long an audio cue waits for a file that is still being prepared (just added) before it gives up.
+    public var clipWaitSeconds = 15.0
 
     private(set) var instances: [UUID: Instance] = [:]
     private var lastGo: Int64?
+    private var lastClipRetry: Int64?
     private var lastPanic: Int64?
 
     public init(document: ShowDocument, sampleRate: Double, lookahead: Int64 = 1024,
@@ -225,6 +234,7 @@ public final class ShowEngine {
     /// Processes everything due up to `now + lookahead`. Call often (every few milliseconds).
     public func advance(to now: Int64) {
         let horizon = now + lookahead
+        retryAwaitingClips(now: now, at: horizon)
         var guardCount = 0
         while let (id, t, event) = nextEvent(upTo: horizon) {
             guardCount += 1
@@ -416,7 +426,18 @@ public final class ShowEngine {
     }
 
     private func startAudio(_ cue: Cue, at t: Int64) {
-        guard let clip = clipProvider(cue), let setup = Self.voiceSetup(cue, clip: clip, outputs: document.outputs.count) else {
+        guard let clip = clipProvider(cue) else {
+            guard clipPending(cue) else {
+                problems[cue.id] = "error.show.missingFile"
+                return
+            }
+            // Not decoded yet (e.g. dropped in a moment ago): wait for it instead of failing at once.
+            instances[cue.id]?.awaitingClip = t + frames(clipWaitSeconds)
+            instances[cue.id]?.actionEnd = nil
+            problems[cue.id] = "error.show.notReady"
+            return
+        }
+        guard let setup = Self.voiceSetup(cue, clip: clip, outputs: document.outputs.count) else {
             problems[cue.id] = "error.show.missingFile"
             return
         }
@@ -426,6 +447,26 @@ public final class ShowEngine {
         instances[cue.id]?.clip = clip
         instances[cue.id]?.rate = setup.rate
         instances[cue.id]?.actionEnd = setup.outputFrames.map { t + $0 }
+    }
+
+    /// Starts audio cues whose file has become ready since GO; gives up after `clipWaitSeconds`.
+    private func retryAwaitingClips(now: Int64, at t: Int64) {
+        // A few times a second is enough; the provider starts a background decode when asked.
+        if let last = lastClipRetry, now - last < frames(0.05) { return }
+        lastClipRetry = now
+        for (id, inst) in instances {
+            guard let deadline = inst.awaitingClip, !inst.stopping, !inst.paused, let cue = document.cue(id) else { continue }
+            if clipProvider(cue) != nil {
+                instances[id]?.awaitingClip = nil
+                instances[id]?.actionAt = t
+                problems[id] = nil
+                startAudio(cue, at: t)
+            } else if now >= deadline || !clipPending(cue) {
+                instances[id]?.awaitingClip = nil
+                instances[id]?.actionEnd = now
+                problems[id] = "error.show.missingFile"
+            }
+        }
     }
 
     /// Voice settings of an audio cue for a decoded clip (also used to audition from the editor).
