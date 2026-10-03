@@ -269,6 +269,30 @@ final class SnapshotTests: XCTestCase {
         try snapshot(QLabImportView(), size: CGSize(width: 600, height: 560), name: "qlab-import", loc: Self.ru)
     }
 
+    /// The hidden game renders into its own 320×224 framebuffer; scaled 3× here.
+    func testHiddenGameScreens() throws {
+        let w = GameWorld()
+        let r = GameRenderer()
+        func image() -> some View {
+            let fb = r.render(w)
+            let provider = CGDataProvider(data: Data(fb.rgbaBytes) as CFData)!
+            let cg = CGImage(width: 320, height: 224, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: 1280,
+                             space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipLast.rawValue),
+                             provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent)!
+            return Image(decorative: cg, scale: 1).interpolation(.none).resizable().frame(width: 960, height: 672)
+        }
+        for _ in 0..<30 { w.step(GameInput()) }
+        try snapshot(image(), size: CGSize(width: 960, height: 672), name: "game-title", loc: Self.ru)
+        var start = GameInput(); start.start = true
+        w.step(start); w.step(GameInput())
+        for _ in 0..<110 { w.step(GameInput()) }
+        var right = GameInput(); right.right = true
+        for _ in 0..<50 { w.step(right) }
+        var punch = GameInput(); punch.punch = true
+        w.step(punch); for _ in 0..<6 { w.step(GameInput()) }
+        try snapshot(image(), size: CGSize(width: 960, height: 672), name: "game-panel", loc: Self.ru)
+    }
+
     func testInputListPrintSheets() throws {
         let doc = Self.sampleInputList
         try snapshot(ChannelSheet(doc: doc, rows: doc.channelPages(rowsPerPage: InputListPrint.rowsPerPage)[0], page: "1 / 3"),
