@@ -114,9 +114,6 @@ struct ShowWorkspace: View {
         HStack(alignment: .top, spacing: 12) {
             VStack(spacing: 12) {
                 HStack(alignment: .top, spacing: 12) {
-                    if !show.showMode {
-                        ShowLibraryPanel().frame(width: 190)
-                    }
                     CueListView()
                         .frame(maxWidth: .infinity)
                     PadGridView(columns: show.showMode ? 3 : 2)

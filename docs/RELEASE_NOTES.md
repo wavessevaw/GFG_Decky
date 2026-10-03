@@ -21,7 +21,8 @@
 (и с конца списка), при удалении кью под курсором — на следующую; щелчок по кью ставит на неё курсор GO, как в QLab.
 В режиме «Правка» появилась панель воспроизведения — GO, пауза и «Стоп всё»: треки можно слушать, не переходя
 в режим «Шоу». Пробел больше не теряется в полях (заметки, имя, номер): щелчок в любом месте вне поля или Esc заканчивает
-ввод, и пробел снова запускает GO.
+ввод, и пробел снова запускает GO. В виде «Эксперт» убрана боковая панель, дублировавшая вкладки списков и панель
+добавления кью; новый банк one-shot создаётся кнопкой «+» над кнопками.
 
 Функции №1 и №2 — без изменений.
 
@@ -37,7 +38,8 @@ engineer; the console test report as steps.
 for it (up to 15 s) instead of reporting "File not found"; a genuinely missing file is still reported at once. GO and Space no longer stay disabled after adding cues: the
 playhead moves to the first added cue (also from the end of the list) and off a deleted cue; clicking a cue puts the
 playhead on it, as in QLab. Edit mode now has a transport (GO, pause, Stop all), so tracks can be played while
-building the show; a click anywhere outside a text field (notes, name, number) or Esc ends typing, so Space is GO again.
+building the show; a click anywhere outside a text field (notes, name, number) or Esc ends typing, so Space is GO again. The Expert view no longer has the side panel that duplicated the list tabs and the add-cue
+toolbar; a new one-shot bank is created from the "+" above the pads.
 
 ---
 

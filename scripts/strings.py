@@ -607,6 +607,7 @@ STRINGS = {
                          "Простой: список и одна панель сбоку. Эксперт: библиотека, one-shot и таймлайн."),
     "show.lists": ("Cue lists", "Списки"),
     "show.banks": ("One-shot banks", "Банки one-shot"),
+    "show.bank.add": ("New bank", "Новый банк"),
     "show.bank": ("Bank", "Банк"),
     "show.add.title": ("Add", "Добавить"),
     "show.oneShot": ("One-shot", "One-shot"),

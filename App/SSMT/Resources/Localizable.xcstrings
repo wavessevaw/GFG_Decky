@@ -13704,6 +13704,23 @@
         }
       }
     },
+    "show.bank.add": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New bank"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Новый банк"
+          }
+        }
+      }
+    },
     "show.banks": {
       "extractionState": "manual",
       "localizations": {
