@@ -104,7 +104,7 @@ struct ShowWorkspace: View {
             CueListView()
                 .frame(maxWidth: .infinity)
             Group {
-                if show.showMode { OperatorColumn() } else { CueInspector() }
+                if show.showMode { OperatorColumn() } else { VStack(spacing: 10) { EditTransport(); CueInspector() } }
             }
             .frame(width: 320)
         }
@@ -128,10 +128,73 @@ struct ShowWorkspace: View {
             }
             .frame(maxWidth: .infinity)
             Group {
-                if show.showMode { OperatorColumn() } else { CueInspector() }
+                if show.showMode { OperatorColumn() } else { VStack(spacing: 10) { EditTransport(); CueInspector() } }
             }
             .frame(width: show.showMode ? 280 : 320)
         }
+    }
+}
+
+// MARK: - Transport while editing
+
+/// GO, pause and stop in edit mode: tracks can be played and checked while the show is being built.
+struct EditTransport: View {
+    @EnvironmentObject var show: ShowStore
+    @EnvironmentObject var loc: Localizer
+
+    private var playhead: UUID? {
+        show.snapshot == .empty ? show.currentList?.cues.first?.id : show.snapshot.playhead
+    }
+
+    var body: some View {
+        let cue = show.doc.cue(playhead)
+        let ready = cue != nil
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Text(loc.t("show.next").uppercased()).font(Theme.label(10)).tracking(1.2).foregroundStyle(Theme.textSecondary)
+                Text(cue.map { [$0.number, $0.name.isEmpty ? loc.t("cue.kind.\($0.kind.rawValue)") : $0.name].filter { !$0.isEmpty }.joined(separator: " · ") }
+                     ?? loc.t("show.endOfList"))
+                    .font(.system(size: 12, weight: .semibold)).lineLimit(1)
+                    .foregroundStyle(ready ? Theme.textPrimary : Theme.textMuted)
+                Spacer(minLength: 0)
+                if !show.snapshot.running.isEmpty {
+                    Image(systemName: "play.circle.fill").font(.system(size: 12)).foregroundStyle(Theme.accent)
+                    Text("\(show.snapshot.running.count)").font(Theme.mono(12)).foregroundStyle(Theme.accent)
+                }
+            }
+            HStack(spacing: 8) {
+                Button { show.go() } label: {
+                    HStack(spacing: 6) {
+                        Text("GO").font(.system(size: 20, weight: .heavy, design: .rounded)).tracking(2)
+                        Text(loc.t("show.go.hint")).font(.system(size: 10, weight: .medium)).opacity(0.65)
+                    }
+                    .foregroundStyle(ready ? Color.black : Theme.textSecondary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(ready ? AnyShapeStyle(LinearGradient(colors: [Theme.accent, Theme.accentHot], startPoint: .top, endPoint: .bottom))
+                                        : AnyShapeStyle(Color.white.opacity(0.08)))
+                    )
+                    .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .disabled(!ready)
+                .help(loc.t("show.go.help"))
+                Button { show.anyPaused ? show.resumeAll() : show.pauseAll() } label: {
+                    Image(systemName: show.anyPaused ? "play.fill" : "pause.fill").frame(width: 18, height: 28)
+                }
+                .buttonStyle(SSMTButtonStyle(active: show.anyPaused))
+                .disabled(show.snapshot.running.isEmpty)
+                .help(loc.t(show.anyPaused ? "show.resumeAll" : "show.pauseAll"))
+                Button { show.panic() } label: {
+                    Image(systemName: "stop.fill").frame(width: 18, height: 28)
+                }
+                .buttonStyle(SSMTButtonStyle(kind: .danger))
+                .help(loc.t("show.panic.help"))
+            }
+        }
+        .glassCard(padding: 12)
     }
 }
 

@@ -92,6 +92,8 @@ struct CueListView: View {
     }
 
     private func select(_ id: UUID, rows: [(cue: Cue, depth: Int)]) {
+        // Leave any text field of the inspector, so Space is GO again and not a typed space.
+        NSApp.keyWindow?.makeFirstResponder(nil)
         let mods = NSEvent.modifierFlags
         if mods.contains(.command) {
             if show.selection.contains(id) { show.selection.remove(id) } else { show.selection.insert(id) }
