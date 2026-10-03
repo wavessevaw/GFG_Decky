@@ -921,6 +921,7 @@ static void title(void)
     if (hero.spr) SPR_setVisibility(hero.spr, HIDDEN);
     HUD_show(FALSE);
     TXT_clearCaption();
+    TXT_clearBanner();
     pageI = 0;
     mode = M_TITLE;
     PAL_fadeOutAll(16, FALSE);
@@ -986,6 +987,8 @@ void GAME_run(void)
                 break;
             case M_WIN:
                 overT++;
+                // The boss finishes falling while the hero celebrates.
+                for (u16 i = 0; i < MAX_ENEMIES; i++) if (foe[i].on) updateEnemy(&foe[i]);
                 if (hero.ground) setFrame(&hero, A_CHEER, 0);
                 if (overT == 220)
                 {
@@ -1000,6 +1003,7 @@ void GAME_run(void)
                     memcpy(palette, BG_colors(), 64);
                     PAL_fadeInAll(palette, 20, TRUE);
                 }
+                if (overT == 260) TXT_banner("ПУЛЬТ СПАСЁН. ШОУ ДОЛЖНО ПРОДОЛЖАТЬСЯ!", 18, C_YELLOW, C_INK, FALSE);
                 if (overT > 280 && (pressed & BUTTON_START)) title();
                 break;
         }
