@@ -14,9 +14,9 @@
   разборчивости, общий журнал ассистента и звукорежиссёра.
 - **Тест пульта:** отчёт по шагам.
 
-**Qtrl: аудио в шоу — как в QLab.** Добавленный трек (перетаскиванием, кнопкой «+», в кнопки one-shot) сразу
-копируется в папку медиа шоу и играет из своей копии; при сохранении все файлы собираются в папку «<имя шоу> Audio»
-рядом с файлом шоу — шоу переносится одной папкой. Если файл не удаётся скопировать или прочитать, показывается
+**Qtrl: аудио в шоу — как в QLab.** При сохранении шоу все его аудиофайлы копируются в папку «<имя шоу> Audio»
+рядом с файлом шоу и записываются относительно него — шоу переносится одной папкой. До сохранения треки играют
+с исходного места. Если файл не удаётся скопировать или прочитать, показывается
 настоящая причина от macOS, а не общее «Файл не найден». SSMT запрашивает доступ к папкам «Рабочий стол»,
 «Документы», «Загрузки» и внешним дискам с понятным объяснением.
 
@@ -40,8 +40,8 @@ with the EQ curve over the channel spectrum; show mode with the guard status, mo
 restore countdown, active corrections that can be cancelled one by one, and one log for the assistant and the
 engineer; the console test report as steps.
 
-**Qtrl: show audio as in QLab.** Added tracks are copied into the show's media folder at once and play from that
-copy; saving gathers every file into "<show name> Audio" next to the show file. A file that cannot be copied or read
+**Qtrl: show audio as in QLab.** Saving a show copies all its audio into "<show name> Audio" next to the show file
+(stored relative to it), so a show travels as one folder; before saving, tracks play from where they are. A file that cannot be copied or read
 shows the system's reason instead of a generic "File not found". Folder access prompts now explain why.
 
 **Qtrl fix:** a track dropped into the cue list now plays on GO: if its file is still being prepared, the cue waits
