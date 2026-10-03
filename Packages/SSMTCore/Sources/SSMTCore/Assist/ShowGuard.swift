@@ -50,6 +50,8 @@ public final class ShowGuard {
         public var restoreStepDB = 1.0
         /// After the engineer touches a strip the guard keeps off it for this long (s).
         public var engineerHoldSeconds = 30.0
+        /// For safety (a ringing monitor, feedback in the hall) the guard waits only this long after a touch.
+        public var safetyHoldSeconds = 3.0
         /// Ensemble channels playing at once that make a "mass scene".
         public var massSceneMinActive = 4
         /// Quiet time before a feedback notch is released (s).
@@ -69,7 +71,11 @@ public final class ShowGuard {
     public var monitorBuses: Set<Int>
     public private(set) var log: [(time: Double, action: GuardAction)] = []
 
-    struct Offset { var band: Int; var original: StripEQBand; var gainDB: Double }
+    struct Offset {
+        var band: Int; var original: StripEQBand; var gainDB: Double
+        /// A flat band borrowed and moved to this frequency (bell, Q 1).
+        var retune: Double? = nil
+    }
     var notches: [Int: (offset: Offset, frequency: Double, last: Double)] = [:]
     var unmasks: [Int: Offset] = [:]
     var tonal: [Int: Offset] = [:]
@@ -82,6 +88,7 @@ public final class ShowGuard {
     var busHistory: [Int: [Double]] = [:]
     var inputHistory: [Double] = []
     var drift: [Int: [Double]] = [:]          // EMA of bands per channel
+    var previousBands: [Int: [[Double]]] = [:]  // the last three seconds' spectra per channel
     var lastMassScene = -1e9
     let kinds: [Int: SourceKind]
 
@@ -104,6 +111,8 @@ public final class ShowGuard {
         for o in [notches[ch]?.offset, unmasks[ch], tonal[ch]].compactMap({ $0 }) where o.band < s.eq.count {
             if notches[ch]?.offset.band == o.band, let n = notches[ch] {
                 s.eq[o.band] = StripEQBand(type: .peaking, frequency: n.frequency, gainDB: n.offset.gainDB, q: 8)
+            } else if let f = o.retune {
+                s.eq[o.band] = StripEQBand(type: .peaking, frequency: f, gainDB: o.gainDB, q: 1.0)
             } else {
                 s.eq[o.band].gainDB = max(-15, min(15, s.eq[o.band].gainDB + o.gainDB))
             }
@@ -122,6 +131,15 @@ public final class ShowGuard {
     public func consoleChanged(_ s: ChannelStrip, time: Double) {
         guard let shown = strip(s.id) else { base[s.id] = s; return }
         if Self.same(shown, s) { return }
+        // A fader ride or a mute is the engineer mixing, not taking over the channel's EQ: keep the corrections.
+        var ride = shown
+        ride.faderDB = s.faderDB
+        ride.muted = s.muted
+        if Self.same(ride, s) {
+            base[s.id]?.faderDB = s.faderDB
+            base[s.id]?.muted = s.muted
+            return
+        }
         base[s.id] = s
         hands[s.id] = time
         let had = notches[s.id] != nil || unmasks[s.id] != nil || tonal[s.id] != nil
@@ -148,6 +166,11 @@ public final class ShowGuard {
         return true
     }
 
+    /// EQ bands of a channel the guard already uses.
+    func used(_ ch: Int) -> Set<Int> {
+        Set([notches[ch]?.offset.band, unmasks[ch]?.band, tonal[ch]?.band].compactMap { $0 })
+    }
+
     func handsOff(_ ch: Int, _ t: Double) -> Bool { (hands[ch].map { t - $0 < settings.engineerHoldSeconds }) ?? false }
     func record(_ t: Double, _ a: GuardAction) { log.append((t, a)); if log.count > 500 { log.removeFirst(100) } }
 
@@ -167,6 +190,10 @@ public final class ShowGuard {
         let mark = log.count
 
         hall(t, channels, hallFeedback)
+        for (k, f) in channels where f.bandsDB.contains(where: { $0 > -119 }) {
+            previousBands[k, default: []].append(f.bandsDB)
+            if previousBands[k]!.count > 3 { previousBands[k]!.removeFirst() }
+        }
         monitors(t, channels, busLevels, stageFeedback)
         massScene(t, channels)
         tonalDrift(t, channels)
@@ -183,8 +210,8 @@ public final class ShowGuard {
     }
 
     /// Band the guard may borrow: the one nearest `f` that is nearly flat, else the nearest peaking band.
-    func bandFor(_ s: ChannelStrip, near f: Double, allowRetune: Bool) -> Int? {
-        let idx = s.eq.indices.sorted { abs(log2(s.eq[$0].frequency / f)) < abs(log2(s.eq[$1].frequency / f)) }
+    func bandFor(_ s: ChannelStrip, near f: Double, allowRetune: Bool, exclude: Set<Int> = []) -> Int? {
+        let idx = s.eq.indices.filter { !exclude.contains($0) }.sorted { abs(log2(s.eq[$0].frequency / f)) < abs(log2(s.eq[$1].frequency / f)) }
         if allowRetune, let flat = idx.first(where: { abs(s.eq[$0].gainDB) < 0.5 }) { return flat }
         return idx.first { s.eq[$0].type == .peaking && abs(log2(s.eq[$0].frequency / f)) < 0.75 }
     }
@@ -193,8 +220,10 @@ public final class ShowGuard {
 
     func hall(_ t: Double, _ ch: [Int: SignalFeatures], _ events: [FeedbackDetector.Event]) {
         for e in events {
+            // The same howl dying away after a fresh notch: neither deepen nor blame another channel.
+            if notches.values.contains(where: { abs(log2($0.frequency / e.frequency)) < 1.0 / 6 && t - $0.last < 5 }) { continue }
             let b = ThirdOctave.index(of: e.frequency)
-            let culprit = base.values.filter { !$0.muted && $0.faderDB > -60 && !handsOff($0.id, t) }
+            let culprit = base.values.filter { !$0.muted && $0.faderDB > -60 && !((hands[$0.id].map { t - $0 < settings.safetyHoldSeconds }) ?? false) }
                 .max { score($0, b, ch) < score($1, b, ch) }
             guard let s = culprit else { continue }
             if var n = notches[s.id], abs(log2(n.frequency / e.frequency)) < 1.0 / 6 {
@@ -202,7 +231,10 @@ public final class ShowGuard {
                 n.last = t
                 notches[s.id] = n
                 record(t, .notch(channel: s.id, frequency: n.frequency, depthDB: n.offset.gainDB))
-            } else if notches[s.id] == nil, let band = bandFor(s, near: e.frequency, allowRetune: true) {
+            } else if notches[s.id].map({ t - $0.last > 10 }) ?? true,
+                      let band = bandFor(s, near: e.frequency, allowRetune: true,
+                                         exclude: used(s.id).subtracting([notches[s.id]?.offset.band].compactMap { $0 })) {
+                // A new problem on this channel replaces an old notch that has been quiet for a while.
                 notches[s.id] = (Offset(band: band, original: s.eq[band], gainDB: -4), (e.frequency * 10).rounded() / 10, t)
                 unmasks[s.id] = unmasks[s.id]?.band == band ? nil : unmasks[s.id]
                 tonal[s.id] = tonal[s.id]?.band == band ? nil : tonal[s.id]
@@ -217,9 +249,12 @@ public final class ShowGuard {
         }
     }
 
+    /// The channel feeding a loop hears the howl in its own microphone: its energy at that frequency jumps.
+    /// So the rise over the last seconds counts most; how loud the channel is sent to the room breaks ties.
     func score(_ s: ChannelStrip, _ band: Int, _ ch: [Int: SignalFeatures]) -> Double {
-        let level = ch[s.id].map { $0.bandsDB[band] > -119 ? $0.bandsDB[band] : $0.rmsDB - 15 } ?? -100
-        return level + s.faderDB
+        let now = ch[s.id].map { $0.bandsDB[band] > -119 ? $0.bandsDB[band] : $0.rmsDB - 15 } ?? -100
+        let before = previousBands[s.id]?.map { $0[band] }.filter { $0 > -119 }.min() ?? now
+        return (now - before) + 0.2 * (now + s.faderDB)
     }
 
     // MARK: monitor loops → dip the bus, then bring it back
@@ -253,7 +288,7 @@ public final class ShowGuard {
             if let r = rising { looping.insert(r) }
         }
         for id in looping {
-            guard let b = buses[id], !(busHands[id].map { t - $0 < settings.engineerHoldSeconds } ?? false) else { continue }
+            guard let b = buses[id], !(busHands[id].map { t - $0 < settings.safetyHoldSeconds } ?? false) else { continue }
             var d = dips[id] ?? (b.faderDB, 0, nil)
             guard d.dipDB < settings.monitorMaxDipDB else { continue }
             // First time: pull down and later bring it all the way back. If it rings again, it is the setting
@@ -306,7 +341,7 @@ public final class ShowGuard {
                 for k in activeEns where !handsOff(k, t) {
                     guard let s = base[k] else { continue }
                     var o = unmasks[k] ?? {
-                        guard let band = bandFor(s, near: 3000, allowRetune: false), notches[k]?.offset.band != band, tonal[k]?.band != band else { return nil }
+                        guard let band = bandFor(s, near: 3000, allowRetune: false, exclude: used(k)) else { return nil }
                         return Offset(band: band, original: s.eq[band], gainDB: 0)
                     }() ?? Offset(band: -1, original: StripEQBand(frequency: 3000), gainDB: 0)
                     guard o.band >= 0, o.gainDB > -settings.maxEQOffsetDB else { continue }
@@ -343,13 +378,14 @@ public final class ShowGuard {
             let excess = tilt(e) - tilt(ref)
             if excess > 4 {
                 var o = tonal[k] ?? {
-                    guard let band = bandFor(s, near: 250, allowRetune: false), notches[k]?.offset.band != band, unmasks[k]?.band != band else { return nil }
-                    return Offset(band: band, original: s.eq[band], gainDB: 0)
+                    guard let band = bandFor(s, near: 250, allowRetune: true, exclude: used(k)) else { return nil }
+                    let flat = abs(s.eq[band].gainDB) < 0.5
+                    return Offset(band: band, original: s.eq[band], gainDB: 0, retune: flat ? 250 : nil)
                 }() ?? Offset(band: -1, original: StripEQBand(frequency: 250), gainDB: 0)
                 guard o.band >= 0, o.gainDB > -settings.maxEQOffsetDB else { continue }
                 o.gainDB = max(o.gainDB - 1, -settings.maxEQOffsetDB)
                 tonal[k] = o
-                record(t, .tonalHold(channel: k, frequency: s.eq[o.band].frequency, offsetDB: o.gainDB))
+                record(t, .tonalHold(channel: k, frequency: o.retune ?? s.eq[o.band].frequency, offsetDB: o.gainDB))
             } else if excess < 2, var o = tonal[k] {
                 o.gainDB = min(0, o.gainDB + settings.restoreStepDB)
                 if o.gainDB >= 0 { tonal[k] = nil; record(t, .tonalReleased(channel: k)) } else { tonal[k] = o }

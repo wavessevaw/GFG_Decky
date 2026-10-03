@@ -91,9 +91,15 @@ public final class FeedbackDetector {
                 t.maxProm = max(t.maxProm, prom)
                 next.append(t)
                 let growth = t.lastDB - t.firstDB
-                let growing = t.frames >= 5 && growth >= 4 && t.rising * 2 >= t.frames
-                let holding = t.frames >= steadyFrames && t.maxProm >= prominenceDB + 5
-                if growing || holding {
+                // Feedback climbs fast (tens of dB per second); a crescendo is slower.
+                let seconds = Double(t.frames) * Double(size / 2) / sampleRate
+                let growing = t.frames >= 5 && growth >= 6 && growth / seconds >= 9 && t.rising * 2 >= t.frames
+                // Holding: long, prominent and not dying away (a fading note is not feedback).
+                let holding = t.frames >= steadyFrames && t.maxProm >= prominenceDB + 5 && growth > -2
+                // Feedback is one pure tone; a played note comes with its harmonics (a crescendo grows too).
+                // Feedback is caught while it is still pure, before the system clips and adds harmonics.
+                let note = hasHarmonics(db, bin)
+                if (growing || holding) && !note {
                     events.append(Event(frequency: refine(db, bin) , prominenceDB: t.maxProm, growthDB: growth, levelDB: level))
                 }
             } else {
@@ -102,6 +108,22 @@ public final class FeedbackDetector {
         }
         tracks = next
         return events
+    }
+
+    /// True when the peak at `k` has a harmonic partner (f/2, 2f or 3f) standing out of its own neighbourhood.
+    func hasHarmonics(_ db: [Double], _ k: Int) -> Bool {
+        for m in [0.5, 2.0, 3.0] {
+            let c = Int((Double(k) * m).rounded())
+            guard c > 4, c < db.count - 4 else { continue }
+            let lo = max(1, c - 2), hi = min(db.count - 2, c + 2)
+            guard let peak = (lo...hi).max(by: { db[$0] < db[$1] }) else { continue }
+            let f = Double(peak) * sampleRate / Double(size)
+            let a = max(1, Int(f / pow(2, 1.0 / 6) * Double(size) / sampleRate)), b = min(db.count - 1, Int(f * pow(2, 1.0 / 6) * Double(size) / sampleRate))
+            guard b - a >= 4 else { continue }
+            let med = db[a...b].sorted()[(b - a + 1) / 2]
+            if db[peak] - med >= 6 && db[peak] > db[k] - 30 { return true }
+        }
+        return false
     }
 
     /// Parabolic interpolation of the peak frequency.

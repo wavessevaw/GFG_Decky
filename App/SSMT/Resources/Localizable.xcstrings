@@ -2416,6 +2416,278 @@
         }
       }
     },
+    "assist.sim.bus": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: monitor %.1f dB"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: монитор %.1f дБ"
+          }
+        }
+      }
+    },
+    "assist.sim.fader": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: fader %.1f dB"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: фейдер %.1f дБ"
+          }
+        }
+      }
+    },
+    "assist.sim.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A made-up show plays on the console: musicians come and go by scene and a virtual engineer rides the faders (motor faders move on a real X32). The guard backs him up as in a real show."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "На пульте разыгрывается выдуманное шоу: музыканты вступают и уходят по сценам, виртуальный звукорежиссёр двигает фейдеры (на настоящем X32 едут моторные фейдеры). Страховка работает как на настоящем шоу."
+          }
+        }
+      }
+    },
+    "assist.sim.log": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The engineer (simulation)"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Звукорежиссёр (симуляция)"
+          }
+        }
+      }
+    },
+    "assist.sim.scene": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scene %ld s"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сцена %ld с"
+          }
+        }
+      }
+    },
+    "assist.sim.scene.ballad": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ballad: the singer close to the mic"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Баллада: певец близко к микрофону"
+          }
+        }
+      }
+    },
+    "assist.sim.scene.chorus": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chorus: everyone (mass scene)"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Припев: все вместе (массовая сцена)"
+          }
+        }
+      }
+    },
+    "assist.sim.scene.hotVocal": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The lead pushed too hot"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Солист выведен слишком громко"
+          }
+        }
+      }
+    },
+    "assist.sim.scene.intro": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intro: the band"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вступление: группа"
+          }
+        }
+      }
+    },
+    "assist.sim.scene.monitorPush": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The choir asks for more in the wedges"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Хор просит громче в мониторах"
+          }
+        }
+      }
+    },
+    "assist.sim.scene.outro": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Outro: fade out"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Финал: всё уводится"
+          }
+        }
+      }
+    },
+    "assist.sim.scene.verse": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verse: the lead sings"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Куплет: поёт солист"
+          }
+        }
+      }
+    },
+    "assist.sim.start": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start the show"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Запустить шоу"
+          }
+        }
+      }
+    },
+    "assist.sim.stop": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop the show"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Остановить шоу"
+          }
+        }
+      }
+    },
+    "assist.sim.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show simulation"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Симуляция шоу"
+          }
+        }
+      }
+    },
+    "assist.sim.warning": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Names, faders and monitors 1–4 of the channels used change during the simulation and are restored when it stops. Save a scene first; mute the main output if the PA is on."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Названия, фейдеры и мониторы 1–4 задействованных каналов меняются во время симуляции и возвращаются при остановке. Сначала сохраните сцену; если порталы включены — заглушите главный выход."
+          }
+        }
+      }
+    },
     "assist.soon": {
       "extractionState": "manual",
       "localizations": {

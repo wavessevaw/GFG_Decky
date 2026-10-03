@@ -31,6 +31,10 @@ public final class SimulatedConsole {
     /// Stage monitor mixes. A bus starts to ring when its fader goes above `loopAtDB`.
     public private(set) var buses: [Int: BusStrip] = [:]
     public var loopAtDB: [Int: Double] = [:]
+    /// Musicians not playing right now (show simulation).
+    public var silent: Set<Int> = []
+    /// Extra low-mid boost (dB) of a singer leaning into the microphone (proximity effect).
+    public var proximityDB: [Int: Double] = [:]
     var busHowl: [Int: Double] = [:]
     var rng: UInt64
     var time = 0.0
@@ -132,8 +136,11 @@ public final class SimulatedConsole {
             } else {
                 x = raw(ch)
             }
-            // Microphone colouring, then preamp gain.
-            x = filter(x, src.coloring.map { $0.biquad(sampleRate: sampleRate) })
+            if silent.contains(src.sameSourceAs ?? ch) { x = [Double](repeating: 0, count: n) }
+            // Microphone colouring (and proximity boom), then preamp gain.
+            var col = src.coloring
+            if let p = proximityDB[ch], p > 0 { col.append(StripEQBand(type: .peaking, frequency: 220, gainDB: p, q: 0.9)) }
+            x = filter(x, col.map { $0.biquad(sampleRate: sampleRate) })
             let g = pow(10, (strip.gainDB + src.levelDB) / 20)
             let pol = strip.polarityInverted ? -1.0 : 1.0
             for i in 0..<n { x[i] *= g * pol }
@@ -151,9 +158,11 @@ public final class SimulatedConsole {
         // Feedback: a room mode howls when any channel's loop gain there exceeds 0 dB.
         for (fr, modeDB) in roomModes {
             var loop = -200.0
+            var culprit: Int?
             for (ch, src) in sources {
                 guard let s = strips[ch], !s.muted, s.faderDB > -90 else { continue }
-                loop = max(loop, s.faderDB + s.gainDB - 20 + src.couplingDB + modeDB + s.filterResponseDB(at: fr, sampleRate: sampleRate))
+                let l = s.faderDB + s.gainDB - 20 + src.couplingDB + modeDB + s.filterResponseDB(at: fr, sampleRate: sampleRate)
+                if l > loop { loop = l; culprit = ch }
             }
             var a = howl[fr] ?? 0
             if loop > 0 { a = max(a, 0.002) * pow(10, min(loop, 6) / 20 * 4) } else { a *= 0.05 }
@@ -163,6 +172,14 @@ public final class SimulatedConsole {
                 for i in 0..<n {
                     let ramp = loop > 0 ? Double(i) / Double(n) : 1 - Double(i) / Double(n)
                     mic[i] += a * (0.3 + 0.7 * ramp) * sin(2 * .pi * fr * (time + Double(i) / sampleRate))
+                }
+                // The microphone in the loop hears the howl too.
+                if let c = culprit, var x = taps[c], loop > -6 {
+                    for i in 0..<x.count {
+                        let ramp = loop > 0 ? Double(i) / Double(n) : 1 - Double(i) / Double(n)
+                        x[i] += Float(a * 0.5 * (0.3 + 0.7 * ramp) * sin(2 * .pi * fr * (time + Double(i) / sampleRate)))
+                    }
+                    taps[c] = x
                 }
             }
         }

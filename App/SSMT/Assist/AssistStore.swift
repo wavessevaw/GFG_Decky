@@ -140,6 +140,15 @@ final class AssistStore: ObservableObject {
     @Published var testMuteMain = true
     @Published private(set) var testChecks: [ConsoleTestCheck] = []
     @Published private(set) var testing = false
+    // Show simulation: a made-up show with a virtual engineer riding the faders; the guard runs alongside.
+    @Published private(set) var rehearsing = false
+    @Published private(set) var rehearsalScene: ShowRehearsal.Scene?
+    @Published private(set) var rehearsalLog: [(time: Double, event: ShowRehearsal.Event)] = []
+    @Published var rehearsalSceneSeconds = 20.0
+    private var rehearsal: ShowRehearsal?
+    private var rehearsalBackup: (strips: [Int: ChannelStrip], buses: [Int: BusStrip])?
+    private let rehearsalQueue = DispatchQueue(label: "ssmt.assist.rehearsal")
+    private var rehearsalBusy = false
 
     /// Microphones of the function #1 library, the selected one and the SPL calibration (set by AppModel).
     var micLibrary: () -> (mics: [MicrophoneCalibration], selected: UUID?, spl: SPLCalibration?) = { ([], nil, nil) }
@@ -219,6 +228,7 @@ final class AssistStore: ObservableObject {
     }
 
     func disconnect() {
+        stopRehearsal()
         stopJob()
         stopGuard()
         link?.stop()
@@ -455,6 +465,114 @@ final class AssistStore: ObservableObject {
                 if let self, let link = self.link { link.queryAll(channels: self.family.channelCount) }
             }
         }
+    }
+
+    // MARK: show simulation
+
+    /// Plays a made-up show on the console: channel names, musicians coming and going by scene, a virtual
+    /// engineer riding faders (motor faders move on a real X32), and the show guard reacting. On a real console
+    /// the channels and monitors used are backed up first and restored when the simulation stops.
+    func startRehearsal() {
+        guard !rehearsing else { return }
+        stopJob()
+        stopGuard()
+        let scenario = AssistScenario.all.first { $0.id == testScenario } ?? .musical
+        let fam: MixerFamily = family == .xAir ? .xAir : .x32
+        let first = min(testFirst, max(1, fam.channelCount - scenario.channels.count + 1))
+        let console = SimulatedConsole.scenario(scenario, first: first)
+        let r = ShowRehearsal(console: console, character: character, sceneSeconds: rehearsalSceneSeconds)
+        rehearsal = r
+        guardian = r.guardian
+        guarding = true
+        rehearsing = true
+        rehearsalLog = []
+        guardLog = []
+        let chans = console.strips.keys.sorted()
+        if family == .x32 || family == .xAir {
+            let t = UDPConsoleTransport(host: host, port: family.defaultPort)
+            Task { [weak self] in
+                let backup = await ConsoleBackup.read(t, channels: chans, buses: Array(1...4), family: fam)
+                t.close()
+                guard let self, self.rehearsing else { return }
+                self.rehearsalBackup = backup
+                // Names, the starting faders and the monitor buses of the made-up show.
+                for s in r.strips.values { self.link?.send(X32Codec.messages(from: nil, to: s, family: fam)) }
+                for b in r.buses.values { self.link?.send(X32Codec.busMessages(from: nil, to: b, family: fam) + [OSCMessage(X32Codec.busPath(b.id, family: fam) + "/config/name", [.string(b.name)])]) }
+                self.beginRehearsalClock()
+            }
+        } else {
+            beginRehearsalClock()
+        }
+        for s in r.strips.values { stripMap[s.id] = s }
+        strips = stripMap.values.sorted { $0.id < $1.id }
+        for b in r.buses.values { busMap[b.id] = b }
+        buses = busMap.values.sorted { $0.id < $1.id }
+    }
+
+    private func beginRehearsalClock() {
+        timer?.invalidate()
+        timer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.rehearsalTick() }
+        }
+    }
+
+    private func rehearsalTick() {
+        guard let r = rehearsal, !rehearsalBusy else { return }
+        rehearsalBusy = true
+        // The show (and its audio analysis) runs off the main thread; the console and the screen are updated here.
+        rehearsalQueue.async { [weak self] in
+            let out = r.step(dt: 0.25)
+            let scene = r.scene
+            let events = Array(r.events.suffix(80))
+            let glog = Array(r.guardian.log.suffix(200))
+            DispatchQueue.main.async {
+                guard let self, self.rehearsal === r else { return }
+                self.rehearsalBusy = false
+                let fam: MixerFamily = self.family == .xAir ? .xAir : .x32
+                for s in out.strips {
+                    self.link?.send(X32Codec.messages(from: self.stripMap[s.id], to: s, family: fam))
+                    self.stripMap[s.id] = s
+                }
+                for b in out.buses {
+                    self.link?.send(X32Codec.busMessages(from: self.busMap[b.id], to: b, family: fam))
+                    self.busMap[b.id] = b
+                }
+                if !out.strips.isEmpty { self.strips = self.stripMap.values.sorted { $0.id < $1.id } }
+                if !out.buses.isEmpty { self.buses = self.busMap.values.sorted { $0.id < $1.id } }
+                self.rehearsalScene = scene
+                self.rehearsalLog = events.filter { if case .engineerFader = $0.event { return false }; return true }
+                self.guardLog = glog
+            }
+        }
+    }
+
+    func stopRehearsal() {
+        guard rehearsing else { return }
+        timer?.invalidate()
+        timer = nil
+        rehearsing = false
+        rehearsalScene = nil
+        if let r = rehearsal {
+            let (s, b) = r.guardian.releaseAll()
+            for x in s { stripMap[x.id] = x }
+            for x in b { busMap[x.id] = x }
+        }
+        rehearsal = nil
+        guardian = nil
+        guarding = false
+        // Put the console back as it was before the simulation.
+        if let backup = rehearsalBackup, let link {
+            let fam: MixerFamily = family == .xAir ? .xAir : .x32
+            for s in backup.strips.values { link.send(X32Codec.messages(from: nil, to: s, family: fam)); stripMap[s.id] = s }
+            for b in backup.buses.values {
+                link.send(X32Codec.busMessages(from: nil, to: b, family: fam) + [OSCMessage(X32Codec.busPath(b.id, family: fam) + "/config/name", [.string(b.name)])])
+                busMap[b.id] = b
+            }
+            link.queryAll(channels: family.channelCount)
+        }
+        rehearsalBackup = nil
+        strips = stripMap.values.sorted { $0.id < $1.id }
+        buses = busMap.values.sorted { $0.id < $1.id }
     }
 
     // MARK: per-channel state for the table

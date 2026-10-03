@@ -53,7 +53,13 @@ struct AssistWorkspace: View {
                         Panel(title: loc.t("assist.guard"), tint: Theme.signalYellow) { GuardPanel() }
                             .frame(width: 400)
                     }
-                    Panel(title: loc.t("assist.guard.log"), tint: Theme.dataSecondary) { GuardLogView() }
+                    HStack(alignment: .top, spacing: 16) {
+                        Panel(title: loc.t("assist.guard.log"), tint: Theme.dataSecondary) { GuardLogView() }
+                        if store.rehearsing || !store.rehearsalLog.isEmpty {
+                            Panel(title: loc.t("assist.sim.log"), tint: Theme.dataBlue) { RehearsalLogView() }
+                                .frame(width: 420)
+                        }
+                    }
                 }
             }
             .padding(.horizontal, 4)
@@ -314,7 +320,9 @@ private struct GuardPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
+            RehearsalControls()
+            Divider()
+            if !store.rehearsing { HStack(spacing: 8) {
                 if store.guarding {
                     Button { store.stopGuard() } label: { Label(loc.t("assist.guard.off"), systemImage: "shield.slash") }
                         .buttonStyle(SSMTButtonStyle(kind: .danger))
@@ -324,7 +332,7 @@ private struct GuardPanel: View {
                         .buttonStyle(SSMTButtonStyle(kind: .primary))
                         .disabled(!store.isConnected)
                 }
-            }
+            } }
             Text(loc.t("assist.guard.hint")).font(.system(size: 11)).foregroundStyle(Theme.textSecondary)
             if let g = store.guardian {
                 Text(loc.t("assist.guard.monitors")).font(Theme.label(12)).foregroundStyle(Theme.textSecondary)
@@ -453,6 +461,74 @@ private struct ConsoleTestReport: View {
         case .ok: return .good
         case .warning, .running: return .warning
         case .failed: return .error
+        }
+    }
+}
+
+private struct RehearsalControls: View {
+    @EnvironmentObject var store: AssistStore
+    @EnvironmentObject var loc: Localizer
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(loc.t("assist.sim.title")).font(Theme.label(12)).foregroundStyle(Theme.textSecondary)
+            Text(loc.t("assist.sim.hint")).font(.system(size: 11)).foregroundStyle(Theme.textMuted)
+            HStack(spacing: 8) {
+                Picker("", selection: $store.testScenario) {
+                    ForEach(AssistScenario.all) { s in Text(loc.t("assist.scenario.\(s.id)")).tag(s.id) }
+                }
+                .labelsHidden()
+                .frame(width: 170)
+                .disabled(store.rehearsing)
+                Stepper(String(format: loc.t("assist.sim.scene"), Int(store.rehearsalSceneSeconds)), value: $store.rehearsalSceneSeconds, in: 10...60, step: 5)
+                    .font(.system(size: 12))
+                    .disabled(store.rehearsing)
+            }
+            HStack(spacing: 8) {
+                if store.rehearsing {
+                    Button { store.stopRehearsal() } label: { Label(loc.t("assist.sim.stop"), systemImage: "stop.fill") }
+                        .buttonStyle(SSMTButtonStyle(kind: .danger))
+                    if let sc = store.rehearsalScene {
+                        StatusBadge(level: .warning, text: loc.t("assist.sim.scene.\(sc.rawValue)"))
+                    }
+                } else {
+                    Button { store.startRehearsal() } label: { Label(loc.t("assist.sim.start"), systemImage: "play.fill") }
+                        .buttonStyle(SSMTButtonStyle(kind: .primary))
+                        .disabled(!store.isConnected || store.guarding)
+                }
+            }
+            if store.family == .x32 || store.family == .xAir {
+                Label(loc.t("assist.sim.warning"), systemImage: "exclamationmark.triangle.fill")
+                    .font(.system(size: 11)).foregroundStyle(Theme.statusWarning)
+            }
+        }
+    }
+}
+
+private struct RehearsalLogView: View {
+    @EnvironmentObject var store: AssistStore
+    @EnvironmentObject var loc: Localizer
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            ForEach(Array(store.rehearsalLog.suffix(30).reversed().enumerated()), id: \.offset) { _, e in
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(String(format: "%02d:%02d", Int(e.time) / 60, Int(e.time) % 60)).monospacedDigit()
+                        .frame(width: 46, alignment: .trailing).foregroundStyle(Theme.textMuted)
+                    Text(text(e.event))
+                }
+                .font(.system(size: 12))
+            }
+        }
+    }
+
+    private func text(_ e: ShowRehearsal.Event) -> String {
+        switch e {
+        case let .scene(sc): return "▶ " + loc.t("assist.sim.scene.\(sc.rawValue)")
+        case let .engineerFader(ch, db):
+            return String(format: loc.t("assist.sim.fader"), store.strips.first { $0.id == ch }?.name ?? "\(ch)", db)
+        case let .engineerBus(b, db):
+            return String(format: loc.t("assist.sim.bus"), store.buses.first { $0.id == b }?.name ?? "Bus \(b)", db)
         }
     }
 }

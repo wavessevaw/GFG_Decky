@@ -286,3 +286,26 @@ public final class ConsoleEmulator: ConsoleTransport {
         return outbox.first { $0.address.hasPrefix(prefix) }
     }
 }
+
+/// Reading a console's channels and monitor buses before the assistant plays on it, and putting them back.
+public enum ConsoleBackup {
+    public static func read(_ t: ConsoleTransport, channels: [Int], buses: [Int], family: MixerFamily) async -> ([Int: ChannelStrip], [Int: BusStrip]) {
+        var strips = Dictionary(uniqueKeysWithValues: channels.map { ($0, ChannelStrip(id: $0)) })
+        for m in await t.query(channels.flatMap { X32Codec.queryAddresses($0, family: family) }, timeout: 1.5) {
+            X32Codec.apply(m, to: &strips, family: family)
+        }
+        var bs = Dictionary(uniqueKeysWithValues: buses.map { ($0, BusStrip(id: $0)) })
+        for m in await t.query(buses.flatMap { X32Codec.busQueryAddresses($0, family: family) }, timeout: 1.5) {
+            X32Codec.apply(m, toBuses: &bs)
+        }
+        return (strips, bs)
+    }
+
+    public static func restore(_ t: ConsoleTransport, strips: [Int: ChannelStrip], buses: [Int: BusStrip], family: MixerFamily) {
+        for s in strips.values.sorted(by: { $0.id < $1.id }) { t.send(X32Codec.messages(from: nil, to: s, family: family)) }
+        for b in buses.values.sorted(by: { $0.id < $1.id }) {
+            t.send(X32Codec.busMessages(from: nil, to: b, family: family)
+                   + [OSCMessage(X32Codec.busPath(b.id, family: family) + "/config/name", [.string(b.name)])])
+        }
+    }
+}

@@ -106,7 +106,31 @@ final class ShowGuardTests: XCTestCase {
         g.consoleChanged(bus: BusStrip(id: 1, name: "Mon Vox", faderDB: -6), time: t)
         XCTAssertEqual(g.bus(1)!.faderDB, -6, accuracy: 0.01)
         XCTAssertTrue(g.log.contains { $0.action == .yielded(channel: nil, bus: 1) })
-        for l in [-25.0, -25, -25, -10, -10] { let r = g.step(time: t, channels: inputs, busLevels: [1: l]); t += 1; XCTAssertTrue(r.buses.isEmpty) }
+        // Right after the touch the guard does not fight the engineer's hand…
+        for l in [-10.0, -10] { let r = g.step(time: t, channels: inputs, busLevels: [1: l]); t += 1; XCTAssertTrue(r.buses.isEmpty) }
+        // …but a monitor still ringing a few seconds later is a safety matter: it is pulled down again.
+        var acted = false
+        for l in [-25.0, -25, -25, -25, -10, -10] {
+            let r = g.step(time: t, channels: inputs, busLevels: [1: l]); t += 1
+            if !r.buses.isEmpty { acted = true }
+        }
+        XCTAssertTrue(acted)
+        XCTAssertEqual(g.bus(1)!.faderDB, -9, accuracy: 0.01)
+    }
+
+    func testFaderRideKeepsTheGuardsEQ() {
+        let g = makeGuard()
+        var scene: [Int: SignalFeatures] = [1: feature(rms: -20, presence: -26)]
+        for i in 2...6 { scene[i] = feature(rms: -20, presence: -24) }
+        for t in 0..<3 { _ = g.step(time: Double(t), channels: scene, busLevels: [:]) }
+        XCTAssertLessThan(g.strip(3)!.eq[2].gainDB, 0)
+        // The engineer rides the choir fader: the unmasking stays.
+        var ride = g.strip(3)!
+        ride.faderDB = -6
+        g.consoleChanged(ride, time: 3)
+        XCTAssertLessThan(g.strip(3)!.eq[2].gainDB, 0)
+        XCTAssertEqual(g.strip(3)!.faderDB, -6)
+        XCTAssertFalse(g.log.contains { $0.action == .yielded(channel: 3, bus: nil) })
     }
 
     func testMassSceneUnmasksTheLeadAndReleases() {
