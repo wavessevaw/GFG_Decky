@@ -197,6 +197,9 @@ final class ShowStore: ObservableObject {
     // MARK: QLab import
 
     @Published var showQLabImport = false
+    /// A QLab file chosen with Open: the import window reads it when it appears.
+    var pendingQLabFile: URL?
+    static let qlabTypes: [UTType] = ["qlab5", "qlab4", "qlab3"].compactMap { UTType(filenameExtension: $0) }
 
     /// Replaces the show with an imported QLab workspace (one undo step). Keeps this Mac's audio
     /// interface, outputs and OSC devices. Relative file paths are resolved against `baseFolder`.
@@ -657,8 +660,13 @@ final class ShowStore: ObservableObject {
 
     func open() {
         let panel = NSOpenPanel()
-        panel.allowedContentTypes = [Self.fileType, .json]
+        panel.allowedContentTypes = [Self.fileType, .json] + Self.qlabTypes
         guard panel.runModal() == .OK, let url = panel.url else { return }
+        if url.pathExtension.lowercased().hasPrefix("qlab") {
+            pendingQLabFile = url
+            showQLabImport = true
+            return
+        }
         do {
             let d = try ShowDocument.decode(Data(contentsOf: url))
             run { e, now in e.panic(now: now, hard: true) }

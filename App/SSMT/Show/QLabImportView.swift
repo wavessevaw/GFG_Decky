@@ -42,6 +42,12 @@ struct QLabImportView: View {
         .padding(20)
         .frame(width: 600, height: 560, alignment: .topLeading)
         .background(Backdrop())
+        .onAppear {
+            if let url = show.pendingQLabFile {
+                show.pendingQLabFile = nil
+                importFile(url)
+            }
+        }
     }
 
     // MARK: From a running QLab
@@ -134,6 +140,10 @@ struct QLabImportView: View {
         panel.allowedContentTypes = ["qlab5", "qlab4", "qlab3"].compactMap { UTType(filenameExtension: $0) } + [.data, .package]
         panel.treatsFilePackagesAsDirectories = false
         guard panel.runModal() == .OK, let url = panel.url else { return }
+        importFile(url)
+    }
+
+    private func importFile(_ url: URL) {
         error = nil
         var candidates: [URL] = []
         var isDir: ObjCBool = false
