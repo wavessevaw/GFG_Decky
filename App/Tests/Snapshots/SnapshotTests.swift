@@ -274,6 +274,17 @@ final class SnapshotTests: XCTestCase {
         try snapshot(GameLauncherView(), size: CGSize(width: 1030, height: 540), name: "game-launcher", loc: Self.ru)
     }
 
+    func testAssistWorkspace() throws {
+        let store = Self.model.assist
+        store.family = .simulator
+        store.character = .musical
+        store.connect()
+        store.tune(.choir)
+        store.runNow(steps: 14)
+        try snapshot(AssistWorkspace(), size: CGSize(width: 1500, height: 1250), name: "assist", loc: Self.ru)
+        store.disconnect()
+    }
+
     func testInputListPrintSheets() throws {
         let doc = Self.sampleInputList
         try snapshot(ChannelSheet(doc: doc, rows: doc.channelPages(rowsPerPage: InputListPrint.rowsPerPage)[0], page: "1 / 3"),

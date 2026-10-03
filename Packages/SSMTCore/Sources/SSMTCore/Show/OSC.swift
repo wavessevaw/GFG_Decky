@@ -7,6 +7,8 @@ public enum OSCArgument: Codable, Equatable, Sendable {
     case float(Float)
     case string(String)
     case bool(Bool)
+    /// Binary blob (console meters arrive this way).
+    case blob(Data)
 
     var tag: Character {
         switch self {
@@ -14,6 +16,7 @@ public enum OSCArgument: Codable, Equatable, Sendable {
         case .float: return "f"
         case .string: return "s"
         case let .bool(b): return b ? "T" : "F"
+        case .blob: return "b"
         }
     }
 
@@ -24,6 +27,7 @@ public enum OSCArgument: Codable, Equatable, Sendable {
         case let .float(v): return String(format: "%g", v)
         case let .string(s): return "\"\(s)\""
         case let .bool(b): return b ? "true" : "false"
+        case let .blob(d): return "<\(d.count) bytes>"
         }
     }
 }
@@ -50,6 +54,10 @@ public struct OSCMessage: Equatable, Sendable {
             case let .float(v): withUnsafeBytes(of: v.bitPattern.bigEndian) { d.append(contentsOf: $0) }
             case let .string(s): Self.appendString(s, to: &d)
             case .bool: break
+            case let .blob(b):
+                withUnsafeBytes(of: UInt32(b.count).bigEndian) { d.append(contentsOf: $0) }
+                d.append(b)
+                while d.count % 4 != 0 { d.append(0) }
             }
         }
         return d
@@ -100,6 +108,10 @@ public struct OSCMessage: Equatable, Sendable {
             case "s": guard let s = readString() else { return nil }; args.append(.string(s))
             case "T": args.append(.bool(true))
             case "F": args.append(.bool(false))
+            case "b":
+                guard let n = read32(), i + Int(n) <= bytes.count else { return nil }
+                args.append(.blob(Data(bytes[i..<i + Int(n)])))
+                i = (i + Int(n) + 3) & ~3
             default: return nil // unsupported type: refuse rather than misread
             }
         }

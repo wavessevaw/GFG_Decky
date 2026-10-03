@@ -22,6 +22,7 @@ extension View {
         environmentObject(model)
             .environmentObject(model.inputList)
             .environmentObject(model.show)
+            .environmentObject(model.assist)
             .environmentObject(model.live)
             .environmentObject(model.tuning)
             .environmentObject(loc)

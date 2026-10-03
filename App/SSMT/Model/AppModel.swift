@@ -42,6 +42,8 @@ enum AppSection: String, CaseIterable, Identifiable {
     case inputList
     /// Function #3: Qtrl, show control center.
     case show
+    /// Function #4: FOH Assist, automatic channel and group tuning on the console.
+    case assist
     var id: String { rawValue }
 }
 
@@ -141,6 +143,8 @@ final class AppModel: ObservableObject {
     let inputList = InputListStore()
     /// Function #3 document and player (audio output starts when the section is first opened).
     let show = ShowStore(startAudio: false)
+    /// Function #4 (console link and audio input start on Connect).
+    let assist = AssistStore()
     /// Reduced graphics effects (automatic on Intel / low-core Macs; see `GraphicsQuality`).
     @Published var reducedEffects = GraphicsQuality.initialReduced {
         didSet { UserDefaults.standard.set(reducedEffects, forKey: GraphicsQuality.defaultsKey) }

@@ -51,6 +51,8 @@ struct AppSidebar: View {
             } else if model.section == .inputList {
                 inputListItems
                 Spacer(minLength: 16)
+            } else if model.section == .assist {
+                Spacer(minLength: 16)
             } else if model.appMode == .wizard {
                 stages
                 Spacer(minLength: 16)
@@ -71,6 +73,7 @@ struct AppSidebar: View {
             sectionRow(.setup, icon: "dial.medium", title: loc.t("section.setup"))
             sectionRow(.inputList, icon: "list.bullet.rectangle", title: loc.t("section.inputList"))
             sectionRow(.show, icon: "play.rectangle.on.rectangle", title: loc.t("section.show"), subtitle: "Show Control Center")
+            sectionRow(.assist, icon: "slider.vertical.3", title: loc.t("section.assist"), subtitle: "AI soundcheck")
         }
         .padding(4)
         .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.black.opacity(0.18)))
