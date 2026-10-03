@@ -96,7 +96,7 @@ public enum X32Codec {
         let p = channelPath(ch)
         var a = ["\(p)/config/name", gainAddress(ch, family: family), "\(p)/preamp/hpon", "\(p)/preamp/hpf", "\(p)/eq/on",
                  "\(p)/dyn/on", "\(p)/dyn/thr", "\(p)/dyn/ratio", "\(p)/dyn/attack", "\(p)/dyn/release", "\(p)/dyn/knee",
-                 "\(p)/dyn/mgain", "\(p)/mix/fader", "\(p)/mix/on"]
+                 "\(p)/dyn/mgain", "\(p)/mix/fader", "\(p)/mix/on", "\(p)/preamp/invert"]
         for b in 1...4 { a += ["\(p)/eq/\(b)/type", "\(p)/eq/\(b)/f", "\(p)/eq/\(b)/g", "\(p)/eq/\(b)/q"] }
         return a
     }
@@ -134,6 +134,7 @@ public enum X32Codec {
         if oc?.makeupDB != c.makeupDB { f("\(p)/dyn/mgain", linUnmap(c.makeupDB, 0, 24)) }
         if changed(\.faderDB) { f("\(p)/mix/fader", faderPosition(new.faderDB)) }
         if changed(\.muted) { i("\(p)/mix/on", new.muted ? 0 : 1) }
+        if changed(\.polarityInverted) { i("\(p)/preamp/invert", new.polarityInverted ? 1 : 0) }
         return out
     }
 
@@ -167,6 +168,7 @@ public enum X32Codec {
         case ["dyn", "mgain"]: s.compressor.makeupDB = linMap(num ?? 0, 0, 24)
         case ["mix", "fader"]: s.faderDB = faderDB(num ?? 0)
         case ["mix", "on"]: s.muted = (num ?? 1) == 0
+        case ["preamp", "invert"]: s.polarityInverted = (num ?? 0) > 0
         default:
             guard parts.count == 5, parts[2] == "eq", let b = Int(parts[3]), (1...4).contains(b), let v = num else { return nil }
             while s.eq.count < b { s.eq.append(StripEQBand(frequency: 1000)) }

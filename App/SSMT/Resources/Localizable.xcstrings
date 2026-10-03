@@ -2025,6 +2025,74 @@
         }
       }
     },
+    "assist.note.polChecking": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Polarity against %@: clicking and listening… (let the source play)"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Полярность против «%@»: щёлкаю и слушаю… (пусть источник играет)"
+          }
+        }
+      }
+    },
+    "assist.note.polInverted": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Polarity inverted: the sum is %.1f dB fuller"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Полярность перевёрнута: сумма полнее на %.1f дБ"
+          }
+        }
+      }
+    },
+    "assist.note.polKept": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Polarity is right (the sum is %.1f dB fuller than inverted)"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Полярность верная (сумма на %.1f дБ полнее, чем в перевороте)"
+          }
+        }
+      }
+    },
+    "assist.note.polUnclear": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Polarity unclear (%.1f dB): left as it was. Check that only this source is playing."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Полярность неясна (%.1f дБ): оставлено как было. Проверьте, что играет только этот источник."
+          }
+        }
+      }
+    },
     "assist.note.recognised": {
       "extractionState": "manual",
       "localizations": {
@@ -2225,6 +2293,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Настройка каналов"
+          }
+        }
+      }
+    },
+    "assist.polarity": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check polarity"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Проверить полярность"
           }
         }
       }

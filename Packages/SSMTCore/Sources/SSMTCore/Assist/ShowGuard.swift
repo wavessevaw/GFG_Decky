@@ -141,7 +141,7 @@ public final class ShowGuard {
 
     /// Equal within what the console's parameter steps round to (an echo of our own change is not a touch).
     static func same(_ a: ChannelStrip, _ b: ChannelStrip) -> Bool {
-        guard a.muted == b.muted, a.eqOn == b.eqOn, a.highPassOn == b.highPassOn, abs(a.faderDB - b.faderDB) < 0.3,
+        guard a.muted == b.muted, a.polarityInverted == b.polarityInverted, a.eqOn == b.eqOn, a.highPassOn == b.highPassOn, abs(a.faderDB - b.faderDB) < 0.3,
               abs(a.gainDB - b.gainDB) < 0.6, a.eq.count == b.eq.count else { return false }
         for (x, y) in zip(a.eq, b.eq) where x.type != y.type || abs(x.gainDB - y.gainDB) > 0.3
             || abs(log2(x.frequency / y.frequency)) > 0.05 || abs(log2(x.q / y.q)) > 0.1 { return false }

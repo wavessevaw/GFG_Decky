@@ -156,6 +156,11 @@ private struct GroupPanel: View {
                     .buttonStyle(SSMTButtonStyle(kind: .primary))
             }
             .disabled(!store.isConnected || store.running)
+            HStack(spacing: 8) {
+                Button { store.checkPolarity() } label: { Label(loc.t("assist.polarity"), systemImage: "plusminus.circle") }
+                    .buttonStyle(SSMTButtonStyle())
+            }
+            .disabled(!store.isConnected || store.running)
             HStack(spacing: 6) {
                 Text(loc.t("assist.range")).font(.system(size: 12))
                 Stepper("\(store.rangeFrom)", value: $store.rangeFrom, in: 1...max(1, store.strips.count))
@@ -210,7 +215,7 @@ private struct AssistChannelTable: View {
             Text(s.name.isEmpty ? "—" : s.name).lineLimit(1).frame(width: 120, alignment: .leading)
             Text(store.kind(of: s.id).map { loc.t("assist.kind.\($0.rawValue)") } ?? "—").lineLimit(1)
                 .frame(width: 130, alignment: .leading).foregroundStyle(Theme.textSecondary)
-            Text(String(format: "%.1f", s.gainDB)).monospacedDigit().frame(width: 56, alignment: .trailing)
+            Text(String(format: "%.1f", s.gainDB) + (s.polarityInverted ? " Ø" : "")).monospacedDigit().frame(width: 56, alignment: .trailing)
             Text(s.highPassOn ? String(format: "%.0f", s.highPassHz) : "off").monospacedDigit().frame(width: 56, alignment: .trailing)
             Text(eqSummary(s)).lineLimit(1).frame(minWidth: 220, alignment: .leading).foregroundStyle(Theme.textSecondary)
             Text(s.compressor.enabled ? String(format: "%.0f dB %.1f:1", s.compressor.thresholdDB, s.compressor.ratio) : "off")
@@ -276,6 +281,10 @@ private struct AssistLogView: View {
         case .compressorOff: return loc.t("assist.note.compOff")
         case let .fader(db): return String(format: loc.t("assist.note.fader"), db)
         case let .feedback(f, d): return String(format: loc.t("assist.note.feedback"), PEQFilter.label(f), d)
+        case let .polarityChecking(ref):
+            return String(format: loc.t("assist.note.polChecking"), store.strips.first { $0.id == ref }?.name ?? "\(ref)")
+        case let .polarity(inv, d): return String(format: loc.t(inv ? "assist.note.polInverted" : "assist.note.polKept"), d)
+        case let .polarityUnclear(d): return String(format: loc.t("assist.note.polUnclear"), d)
         case let .done(dev): return String(format: loc.t("assist.note.done"), dev)
         case let .gaveUp(r): return loc.t(r == "no signal" ? "assist.note.noSignal" : "assist.note.unsettled")
         }
@@ -284,7 +293,8 @@ private struct AssistLogView: View {
     private func color(_ n: AssistNote) -> Color {
         switch n {
         case .done: return Theme.statusGood
-        case .feedback, .clipRisk, .gaveUp: return Theme.statusWarning
+        case .polarity: return Theme.statusGood
+        case .feedback, .clipRisk, .gaveUp, .polarityUnclear: return Theme.statusWarning
         default: return Theme.textPrimary
         }
     }

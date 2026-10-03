@@ -55,7 +55,8 @@ public enum ConsoleMeters {
         case (.xAir, "5"): return (.buses, shorts())
         case (.xAir, "4"): return (.rta, shorts())
         case (_, "1"): return (.channels, Array(floats().prefix(32)))
-        case (_, "2"): return (.buses, Array(floats().prefix(16)))
+        // X32 /meters/2: 16 buses, 6 matrices, main L, main R, mono… (main used by the polarity check).
+        case (_, "2"): return (.buses, floats())
         case (_, "15"): return (.rta, Array(shorts().prefix(100)))
         default: return nil
         }

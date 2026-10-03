@@ -16,6 +16,11 @@ public final class SimulatedConsole {
         public var levelDB: Double
         /// How much of this channel the measurement mic / other mics pick up back (dB); higher = feedback sooner.
         public var couplingDB: Double
+        /// Second microphone on another channel's source (kick out, snare bottom): that channel, the extra
+        /// distance as a delay, and the physical polarity (-1: the mic faces the other side of the drum head).
+        public var sameSourceAs: Int?
+        public var delayMS: Double = 0
+        public var physicalPolarity: Double = 1
     }
 
     public let sampleRate: Double
@@ -40,8 +45,8 @@ public final class SimulatedConsole {
     }
 
     /// A typical stage: lead vocals, a band, a small string section and a four-mic choir.
-    public static func demo(sampleRate: Double = 48000) -> SimulatedConsole {
-        let c = SimulatedConsole(sampleRate: sampleRate)
+    public static func demo(sampleRate: Double = 48000, seed: UInt64 = 7) -> SimulatedConsole {
+        let c = SimulatedConsole(sampleRate: sampleRate, seed: seed)
         let mud = StripEQBand(type: .peaking, frequency: 315, gainDB: 6, q: 1.2)
         let harsh = StripEQBand(type: .peaking, frequency: 3150, gainDB: 5, q: 2)
         let dull = StripEQBand(type: .highShelf, frequency: 5000, gainDB: -6)
@@ -60,6 +65,13 @@ public final class SimulatedConsole {
             c.strips[ch] = ChannelStrip(id: ch, name: e.0, gainDB: 20, faderDB: -10)
             c.sources[ch] = Source(kind: e.1, pitch: e.2, coloring: e.3, levelDB: e.4, couplingDB: e.1.family == .choir || e.1.family == .vocals ? -18 : -30)
         }
+        // Second mics on the kick and the snare (the bottom mic sees the head move the other way).
+        c.strips[17] = ChannelStrip(id: 17, name: "Kick Out", gainDB: 20, faderDB: -10)
+        c.sources[17] = Source(kind: .kick, pitch: 55, coloring: [StripEQBand(type: .highShelf, frequency: 4000, gainDB: -6)], levelDB: -32,
+                               couplingDB: -30, sameSourceAs: 1, delayMS: 1.0, physicalPolarity: 1)
+        c.strips[18] = ChannelStrip(id: 18, name: "Snare Bottom", gainDB: 20, faderDB: -10)
+        c.sources[18] = Source(kind: .snare, pitch: 190, coloring: [StripEQBand(type: .highShelf, frequency: 5000, gainDB: 4)], levelDB: -28,
+                               couplingDB: -30, sameSourceAs: 2, delayMS: 0.3, physicalPolarity: -1)
         for b in 1...4 { c.buses[b] = BusStrip(id: b, name: "Mon \(b)", faderDB: -3) }
         c.loopAtDB = [2: 0]   // Mon 2 (choir wedges) rings when pushed to unity
         return c
@@ -101,15 +113,30 @@ public final class SimulatedConsole {
         var taps: [Int: [Float]] = [:]
         var mic = [Double](repeating: 0, count: n)
         let active = Set(channels)
-        for (ch, src) in sources {
+        var raws: [Int: [Double]] = [:]
+        func raw(_ ch: Int) -> [Double] {
+            if let r = raws[ch] { return r }
+            let r = synth(sources[ch]!, count: n, seed: UInt64(ch))
+            raws[ch] = r
+            return r
+        }
+        for (ch, src) in sources.sorted(by: { $0.key < $1.key }) {
             guard let strip = strips[ch] else { continue }
             let audible = !strip.muted && strip.faderDB > -90
             guard active.contains(ch) || audible else { continue }
-            var x = synth(src, count: n, seed: UInt64(ch))
+            var x: [Double]
+            if let primary = src.sameSourceAs, sources[primary] != nil {
+                let src0 = raw(primary)
+                let d = Int(src.delayMS / 1000 * sampleRate)
+                x = (0..<n).map { $0 >= d ? src0[$0 - d] * src.physicalPolarity : 0 }
+            } else {
+                x = raw(ch)
+            }
             // Microphone colouring, then preamp gain.
             x = filter(x, src.coloring.map { $0.biquad(sampleRate: sampleRate) })
             let g = pow(10, (strip.gainDB + src.levelDB) / 20)
-            for i in 0..<n { x[i] *= g }
+            let pol = strip.polarityInverted ? -1.0 : 1.0
+            for i in 0..<n { x[i] *= g * pol }
             var post = x
             var chain: [Biquad] = []
             if strip.highPassOn { chain.append(Biquad.design(.highPass, frequency: strip.highPassHz, q: 0.7071, sampleRate: sampleRate)) }

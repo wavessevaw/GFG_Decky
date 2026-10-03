@@ -12,6 +12,10 @@ public enum AssistNote: Equatable, Codable, Sendable {
     case compressorOff
     case fader(toDB: Double)
     case feedback(frequency: Double, notchDB: Double)
+    case polarityChecking(against: Int)
+    /// Result of the polarity check: kept or inverted, and how much fuller the sum is in that position (dB).
+    case polarity(inverted: Bool, differenceDB: Double)
+    case polarityUnclear(differenceDB: Double)
     case done(remainingDeviationDB: Double)
     case gaveUp(reason: String)
 }

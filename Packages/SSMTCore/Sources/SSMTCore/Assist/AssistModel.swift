@@ -133,6 +133,8 @@ public struct ChannelStrip: Equatable, Codable, Sendable, Identifiable {
     /// Fader (dB, -inf as -144).
     public var faderDB: Double
     public var muted: Bool
+    /// Polarity (phase) inverted on the console's input.
+    public var polarityInverted: Bool = false
 
     public init(id: Int, name: String = "", gainDB: Double = 20, highPassOn: Bool = false, highPassHz: Double = 80,
                 eqOn: Bool = true, eq: [StripEQBand] = ChannelStrip.flatEQ, compressor: StripCompressor = StripCompressor(),

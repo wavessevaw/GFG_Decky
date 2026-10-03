@@ -147,6 +147,8 @@ final class AssistStore: ObservableObject {
     private var stripMap: [Int: ChannelStrip] = [:]
     private var busMap: [Int: BusStrip] = [:]
     private var meters = ConsoleMeterAccumulator()
+    /// Main L+R meter frames of the current window (the polarity check's "ear" without a hall mic).
+    private var mainFrames: [Double] = []
     private var rtaCursor = 0
     private var references: [Int: [Double]] = [:]
     private var guardStart = Date()
@@ -245,7 +247,9 @@ final class AssistStore: ObservableObject {
             switch bank {
             case .channels: if running || guarding { meters.add(channelLevels: values) }
             case .rta: if running || guarding { meters.add(rtaBands: values) }
-            case .buses: for (i, v) in values.enumerated() { busLevels[i + 1] = v }
+            case .buses:
+                for (i, v) in values.prefix(X32Codec.busCount(family)).enumerated() { busLevels[i + 1] = v }
+                if values.count >= 24, running { mainFrames.append(Decibel.fromPower(pow(10, values[22] / 10) + pow(10, values[23] / 10))) }
             }
             return
         }
@@ -278,6 +282,18 @@ final class AssistStore: ObservableObject {
         guard let session else { return }
         session.measurementMic = measurementMic
         if session.startGroup(selection).isEmpty {
+            message = "nothing found"
+            return
+        }
+        begin()
+    }
+
+    /// Automatic polarity check of the mic pairs found from the console names (kick in/out, snare top/bottom,
+    /// bass DI/mic, guitar L/R, overheads against the snare).
+    func checkPolarity() {
+        guard let session else { return }
+        session.measurementMic = measurementMic
+        if session.startPolarity().isEmpty {
             message = "nothing found"
             return
         }
@@ -361,7 +377,9 @@ final class AssistStore: ObservableObject {
             return
         }
         let (feats, mic, _) = window(channels: session.listening, seconds: 2)
-        let changed = session.tick(features: feats, mic: mic)
+        let main = mainFrames.isEmpty ? nil : Decibel.fromPower(mainFrames.reduce(0) { $0 + pow(10, $1 / 10) } / Double(mainFrames.count))
+        mainFrames.removeAll()
+        let changed = session.tick(features: feats, mic: mic, mainLevelDB: main)
         apply(changed)
         log = Array(session.log.suffix(200))
         features.merge(session.features) { $1 }

@@ -14,6 +14,7 @@ public final class AssistSession {
         case none
         case channel(Int)
         case group(AssistGroupSelection, [Int])
+        case polarity([PolarityPair])
     }
 
     public let sampleRate: Double
@@ -26,6 +27,7 @@ public final class AssistSession {
     public private(set) var job: Job = .none
     public private(set) var single: ChannelTuning?
     public private(set) var group: GroupTuning?
+    public private(set) var polarity: PolarityCheck?
     public private(set) var log: [LogEntry] = []
     public private(set) var steps = 0
     /// Last analysis per channel (for the UI meters and the classifier column).
@@ -53,6 +55,7 @@ public final class AssistSession {
         case .none: return false
         case .channel: return single?.state != .done
         case .group: return group?.phase != .done
+        case .polarity: return polarity?.done == false
         }
     }
 
@@ -62,6 +65,7 @@ public final class AssistSession {
         case .none: return []
         case let .channel(c): return [c]
         case let .group(_, m): return m
+        case .polarity: return polarity?.current.map { [$0.reference, $0.test] } ?? []
         }
     }
 
@@ -90,7 +94,20 @@ public final class AssistSession {
         return members
     }
 
-    public func stop() { job = .none; single = nil; group = nil }
+    /// Checks the polarity of the given pairs (default: pairs found from the console names). Returns the pairs.
+    @discardableResult
+    public func startPolarity(_ pairs: [PolarityPair]? = nil) -> [PolarityPair] {
+        let p = pairs ?? PolarityPairs.find(in: strips.values.sorted { $0.id < $1.id })
+        guard !p.isEmpty else { return [] }
+        for pair in p { for ch in [pair.reference, pair.test] where snapshot[ch] == nil { snapshot[ch] = strips[ch] } }
+        polarity = PolarityCheck(pairs: p)
+        single = nil
+        group = nil
+        job = .polarity(p)
+        return p
+    }
+
+    public func stop() { job = .none; single = nil; group = nil; polarity = nil }
 
     /// Strips to send to put channels back as they were before the assistant (all touched channels if nil).
     public func undo(_ channel: Int? = nil) -> [ChannelStrip] {
@@ -115,7 +132,7 @@ public final class AssistSession {
     }
 
     /// Same, with channel features already measured (console meters and RTA over the network).
-    public func tick(features feats: [Int: SignalFeatures], mic: [Float]?) -> [ChannelStrip] {
+    public func tick(features feats: [Int: SignalFeatures], mic: [Float]?, mainLevelDB: Double? = nil) -> [ChannelStrip] {
         guard isRunning else { return [] }
         steps += 1
         for (ch, f) in feats { features[ch] = f }
@@ -146,6 +163,18 @@ public final class AssistSession {
             single = t
             for n in notes { log.append(LogEntry(step: steps, channel: ch, note: n)) }
             commit(ns)
+        case .polarity:
+            guard var p = polarity else { break }
+            // The "ear": the hall mic's low / low-mid energy, else the console's main meter.
+            var sum = mainLevelDB
+            if let mic, mic.count >= 4096 {
+                let mf = measurementMic.corrected(extractor.analyze(mic, gateDB: -90))
+                if let e = PolarityCheck.sumEnergy(mf) { sum = e }
+            }
+            let (ns, notes) = p.step(strips: strips, channels: feats, sum: sum)
+            polarity = p
+            for s in ns { commit(s) }
+            for (ch, n) in notes { log.append(LogEntry(step: steps, channel: ch, note: n)) }
         case .group:
             guard var g = group else { break }
             let (ns, notes) = g.step(strips: strips, features: feats, feedback: events, splA: micSPL)
