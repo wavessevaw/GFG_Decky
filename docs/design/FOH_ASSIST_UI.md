@@ -1,6 +1,9 @@
 # FOH Assist — interface redesign proposal (for review)
 
-Status: **proposal, not implemented.** Mockups: [`foh-assist-soundcheck.png`](foh-assist-soundcheck.png) ·
+Status: **implemented** on the claude branch (`App/SSMT/Assist/AssistWorkspace.swift`); Codex could not review
+(out of tokens), questions below were decided by Claude: master/detail with a `List`-like `LazyVStack`, meters in a
+separate `AssistMeters` object at ≤ 10 Hz, a dedicated `Canvas` EQ curve, `ViewThatFits` for the header and the action
+bar at the 1100 px minimum window. Mockups: [`foh-assist-soundcheck.png`](foh-assist-soundcheck.png) ·
 [`foh-assist-show.png`](foh-assist-show.png) (HTML sources next to them). Current screens for comparison:
 `App/Tests/Snapshots/References/assist.png`, `assist-show.png` (on `main`).
 

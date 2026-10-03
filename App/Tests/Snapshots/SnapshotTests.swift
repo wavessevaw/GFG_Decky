@@ -281,14 +281,16 @@ final class SnapshotTests: XCTestCase {
         store.connect()
         store.tune(.choir)
         store.runNow(steps: 14)
-        try snapshot(AssistWorkspace(), size: CGSize(width: 1500, height: 1250), name: "assist", loc: Self.ru)
+        store.selectedChannel = store.strips.first { store.state(of: $0.id) == .done }?.id
+        try snapshot(AssistWorkspace(), size: CGSize(width: 1500, height: 940), name: "assist", loc: Self.ru)
         // Show mode: the guard backs up the engineer.
         store.mode = .show
         store.startGuard()
         store.runGuardNow(steps: 6)
-        try snapshot(AssistWorkspace(), size: CGSize(width: 1500, height: 900), name: "assist-show", loc: Self.ru)
+        try snapshot(AssistWorkspace(), size: CGSize(width: 1500, height: 940), name: "assist-show", loc: Self.ru)
         store.stopGuard()
         store.mode = .soundcheck
+        store.selectedChannel = nil
         store.disconnect()
     }
 

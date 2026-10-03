@@ -207,3 +207,31 @@ final class ShowGuardTests: XCTestCase {
         XCTAssertEqual(sim.buses[1]!.faderDB, -3)   // other monitors untouched
     }
 }
+
+final class ShowGuardCorrectionListTests: XCTestCase {
+    func testActiveCorrectionsAreListedAndCanBeCancelled() {
+        let strips = [ChannelStrip(id: 1, name: "Vox Lead", faderDB: 0)] + (2...6).map { ChannelStrip(id: $0, name: "Choir \($0)", faderDB: -3) }
+        let g = ShowGuard(strips: strips, buses: [BusStrip(id: 2, name: "Mon 2", faderDB: -2)], character: .musical)
+        func f(_ rms: Double, _ p: Double) -> SignalFeatures {
+            var x = SignalFeatures(rmsDB: rms, level50DB: rms, level95DB: rms + 6, activity: 1)
+            x.bandsDB = ThirdOctave.centers.map { (1600...5000).contains($0) ? p : rms - 10 }
+            return x
+        }
+        var scene: [Int: SignalFeatures] = [1: f(-20, -26)]
+        for i in 2...6 { scene[i] = f(-20, -24) }
+        var t = 0.0
+        for l in [-25.0, -25, -25, -25, -10, -10] { _ = g.step(time: t, channels: scene, busLevels: [2: l]); t += 1 }
+        let list = g.corrections(at: t)
+        XCTAssertEqual(list.first?.kind, .monitorDip)
+        XCTAssertEqual(list.first?.target, 2)
+        XCTAssertEqual(list.filter { $0.kind == .unmask }.count, 5)
+        // Cancel the dip: the bus goes back to where the engineer had it and the guard keeps off it.
+        let r = g.cancel("monitorDip-2", time: t)
+        XCTAssertEqual(r.buses.first?.faderDB ?? 0, -2, accuracy: 0.01)
+        XCTAssertFalse(g.corrections(at: t).contains { $0.kind == .monitorDip })
+        // Cancel one unmask: that channel's EQ goes back.
+        let c = g.cancel("unmask-3", time: t)
+        XCTAssertEqual(c.strips.first?.eq[2].gainDB ?? -1, 0, accuracy: 0.01)
+        XCTAssertEqual(g.corrections(at: t).filter { $0.kind == .unmask }.count, 4)
+    }
+}

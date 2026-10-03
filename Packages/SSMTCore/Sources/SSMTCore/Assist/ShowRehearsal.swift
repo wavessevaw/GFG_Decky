@@ -37,6 +37,9 @@ public final class ShowRehearsal {
     var faderTarget: [Int: Double] = [:]
     var lastGuardTime = -1.0
     var hotTarget: Double?
+    /// Monitor bus and channel levels of the last guard step (for the meters on screen).
+    public private(set) var lastBusLevels: [Int: Double] = [:]
+    public private(set) var lastChannelLevels: [Int: Double] = [:]
     let extractor: FeatureExtractor
     let detector: FeedbackDetector
     let busOriginal: Double
@@ -170,6 +173,8 @@ public final class ShowRehearsal {
             let r = console.render(seconds: 1, channels: on.sorted())
             let feats = r.taps.mapValues { extractor.analyze($0) }
             let levels = console.busLevels(channelRMS: feats.filter { $0.value.hasSignal }.mapValues(\.rmsDB))
+            lastBusLevels = levels
+            lastChannelLevels = feats.filter { $0.value.hasSignal }.mapValues(\.rmsDB)
             let hall = detector.process(r.mic)
             let g = guardian.step(time: time, channels: feats, busLevels: levels, hallFeedback: hall)
             for s in g.strips {
