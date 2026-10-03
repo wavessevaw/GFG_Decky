@@ -1,0 +1,6 @@
+# build outputs and generated sources (tools/build_assets.py regenerates them)
+out/
+.sgdk/
+src/gen_*
+res/
+__pycache__/
