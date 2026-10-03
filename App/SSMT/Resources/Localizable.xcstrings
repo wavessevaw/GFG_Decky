@@ -8610,13 +8610,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Main"
+            "value": "General"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Основное"
+            "value": "Общее"
           }
         }
       }

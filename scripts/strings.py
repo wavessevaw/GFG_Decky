@@ -590,7 +590,7 @@ STRINGS = {
     "show.col.number": ("No.", "№"),
     "show.col.name": ("Cue", "Кью"),
     "show.col.pre": ("Pre-wait", "До"),
-    "show.tab.main": ("Main", "Основное"),
+    "show.tab.main": ("General", "Общее"),
     "show.tab.time": ("Time", "Время"),
     "show.tab.action": ("Action", "Действие"),
     "show.tab.outputs": ("Outputs", "Выходы"),
