@@ -7658,13 +7658,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Without QLab. The file format is not published, so Sufler takes what it recognises and lists what it could not. If something is missing, use the import from an open QLab."
+            "value": "Without QLab. The file format is not published, so Qtrl takes what it recognises and lists what it could not. If something is missing, use the import from an open QLab."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Без QLab. Формат файла закрыт, поэтому Суфлёр берёт то, что распознаёт, и показывает, что не получилось. Если чего-то не хватает — используйте импорт из открытого QLab."
+            "value": "Без QLab. Формат файла закрыт, поэтому Qtrl берёт то, что распознаёт, и показывает, что не получилось. Если чего-то не хватает — используйте импорт из открытого QLab."
           }
         }
       }
@@ -7726,13 +7726,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Brings a QLab 4 / 5 show into Sufler: cue lists, carts (as one-shot banks), cues with numbers, names, notes, colours, waits, continue modes, files, start / end, loops, fades and targets. The current show is replaced (⌘Z undoes); your audio interface, outputs and OSC devices stay."
+            "value": "Brings a QLab 4 / 5 show into Qtrl: cue lists, carts (as one-shot banks), cues with numbers, names, notes, colours, waits, continue modes, files, start / end, loops, fades and targets. The current show is replaced (⌘Z undoes); your audio interface, outputs and OSC devices stay."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Переносит шоу QLab 4 / 5 в Суфлёр: списки, карты (как банки one-shot), кью с номерами, именами, заметками, цветами, паузами, режимами «затем», файлами, началом и концом, повторами, фейдами и целями. Текущее шоу заменяется (⌘Z отменит); звуковая карта, выходы и OSC-устройства остаются."
+            "value": "Переносит шоу QLab 4 / 5 в Qtrl: списки, карты (как банки one-shot), кью с номерами, именами, заметками, цветами, паузами, режимами «затем», файлами, началом и концом, повторами, фейдами и целями. Текущее шоу заменяется (⌘Z отменит); звуковая карта, выходы и OSC-устройства остаются."
           }
         }
       }
@@ -7879,13 +7879,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Not played by Sufler yet — kept as memos with the QLab type in the notes:"
+            "value": "Not played by Qtrl yet — kept as memos with the QLab type in the notes:"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Суфлёр пока не воспроизводит — оставлены заметками с типом QLab в примечании:"
+            "value": "Qtrl пока не воспроизводит — оставлены заметками с типом QLab в примечании:"
           }
         }
       }
@@ -8491,13 +8491,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sufler"
+            "value": "Qtrl"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Суфлёр"
+            "value": "Qtrl"
           }
         }
       }
