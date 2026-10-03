@@ -632,7 +632,7 @@ STRINGS = {
     "show.wave.loopAll": ("Repeat all", "Повтор целиком"),
     "show.wave.loopPart": ("Loop inside", "Петля внутри"),
     "show.wave.times": ("%d times", "%d раз"),
-    "show.wave.loopStart": ("Loop from", "Петля с"),
+    "show.wave.loopStart": ("Loop from", "Петля от"),
     "show.wave.loopEnd": ("Loop to", "Петля до"),
     "show.wave.loopPart.hint": ("The intro plays once, the blue part repeats, the rest plays after the last pass or a Devamp cue.",
                                 "Начало звучит один раз, синяя часть повторяется, остаток — после последнего круга или кью «Выход из петли»."),
